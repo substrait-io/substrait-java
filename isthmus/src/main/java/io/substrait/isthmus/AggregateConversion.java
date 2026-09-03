@@ -32,14 +32,11 @@ public final class AggregateConversion {
      *
      * <p>Type derivation is fail-closed: a function whose return expression the derivation does not
      * yet support is rejected rather than assumed valid, so this mode is not adoptable for plans
-     * that use such functions. On the standard extension catalog what remains unsupported is a
-     * return of {@code list<anyN>} ({@code filter}, {@code sort}, {@code transform}, {@code
-     * string_split}, {@code regexp_string_split}, {@code regexp_match_substring_all}) and a
-     * multi-line return program ({@code add}, {@code subtract}, {@code multiply}, {@code divide},
-     * {@code modulus}, {@code ceil}, {@code floor}, {@code round}, the {@code bitwise_*} family,
-     * {@code assume_timezone} and {@code strptime_*}). {@code quantile}'s output type cannot be
-     * derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
-     * carries no identity to bind (spec v0.101.0).
+     * that use such functions. Among the standard aggregates that means {@code quantile}, whose
+     * declared return {@code LIST?<any>} uses a plain {@code any} carrying no identity to bind, and
+     * {@code avg} over a decimal, whose intermediate {@code STRUCT<DECIMAL<38,S>,i64>} is a
+     * parameterized struct the derivation has no case for. Because an unspecified aggregate phase
+     * consumes that intermediate state, an ordinary decimal {@code avg} is rejected too.
      */
     EXTENSION_DECLARATION
   }

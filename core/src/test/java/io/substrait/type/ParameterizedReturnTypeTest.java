@@ -53,8 +53,8 @@ class ParameterizedReturnTypeTest {
 
   @Test
   void dateMinusIntervalDayDerivesAPrecisionTimestamp() {
-    // The signature #1117 is about: the spec declares precision_timestamp<P>, where P is the
-    // interval's, and nothing but the interval carries it.
+    // subtract(date, interval_day<P>) declares precision_timestamp<P>, and nothing but the
+    // interval carries P.
     assertEquals(R.precisionTimestamp(6), resolve("subtract:date_iday", R.DATE, R.intervalDay(6)));
     assertEquals(R.precisionTimestamp(3), resolve("subtract:date_iday", R.DATE, R.intervalDay(3)));
   }
@@ -68,7 +68,48 @@ class ParameterizedReturnTypeTest {
         assertThrows(
             UnsupportedOperationException.class,
             () -> resolve("add_intervals:iday_iday", R.intervalDay(3), R.intervalDay(6)));
-    assertTrue(e.getMessage().contains("P"), e.getMessage());
+    assertTrue(
+        e.getMessage().contains("Inconsistent binding for type parameter 'P'"), e.getMessage());
+  }
+
+  @Test
+  void aParameterizedDeclarationRejectsAnotherActualShape() {
+    UnsupportedOperationException e =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> resolve("concat:vchar", R.varChar(20), R.STRING));
+
+    assertTrue(
+        e.getMessage().contains("Cannot bind parameters from declared argument type"),
+        e.getMessage());
+  }
+
+  @Test
+  void aContainerDeclarationIsNotRefusedForABindingItNeverMakes() {
+    // Binding does not descend into a list declaration, so a `list<any1>` argument binds nothing.
+    // Both of these declare a concrete return and need no binding at all, so refusing the shape
+    // would reject calls that resolve today.
+    assertEquals(R.I64, resolve("cardinality:list", R.list(R.I64)));
+    assertEquals(N.I64, resolve("index_in:any_list", R.I64, R.list(R.I64)));
+  }
+
+  @Test
+  void aConcreteReturnStillChecksSharedParameters() {
+    UnsupportedOperationException comparison =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> resolve("lt:any_any", R.precisionTimestamp(3), R.precisionTimestamp(6)));
+    assertTrue(
+        comparison.getMessage().contains("Inconsistent binding for type parameter 'any1'"),
+        comparison.getMessage());
+
+    UnsupportedOperationException strpos =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> resolve("strpos:vchar_vchar", R.varChar(20), R.varChar(3)));
+    assertTrue(
+        strpos.getMessage().contains("Inconsistent binding for type parameter 'L1'"),
+        strpos.getMessage());
   }
 
   @Test

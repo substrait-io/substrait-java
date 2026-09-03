@@ -40,7 +40,7 @@ import java.util.OptionalInt;
  * assume_timezone:date_str_i8} and the {@code strptime_*} family. Among the standard aggregates,
  * {@code quantile} cannot be derived at all: its declared return {@code LIST?<any>} uses a plain
  * {@code any}, which carries no identity to bind. Both lists are pinned against the catalog by
- * {@code ParameterizedReturnTypeTest}, which is spec v0.101.0 today.
+ * {@code ParameterizedReturnTypeTest}.
  */
 public class TypeExpressionEvaluator {
 
@@ -229,7 +229,31 @@ public class TypeExpressionEvaluator {
             ((ParameterizedType.IntervalCompound) declared).precision().value(),
             ((Type.IntervalCompound) actual).precision(),
             bindNames);
+      } else if (!(declared instanceof Type) && !isContainer(declared)) {
+        // A shape one of the arms above should have taken: the declaration carries a parameter and
+        // the actual type is not the class that would bind it. Binding nothing here would enforce
+        // the shared-parameter rule for some calls and skip it for others.
+        throw new UnsupportedOperationException(
+            String.format(
+                "Cannot bind parameters from declared argument type %s to actual type %s",
+                declared, actual));
       }
+    }
+
+    /**
+     * Whether the declared type holds other types rather than an integer parameter. Binding does
+     * not descend into these, so their parameters bind nothing and a mismatch cannot be told from a
+     * shape this method simply does not reach yet -- unlike the classes above, refusing here would
+     * reject declarations that resolve today without binding anything, such as a {@code list<any1>}
+     * argument to a function returning a concrete type.
+     *
+     * @param declared the declared argument type
+     * @return {@code true} if the type is a list, map or struct declaration
+     */
+    private boolean isContainer(ParameterizedType declared) {
+      return declared instanceof ParameterizedType.ListType
+          || declared instanceof ParameterizedType.Map
+          || declared instanceof ParameterizedType.Struct;
     }
 
     private void bindType(String name, Type actual) {
