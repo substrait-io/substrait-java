@@ -392,7 +392,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     Optional<Expression> expression =
         exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
 
-    if (allEmpty(input)) {
+    if (allEmpty(input, expression)) {
       return Optional.empty();
     }
 

@@ -7,6 +7,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -105,11 +106,7 @@ class RelCopyOnWriteVisitorTest extends TestBase {
         window.accept(negateI32LiteralsVisitor(), EmptyVisitationContext.INSTANCE));
   }
 
-  /**
-   * The window relation's own lists are not the only thing below it. A rewrite that applies to the
-   * input has nowhere else to be found: a window relation is the only single-input relation in this
-   * visitor that used to decide "unchanged" without asking its input.
-   */
+  /** A rewrite that applies only below a window relation comes back with the input replaced. */
   @Test
   void consistentPartitionWindowRewritesItsInput() {
     SimpleExtension.WindowFunctionVariant declaration =
@@ -144,5 +141,28 @@ class RelCopyOnWriteVisitorTest extends TestBase {
             .input(sb.project(in -> Arrays.asList(sb.i32(-5)), sb.remap(1), scan))
             .build();
     assertEquals(Optional.of(expected), rewritten);
+  }
+
+  /**
+   * The same guard, one relation over: a rewrite that touches only the exchange's own expression
+   * comes back, where the input alone used to decide whether anything changed.
+   */
+  @Test
+  void multiBucketExchangeRewritesItsExpression() {
+    Rel scan = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I32));
+    MultiBucketExchange exchange =
+        MultiBucketExchange.builder()
+            .input(scan)
+            .expression(sb.i32(5))
+            .constrainedToCount(true)
+            .partitionCount(1)
+            .build();
+
+    Optional<Rel> rewritten =
+        exchange.accept(negateI32LiteralsVisitor(), EmptyVisitationContext.INSTANCE);
+
+    assertEquals(
+        Optional.of(MultiBucketExchange.builder().from(exchange).expression(sb.i32(-5)).build()),
+        rewritten);
   }
 }
