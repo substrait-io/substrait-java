@@ -1,6 +1,7 @@
 package io.substrait.isthmus.calcite.rel.rules;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.substrait.isthmus.calcite.rel.VirtualTable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,8 +40,9 @@ import org.apache.calcite.tools.RelBuilderFactory;
  *
  * <p>This is for a consumer whose planner only knows Calcite's own relations. It is one-way: the
  * expansion is a plan like any other, and converting it back to Substrait gives the relation it is,
- * not the virtual table it came from. Isthmus never runs it -- a plan it converts keeps the {@link
- * VirtualTable}, which is what makes the round trip exact.
+ * not the virtual table it came from. Isthmus never runs it as a planner rule -- a plan it converts
+ * keeps the {@link VirtualTable}, which is what makes the round trip exact -- and its SQL generator
+ * takes only the shape, through {@link #expand(VirtualTable)}.
  */
 public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule.Config> {
 
@@ -72,9 +74,12 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
   /**
    * Expands every {@link VirtualTable} in the given tree, leaving the rest of it alone.
    *
-   * <p>For a consumer that has to hand the tree to something knowing only Calcite's own relations.
-   * Isthmus' own SQL generation is one: {@link org.apache.calcite.rel.rel2sql.RelToSqlConverter}
-   * has no case for a relation it does not know and throws an {@link AssertionError} naming it.
+   * <p>For a consumer that has to hand the tree to something knowing only Calcite's own relations:
+   * {@link org.apache.calcite.rel.rel2sql.RelToSqlConverter} has no case for a relation it does not
+   * know and throws an {@link AssertionError} naming it. Isthmus' own SQL generation does not need
+   * this -- {@link io.substrait.isthmus.sql.SubstraitRelToSqlConverter} has the case instead, which
+   * a tree pass cannot substitute for: a table inside a {@code RexSubQuery} is in no relation's
+   * inputs, so nothing walking them reaches it.
    *
    * @param relNode the tree to expand
    * @return the tree with every virtual table expanded
@@ -86,26 +91,26 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
     return planner.findBestExp();
   }
 
-  private static RelNode expand(VirtualTable virtualTable) {
+  /**
+   * Expands one virtual table into the projections its rows stand for.
+   *
+   * <p>The shape both this rule and isthmus' SQL generation use, so that the two cannot drift: the
+   * generator has its own case for the relation rather than a planner pass, and takes the expansion
+   * from here.
+   *
+   * @param virtualTable the table to expand
+   * @return the union of one projection per row, or the projection itself where there is one row
+   */
+  public static RelNode expand(VirtualTable virtualTable) {
     RelOptCluster cluster = virtualTable.getCluster();
     RelDataType rowType = virtualTable.getRowType();
-    if (virtualTable.getRows().isEmpty()) {
-      return LogicalValues.create(cluster, rowType, ImmutableList.of());
-    }
-
-    RelDataType emptyRowType = cluster.getTypeFactory().createStructType(List.of(), List.of());
-    ImmutableList<ImmutableList<RexLiteral>> singleEmptyRow = ImmutableList.of(ImmutableList.of());
-    // One empty row for every projection: they share a digest, so a planner keeps one of them
-    // whether the rule builds one or many.
-    RelNode emptyRow = LogicalValues.create(cluster, emptyRowType, singleEmptyRow);
-
-    // A projection carries the variables the rows resolve against: a subquery among them is
-    // unreachable by SubQueryRemoveRule and RelDecorrelator, and the expansion is what a consumer
-    // hands to a planner that only knows Calcite's own relations.
+    // A schema may name two columns the same -- the spec asks only that the names are a depth-first
+    // list -- and the table carries them as they are. Calcite's own relations cannot, so both
+    // branches below build their row type from the uniquified names.
     List<String> fieldNames =
         SqlValidatorUtil.uniquify(
             rowType.getFieldNames(), SqlValidatorUtil.F_SUGGESTER, /* caseSensitive= */ true);
-    RelDataType projectRowType =
+    RelDataType uniquifiedRowType =
         cluster
             .getTypeFactory()
             .createStructType(
@@ -114,6 +119,16 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
                     .collect(Collectors.toList()),
                 fieldNames);
 
+    if (virtualTable.getRows().isEmpty()) {
+      return LogicalValues.create(cluster, uniquifiedRowType, ImmutableList.of());
+    }
+
+    RelDataType emptyRowType = cluster.getTypeFactory().createStructType(List.of(), List.of());
+    ImmutableList<ImmutableList<RexLiteral>> singleEmptyRow = ImmutableList.of(ImmutableList.of());
+    // One empty row for every projection: they share a digest, so a planner keeps one of them
+    // whether the rule builds one or many.
+    RelNode emptyRow = LogicalValues.create(cluster, emptyRowType, singleEmptyRow);
+
     List<RelNode> rowProjects = new ArrayList<>();
     for (List<RexNode> row : virtualTable.getRows()) {
       rowProjects.add(
@@ -121,8 +136,10 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
               emptyRow,
               Collections.emptyList(),
               row,
-              projectRowType,
-              virtualTable.getVariablesSet()));
+              uniquifiedRowType,
+              // Not the table's own set: a leaf declares none, and a projection over a zero-field
+              // Values cannot resolve one anyway.
+              ImmutableSet.of()));
     }
     // A one-input union is not a relation a planner keeps -- UNION_REMOVE strips it -- and the
     // projection is what the expansion means anyway.

@@ -2,6 +2,8 @@ package io.substrait.isthmus;
 
 import io.substrait.isthmus.calcite.rel.VirtualTable;
 import java.util.List;
+import java.util.Set;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -10,6 +12,7 @@ import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Holder;
+import org.apache.calcite.util.Litmus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -193,6 +196,39 @@ class OuterReferenceResolverTest extends PlanTestBase {
     Assertions.assertNotNull(anchor0);
     Assertions.assertNotNull(anchor1);
     Assertions.assertNotEquals(anchor0, anchor1);
+  }
+
+  /**
+   * A correlation in a row is visible to Calcite's own collector, which is what a consumer's
+   * decorrelation is built on. It arrives there through {@code accept(RexShuttle)} -- {@code
+   * RelOptUtil.VariableUsedVisitor} is a shuttle, and the collector hands it to every relation.
+   *
+   * <p>Declaring the ids on the relation instead would do the opposite: {@code
+   * RelOptUtil.CorrelationCollector} subtracts {@code getVariablesSet} from what it collected, so a
+   * leaf naming the ids its rows resolve against empties its own result.
+   */
+  @Test
+  void aCorrelationInARowIsVisibleToTheCollector() {
+    final Holder<RexCorrelVariable> cor = Holder.empty();
+    tpcDsRelBuilder.scan("tpcds", "ITEM").variable(cor::set);
+    final RexNode promoOfItem =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .scan("tpcds", "PROMOTION")
+                .filter(
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("P_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor.get(), "I_ITEM_SK")))
+                .project(tpcDsRelBuilder.field("P_PROMO_SK"))
+                .build());
+    final RelNode table =
+        VirtualTable.create(
+            tpcDsRelBuilder.getCluster(),
+            tpcDsRelBuilder.getTypeFactory().builder().add("col1", promoOfItem.getType()).build(),
+            List.of(List.of(promoOfItem)));
+
+    Assertions.assertEquals(Set.of(cor.get().id), RelOptUtil.getVariablesUsed(table));
+    Assertions.assertFalse(RelOptUtil.notContainsCorrelation(table, cor.get().id, Litmus.IGNORE));
   }
 
   /**

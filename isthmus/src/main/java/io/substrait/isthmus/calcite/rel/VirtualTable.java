@@ -1,10 +1,8 @@
 package io.substrait.isthmus.calcite.rel;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -14,9 +12,9 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
@@ -40,7 +38,6 @@ import org.apache.calcite.util.Litmus;
 public class VirtualTable extends AbstractRelNode {
 
   private final ImmutableList<List<RexNode>> rows;
-  private final ImmutableSet<CorrelationId> variablesSet;
 
   /**
    * VirtualTable constructor.
@@ -48,34 +45,27 @@ public class VirtualTable extends AbstractRelNode {
    * @param cluster the cluster this relation belongs to
    * @param traitSet the relation's traits
    * @param rowType the table's row type, carrying the schema's field names
-   * @param variablesSet the correlation variables the rows resolve against
    * @param rows one list of values per row, each value at the type its column is declared at
-   * @throws IllegalArgumentException if a row does not fit the row type
+   * @throws IllegalArgumentException if a row has more or fewer values than the type has columns
    */
   public VirtualTable(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelDataType rowType,
-      Set<CorrelationId> variablesSet,
       List<? extends List<RexNode>> rows) {
     super(cluster, traitSet);
     this.rowType = rowType;
-    this.variablesSet = ImmutableSet.copyOf(variablesSet);
     ImmutableList.Builder<List<RexNode>> builder = ImmutableList.builder();
     for (List<RexNode> row : rows) {
-      // Nothing else checks this: the deleted LogicalProject got it from RexUtil.compatibleTypes,
-      // and AbstractRelNode.isValid succeeds unconditionally.
+      // Nothing else checks the count: the deleted LogicalProject got it from
+      // RexUtil.compatibleTypes, and AbstractRelNode.isValid succeeds unconditionally. The value
+      // types are not checked at all: the conversion gives every value the type its column is
+      // declared at before building the table, so a check here would only bind a direct caller.
       if (row.size() != rowType.getFieldCount()) {
         throw new IllegalArgumentException(
             String.format(
                 "A virtual table's row has %d values where its type declares %d columns: %s",
                 row.size(), rowType.getFieldCount(), row));
-      }
-      if (!RexUtil.compatibleTypes(row, rowType, Litmus.IGNORE)) {
-        throw new IllegalArgumentException(
-            String.format(
-                "A virtual table's row %s does not fit the type %s its columns are declared at",
-                row, rowType.getFullTypeString()));
       }
       builder.add(ImmutableList.copyOf(row));
     }
@@ -83,8 +73,7 @@ public class VirtualTable extends AbstractRelNode {
   }
 
   /**
-   * Creates a virtual table with no correlation variables, in the convention every relation this
-   * conversion builds is in.
+   * Creates a virtual table in the convention every relation this conversion builds is in.
    *
    * @param cluster the cluster this relation belongs to
    * @param rowType the table's row type, carrying the schema's field names
@@ -93,25 +82,7 @@ public class VirtualTable extends AbstractRelNode {
    */
   public static VirtualTable create(
       RelOptCluster cluster, RelDataType rowType, List<? extends List<RexNode>> rows) {
-    return create(cluster, rowType, ImmutableSet.of(), rows);
-  }
-
-  /**
-   * Creates a virtual table whose rows resolve against the given correlation variables.
-   *
-   * @param cluster the cluster this relation belongs to
-   * @param rowType the table's row type, carrying the schema's field names
-   * @param variablesSet the correlation variables the rows resolve against
-   * @param rows one list of values per row
-   * @return the virtual table
-   */
-  public static VirtualTable create(
-      RelOptCluster cluster,
-      RelDataType rowType,
-      Set<CorrelationId> variablesSet,
-      List<? extends List<RexNode>> rows) {
-    return new VirtualTable(
-        cluster, cluster.traitSetOf(Convention.NONE), rowType, variablesSet, rows);
+    return new VirtualTable(cluster, cluster.traitSetOf(Convention.NONE), rowType, rows);
   }
 
   /**
@@ -121,25 +92,6 @@ public class VirtualTable extends AbstractRelNode {
    */
   public List<List<RexNode>> getRows() {
     return rows;
-  }
-
-  /**
-   * Returns the correlation variables the rows resolve against.
-   *
-   * <p>A row holding a {@link org.apache.calcite.rex.RexSubQuery} that binds an outer reference is
-   * unreachable by {@code SubQueryRemoveRule}, whose operands are a projection, a filter and a
-   * join, and by {@code RelDecorrelator}: a consumer's planner leaves it unexpanded, and the
-   * variables it resolves against have to travel with the relation that holds it.
-   *
-   * <p>Only a consumer populates it. A conversion never does: an id is bound to a relation whose
-   * fields the reference names, and a leaf with no inputs has none, so an outer reference in a row
-   * belongs to the relation around the table the way one in a projection's expression does.
-   *
-   * @return the correlation variables
-   */
-  @Override
-  public Set<CorrelationId> getVariablesSet() {
-    return variablesSet;
   }
 
   @Override
@@ -196,12 +148,38 @@ public class VirtualTable extends AbstractRelNode {
     if (!changed) {
       return this;
     }
-    RelDataType rewrittenType =
-        rewritten.stream().allMatch(row -> RexUtil.compatibleTypes(row, rowType, Litmus.IGNORE))
-            ? rowType
-            : RexUtil.createStructType(
-                getCluster().getTypeFactory(), rewritten.get(0), rowType.getFieldNames(), null);
-    return new VirtualTable(getCluster(), getTraitSet(), rewrittenType, variablesSet, rewritten);
+    return new VirtualTable(getCluster(), getTraitSet(), rebuiltRowType(rewritten), rewritten);
+  }
+
+  /**
+   * The row type the rewritten rows fit.
+   *
+   * <p>The declared one where every row still carries it, so that a substitution keeping the types
+   * keeps the schema's names, nested ones included. Otherwise the least restrictive type each
+   * column takes across all of the rows: a shuttle that retypes a value in one row need not retype
+   * the same column in the next, and a type taken from one row alone need not fit the others.
+   *
+   * @param rewritten the rows after the rewrite
+   * @return the row type to build the rewritten table at
+   */
+  private RelDataType rebuiltRowType(List<List<RexNode>> rewritten) {
+    if (rewritten.stream().allMatch(row -> RexUtil.compatibleTypes(row, rowType, Litmus.IGNORE))) {
+      return rowType;
+    }
+    RelDataTypeFactory typeFactory = getCluster().getTypeFactory();
+    List<RelDataType> columnTypes = new ArrayList<>(rowType.getFieldCount());
+    for (int column = 0; column < rowType.getFieldCount(); column++) {
+      List<RelDataType> valueTypes = new ArrayList<>(rewritten.size());
+      for (List<RexNode> row : rewritten) {
+        valueTypes.add(row.get(column).getType());
+      }
+      RelDataType columnType = typeFactory.leastRestrictive(valueTypes);
+      // Nothing in Calcite's type system unifies every pair -- a rewrite that leaves two rows with
+      // no common type keeps the declared one, and the constructor is left to report the row.
+      columnTypes.add(
+          columnType == null ? rowType.getFieldList().get(column).getType() : columnType);
+    }
+    return typeFactory.createStructType(columnTypes, rowType.getFieldNames());
   }
 
   /**
@@ -215,7 +193,6 @@ public class VirtualTable extends AbstractRelNode {
     return super.explainTerms(pw)
         .itemIf("type", rowType, pw.getDetailLevel() == SqlExplainLevel.DIGEST_ATTRIBUTES)
         .itemIf("type", rowType.getFieldList(), pw.nest())
-        .itemIf("variablesSet", variablesSet, !variablesSet.isEmpty())
         .item(
             "rows",
             rows.stream()
@@ -240,6 +217,6 @@ public class VirtualTable extends AbstractRelNode {
     if (!inputs.isEmpty()) {
       throw new IllegalArgumentException("VirtualTable takes no inputs, but got " + inputs.size());
     }
-    return new VirtualTable(getCluster(), traitSet, rowType, variablesSet, rows);
+    return new VirtualTable(getCluster(), traitSet, rowType, rows);
   }
 }

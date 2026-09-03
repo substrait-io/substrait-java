@@ -1,6 +1,5 @@
 package io.substrait.isthmus.sql;
 
-import io.substrait.isthmus.calcite.rel.rules.VirtualTableExpansionRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlDialect;
@@ -24,16 +23,16 @@ public class SubstraitSqlDialect extends SqlDialect {
   /**
    * Converts a Calcite {@link RelNode} to its SQL representation using the default dialect.
    *
-   * <p>Any {@link io.substrait.isthmus.calcite.rel.VirtualTable} in the tree is expanded first:
-   * {@link RelToSqlConverter} knows Calcite's own relations only.
+   * <p>Generated with {@link SubstraitRelToSqlConverter}: {@link RelToSqlConverter} knows Calcite's
+   * own relations only, and a plan isthmus converts can hold an {@link
+   * io.substrait.isthmus.calcite.rel.VirtualTable}.
    *
    * @param relNode The Calcite relational node to convert.
    * @return A {@link SqlString} representing the SQL equivalent of the given {@link RelNode}.
    */
   public static SqlString toSql(RelNode relNode) {
-    RelToSqlConverter relToSql = new RelToSqlConverter(DEFAULT);
-    SqlNode sqlNode =
-        relToSql.visitRoot(VirtualTableExpansionRule.expandAll(relNode)).asStatement();
+    RelToSqlConverter relToSql = new SubstraitRelToSqlConverter(DEFAULT);
+    SqlNode sqlNode = relToSql.visitRoot(relNode).asStatement();
     return sqlNode.toSqlString(
         c ->
             c.withAlwaysUseParentheses(false)

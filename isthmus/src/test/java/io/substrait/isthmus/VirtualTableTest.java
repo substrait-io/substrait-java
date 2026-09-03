@@ -27,6 +27,7 @@ import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -146,6 +147,55 @@ class VirtualTableTest extends PlanTestBase {
   }
 
   /**
+   * A shuttle need not retype the same column in every row, so the rebuilt type is the least
+   * restrictive each column takes across all of them. Taken from the first row alone it would not
+   * fit the rest, and the constructor would report a row that the rewrite itself produced.
+   */
+  @Test
+  void aShuttleRetypingOneRowRebuildsATypeThatFitsThemAll() {
+    RelNode table = substraitToCalcite.convert(computedRows());
+    RexBuilder rexBuilder = table.getCluster().getRexBuilder();
+    RelDataType bigint = typeFactory.createSqlType(SqlTypeName.BIGINT);
+
+    RelNode rewritten =
+        table.accept(
+            new RexShuttle() {
+              private boolean firstRow = true;
+
+              @Override
+              public RexNode visitLiteral(RexLiteral literal) {
+                if (firstRow && literal.getType().getSqlTypeName() == SqlTypeName.INTEGER) {
+                  firstRow = false;
+                  return rexBuilder.makeCast(bigint, literal);
+                }
+                return literal;
+              }
+            });
+
+    assertEquals(
+        SqlTypeName.BIGINT,
+        rewritten.getRowType().getFieldList().get(0).getType().getSqlTypeName());
+  }
+
+  /**
+   * A table of no rows takes the uniquified names too: {@link
+   * org.apache.calcite.rel.logical.LogicalValues} is a Calcite relation like the projection the row
+   * branch builds, and cannot hold a name twice either.
+   */
+  @Test
+  void theExpansionOfNoRowsUniquifiesRepeatedFieldNames() {
+    NamedStruct repeated = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.FP64));
+    RelNode table =
+        substraitToCalcite.convert(
+            virtualTable(repeated, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))));
+    RelNode empty = VirtualTable.create(table.getCluster(), table.getRowType(), List.of());
+
+    assertEquals(
+        List.of("c", "c1"),
+        plan(empty, VirtualTableExpansionRule.instance()).getRowType().getFieldNames());
+  }
+
+  /**
    * A projection above the table is where the expansion used to lose the schema's names: the
    * renaming projection it carried was merged into this one, and nothing was left to rebuild the
    * table from.
@@ -214,13 +264,14 @@ class VirtualTableTest extends PlanTestBase {
   }
 
   /**
-   * SQL generation is the consumer the rule exists for: {@link
+   * SQL generation is where the relation meets stock Calcite: {@link
    * org.apache.calcite.rel.rel2sql.RelToSqlConverter} knows Calcite's own relations only, and
    * throws an {@code AssertionError} naming anything else -- unconditionally, so assertions being
-   * off does not help. Both of isthmus' entry points expand before they convert.
+   * off does not help. Both of isthmus' entry points go through {@link
+   * io.substrait.isthmus.sql.SubstraitRelToSqlConverter}, which has a case for it.
    */
   @Test
-  void sqlGenerationExpandsTheTable() {
+  void sqlGenerationRendersTheTable() {
     RelNode table = substraitToCalcite.convert(computedRows());
     io.substrait.plan.Plan plan = sb.plan(sb.root(computedRows(), List.of("col1", "col2")));
 
@@ -235,19 +286,60 @@ class VirtualTableTest extends PlanTestBase {
                 SubstraitSqlDialect.toSql(table).getSql()),
         () ->
             assertEquals(
-                1,
-                new SubstraitToSql(converterProvider)
-                    .convert(plan, SubstraitSqlDialect.DEFAULT)
-                    .size()));
+                List.of(
+                    "SELECT *\n"
+                        + "FROM (SELECT 2 AS col1, 4.4E0 + 4.5E0 AS col2\n"
+                        + "FROM (VALUES ()) AS t\n"
+                        + "UNION ALL\n"
+                        + "SELECT 6 * 2 AS col1, 8.8E0 AS col2\n"
+                        + "FROM (VALUES ()) AS t) AS t3"),
+                new SubstraitToSql(converterProvider).convert(plan, SubstraitSqlDialect.DEFAULT)));
   }
 
   /**
-   * The rows have to fit the row type: the projection this used to be built as gave that check for
-   * free through {@code RexUtil.compatibleTypes}, and {@code AbstractRelNode.isValid} succeeds
-   * whatever it is handed.
+   * A table inside a subquery is the position a tree pass ahead of the converter cannot reach: a
+   * subquery's relation is in no relation's inputs, so walking them never arrives at it. {@code
+   * SqlImplementor} converts it through {@code visitRoot}, which lands on the same {@code visit} as
+   * every other position.
    */
   @Test
-  void theRowsHaveToFitTheRowType() {
+  void sqlGenerationReachesATableInsideASubquery() {
+    VirtualTableScan oneRow =
+        virtualTable(
+            NamedStruct.of(List.of("col1"), R.struct(R.I32)),
+            List.of(sb.multiply(sb.i32(6), sb.i32(2))));
+    Rel root =
+        sb.project(
+            input -> List.of(sb.scalarSubquery(oneRow, R.I32)),
+            Rel.Remap.of(List.of(1)),
+            sb.namedScan(List.of("example"), List.of("a"), List.of(R.I32)));
+
+    assertAll(
+        () ->
+            assertEquals(
+                "SELECT (SELECT 6 * 2 AS \"col1\"\n"
+                    + "FROM (VALUES ()) AS \"t\") AS \"$f1\"\n"
+                    + "FROM \"example\"",
+                SubstraitSqlDialect.toSql(substraitToCalcite.convert(root)).getSql()),
+        () ->
+            assertEquals(
+                List.of(
+                    "SELECT (SELECT 6 * 2 AS col1\n"
+                        + "FROM (VALUES ()) AS t) AS q\n"
+                        + "FROM example"),
+                new SubstraitToSql(converterProvider)
+                    .convert(sb.plan(sb.root(root, List.of("q"))), SubstraitSqlDialect.DEFAULT)));
+  }
+
+  /**
+   * A row has one value per column, and that is all the relation checks: the projection this used
+   * to be built as got the count from {@code RexUtil.compatibleTypes}, and {@code
+   * AbstractRelNode.isValid} succeeds whatever it is handed. The value types are deliberately not
+   * checked -- the conversion gives each value the type its column is declared at before building
+   * the table, and checking here would reject a value it allows.
+   */
+  @Test
+  void aRowHasOneValuePerColumn() {
     RelNode table = substraitToCalcite.convert(computedRows());
     RelDataType rowType = table.getRowType();
     RexBuilder rexBuilder = table.getCluster().getRexBuilder();
@@ -263,7 +355,14 @@ class VirtualTableTest extends PlanTestBase {
             assertThrows(
                 IllegalArgumentException.class,
                 () ->
-                    VirtualTable.create(table.getCluster(), rowType, List.of(List.of(i32, i32)))));
+                    VirtualTable.create(
+                        table.getCluster(), rowType, List.of(List.of(i32, i32, i32)))),
+        // The second column is declared FP64, and an i32 value in it is taken as it comes.
+        () ->
+            assertEquals(
+                rowType,
+                VirtualTable.create(table.getCluster(), rowType, List.of(List.of(i32, i32)))
+                    .getRowType()));
   }
 
   /**

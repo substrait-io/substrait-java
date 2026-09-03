@@ -118,8 +118,10 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     // A relation's own expressions can hold a subquery binding outer references, and a subquery's
     // relation is not an input, so walking inputs never reaches it. Filter and Project scan theirs
     // before they get here; a virtual table's rows, and a join, calc or sort condition, arrive
-    // here. AbstractRelNode.accept(RexShuttle) returns the relation itself, so the result is the
-    // one already in the tree.
+    // here. The rewrite is an identity -- RexVisitor.visitSubQuery returns the subquery it was
+    // given -- so the relation the tree holds is unchanged and the result is discarded. Relations
+    // that do not override accept(RexShuttle) at all -- TableModify, Window, Match, Aggregate --
+    // keep their expressions to themselves; a correlation among those is still unresolved.
     other.accept(rexVisitor);
     for (RelNode child : other.getInputs()) {
       reverseAccept(child);
