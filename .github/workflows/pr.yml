@@ -57,14 +57,12 @@ jobs:
       - name: Scan
         id: scan
         run: |
-          docker run --rm \
-            --volume './:/src' \
-            ghcr.io/google/osv-scanner:latest \
-            scan source \
-            --config=/src/osv-scanner.toml \
-            --lockfile /src/${{ matrix.project }}/gradle.lockfile \
+          make install-osv-scanner
+          ./osv-scanner scan source \
+            --config=osv-scanner.toml \
+            --lockfile=${{ matrix.project }}/gradle.lockfile \
             --format=markdown \
-            --output-file=/src/osv-scanner.md
+            --output-file=osv-scanner.md
       - name: Report failure
         if: ${{ failure() && steps.scan.conclusion == 'failure' }}
         run: |
