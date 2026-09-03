@@ -10,6 +10,8 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class JoinRoundtripTest extends TestBase {
 
@@ -24,6 +26,39 @@ class JoinRoundtripTest extends TestBase {
           Arrays.asList("T2"),
           Arrays.asList("d", "e", "f"),
           Arrays.asList(R.FP64, R.STRING, R.I64));
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Join.JoinType.class,
+      names = {
+        "INNER",
+        "LEFT",
+        "RIGHT",
+        "OUTER",
+        "LEFT_SEMI",
+        "LEFT_ANTI",
+        "RIGHT_SEMI",
+        "RIGHT_ANTI"
+      })
+  void postJoinFilterUsesOutputSchemaBeforeEmit(Join.JoinType joinType) {
+    Join join =
+        sb.join(
+            input -> sb.equal(sb.fieldReference(input, 0), sb.fieldReference(input, 5)),
+            joinType,
+            leftTable,
+            rightTable);
+    Join filtered =
+        Join.builder()
+            .from(join)
+            .postJoinFilter(
+                sb.and(
+                    sb.isNull(sb.fieldReference(join, 0)),
+                    sb.isNull(sb.fieldReference(join, join.getRecordType().fields().size() - 1))))
+            .remap(sb.remap(0))
+            .build();
+
+    verifyRoundTrip(filtered);
+  }
 
   @Test
   void hashJoin() {
