@@ -365,4 +365,22 @@ class CalciteTypeTest extends CalciteObjs {
     assertEquals(expression, converter.toSubstrait(calciteType));
     assertEquals(calciteType, converter.toCalcite(type, expression, dfsFieldNames));
   }
+
+  /**
+   * The unsupported-type arm reports the type it was handed, and a type renders whatever a field
+   * name says. Passing that message to {@code String.format} as its format string made the
+   * exception class depend on the name: a {@code %s} in it arrived as a conversion specifier.
+   */
+  @Test
+  void anUnsupportedTypeIsReportedWhateverItsFieldsAreCalled() {
+    RelDataType struct =
+        type.createStructType(
+            Arrays.asList(type.createSqlType(SqlTypeName.INTEGER)), Arrays.asList("%s"));
+
+    UnsupportedOperationException e =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> TypeConverter.DEFAULT.toSubstrait(type.createMultisetType(struct, -1)));
+    assertTrue(e.getMessage().contains("%s"), e.getMessage());
+  }
 }
