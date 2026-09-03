@@ -368,19 +368,26 @@ class CalciteTypeTest extends CalciteObjs {
 
   /**
    * The unsupported-type arm reports the type it was handed, and a type renders whatever a field
-   * name says. Passing that message to {@code String.format} as its format string made the
-   * exception class depend on the name: a {@code %s} in it arrived as a conversion specifier.
+   * name says. Passing that message to {@code String.format} as its format string made the name
+   * decide the outcome: {@code %s} and {@code %d} arrived as conversion specifiers and changed the
+   * exception class, while {@code %n} and {@code %%} changed the message instead and threw nothing.
+   *
+   * <p>Both fixture choices are forced. {@code MULTISET} is the only {@link SqlTypeName} reaching
+   * that arm whose rendering carries a field name -- {@code ROW}, {@code ARRAY} and {@code MAP}
+   * recurse past it and every other name renders a fixed string -- and {@code -1} is the only
+   * maximum cardinality {@code createMultisetType} accepts.
    */
-  @Test
-  void anUnsupportedTypeIsReportedWhateverItsFieldsAreCalled() {
+  @ParameterizedTest
+  @ValueSource(strings = {"%s", "%d", "100%", "%n", "%%"})
+  void anUnsupportedTypeIsReportedWhateverItsFieldsAreCalled(String fieldName) {
     RelDataType struct =
         type.createStructType(
-            Arrays.asList(type.createSqlType(SqlTypeName.INTEGER)), Arrays.asList("%s"));
+            Arrays.asList(type.createSqlType(SqlTypeName.INTEGER)), Arrays.asList(fieldName));
+    RelDataType multiset = type.createMultisetType(struct, -1);
 
     UnsupportedOperationException e =
         assertThrows(
-            UnsupportedOperationException.class,
-            () -> TypeConverter.DEFAULT.toSubstrait(type.createMultisetType(struct, -1)));
-    assertTrue(e.getMessage().contains("%s"), e.getMessage());
+            UnsupportedOperationException.class, () -> TypeConverter.DEFAULT.toSubstrait(multiset));
+    assertEquals("Unable to convert the type " + multiset, e.getMessage());
   }
 }
