@@ -1,6 +1,7 @@
 package io.substrait.relation.physical;
 
 import io.substrait.expression.FieldReference;
+import io.substrait.extension.SimpleExtension;
 import org.immutables.value.Value;
 
 /**
@@ -127,29 +128,26 @@ public abstract class ComparisonJoinKey {
     }
   }
 
-  /**
-   * A custom comparison behavior, given by a reference to a binary function with a boolean return
-   * type.
-   */
+  /** A custom comparison behavior, given by a binary scalar function with a boolean return type. */
   @Value.Immutable
   public abstract static class CustomComparison implements ComparisonType {
     /**
-     * Returns the reference to the binary boolean-returning comparison function.
+     * Returns the {@link io.substrait.extension.SimpleExtension.ScalarFunctionVariant} declaring
+     * the binary boolean-returning comparison function. Its plan-local reference is assigned during
+     * protobuf conversion.
      *
-     * @return the custom function reference
+     * @return the comparison function declaration
      */
-    public abstract int getCustomFunctionReference();
+    public abstract SimpleExtension.ScalarFunctionVariant getDeclaration();
 
     /**
-     * Creates a {@link CustomComparison} referencing the given comparison function.
+     * Creates a {@link CustomComparison} using the given comparison function declaration.
      *
-     * @param customFunctionReference the reference to the comparison function
+     * @param declaration the binary boolean-returning comparison function declaration
      * @return a new custom comparison
      */
-    public static CustomComparison of(int customFunctionReference) {
-      return ImmutableComparisonJoinKey.CustomComparison.builder()
-          .customFunctionReference(customFunctionReference)
-          .build();
+    public static CustomComparison of(SimpleExtension.ScalarFunctionVariant declaration) {
+      return ImmutableComparisonJoinKey.CustomComparison.builder().declaration(declaration).build();
     }
 
     @Override
