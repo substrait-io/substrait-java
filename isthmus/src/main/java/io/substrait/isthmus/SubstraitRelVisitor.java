@@ -64,6 +64,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -845,16 +846,42 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           final RelOptTable table = requireTable(modify);
 
           RelNode input = modify.getInput();
-          final Expression condition;
-          if (input instanceof org.apache.calcite.rel.core.Filter) {
-            org.apache.calcite.rel.core.Filter filter = (org.apache.calcite.rel.core.Filter) input;
-            condition = toExpression(filter.getCondition());
-          } else {
-            condition = Expression.BoolLiteral.builder().nullable(false).value(true).build();
+          List<RexNode> conditions = new ArrayList<>();
+          List<RexNode> sourceExpressions =
+              Optional.ofNullable(modify.getSourceExpressionList()).orElse(Collections.emptyList());
+          while (true) {
+            if (outerReferenceResolver != null
+                && outerReferenceResolver.anchorForTarget(input) != null) {
+              throw new UnsupportedOperationException(
+                  "UPDATE cannot remove an input that binds a correlated subquery");
+            }
+            if (input instanceof org.apache.calcite.rel.core.Project) {
+              org.apache.calcite.rel.core.Project project =
+                  (org.apache.calcite.rel.core.Project) input;
+              if (project.containsOver()) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot flatten a window projection");
+              }
+              sourceExpressions = resolveProjectedRefs(sourceExpressions, project);
+              conditions = new ArrayList<>(resolveProjectedRefs(conditions, project));
+              input = project.getInput();
+            } else if (input instanceof org.apache.calcite.rel.core.Filter) {
+              org.apache.calcite.rel.core.Filter filter =
+                  (org.apache.calcite.rel.core.Filter) input;
+              conditions.add(filter.getCondition());
+              input = filter.getInput();
+            } else {
+              break;
+            }
           }
+          if (!(input instanceof org.apache.calcite.rel.core.TableScan)
+              || !table.getQualifiedName().equals(input.getTable().getQualifiedName())) {
+            throw new UnsupportedOperationException(
+                "UPDATE requires a scan of its target table beneath projections and filters");
+          }
+          Expression condition = toExpression(RexUtil.composeConjunction(rexBuilder, conditions));
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
-          List<RexNode> sourceExpressions = getSourceExpressions(modify);
           List<String> allTableColumnNames = table.getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
@@ -900,34 +927,15 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return table;
   }
 
-  private List<RexNode> getSourceExpressions(TableModify modify) {
-    List<RexNode> results = modify.getSourceExpressionList();
-    if (results == null) {
-      return Collections.emptyList();
-    }
-
-    RelNode input = modify.getInput();
-    if (input instanceof org.apache.calcite.rel.core.Project) {
-      return resolveProjectedRefs(results, (org.apache.calcite.rel.core.Project) input);
-    }
-
-    return results;
-  }
-
   private List<RexNode> resolveProjectedRefs(
       List<RexNode> expressions, org.apache.calcite.rel.core.Project project) {
     List<RexNode> projects = project.getProjects();
-    return expressions.stream()
-        .map(
-            expression -> {
-              if (expression instanceof RexInputRef) {
-                int refIndex = ((RexInputRef) expression).getIndex();
-                return projects.get(refIndex);
-              }
-
-              return expression;
-            })
-        .collect(Collectors.toList());
+    return new RexShuttle() {
+      @Override
+      public RexNode visitInputRef(RexInputRef inputRef) {
+        return projects.get(inputRef.getIndex());
+      }
+    }.apply(expressions);
   }
 
   /**
