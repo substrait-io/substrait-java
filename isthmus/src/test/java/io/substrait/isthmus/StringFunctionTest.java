@@ -54,6 +54,20 @@ final class StringFunctionTest extends PlanTestBase {
 
   @ParameterizedTest
   @ValueSource(strings = {"c16", "vc32"})
+  void initcap(String column) throws Exception {
+    String query = String.format("SELECT initcap(%s) FROM strings", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
+  void reverse(String column) throws Exception {
+    String query = String.format("SELECT reverse(%s) FROM strings", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32"})
   void replace(String column) throws Exception {
     String query =
         String.format("SELECT replace(%s, replace_from, replace_to) FROM replace_strings", column);

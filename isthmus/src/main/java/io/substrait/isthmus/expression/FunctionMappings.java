@@ -132,6 +132,8 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.CHAR_LENGTH, "char_length"),
               s(SqlStdOperatorTable.LOWER, "lower"),
               s(SqlStdOperatorTable.UPPER, "upper"),
+              s(SqlStdOperatorTable.INITCAP, "initcap"),
+              s(SqlLibraryOperators.REVERSE, "reverse"),
               s(SqlStdOperatorTable.BETWEEN),
               s(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "is_not_distinct_from"),
               s(SqlStdOperatorTable.COALESCE, "coalesce"),
