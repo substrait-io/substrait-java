@@ -531,12 +531,19 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   }
 
   override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
-    val child = write.getInput.accept(this, context)
     val mode = write.getOperation match {
       case WriteOp.INSERT => SaveMode.Append
-      case WriteOp.UPDATE => SaveMode.Overwrite
       case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
     }
+    // create_mode applies only to CTAS. Older file writes used it for Spark save modes,
+    // so reject the modes that cannot be represented by an append-only file extension.
+    write.getCreateMode match {
+      case CreateMode.UNSPECIFIED | CreateMode.APPEND_IF_EXISTS =>
+      case createMode =>
+        throw new UnsupportedOperationException(
+          s"Filesystem INSERT does not support create mode $createMode")
+    }
+    val child = write.getInput.accept(this, context)
 
     val file = write.getDetail match {
       case FileHolder(f) => f

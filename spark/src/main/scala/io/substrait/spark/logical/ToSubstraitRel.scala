@@ -606,10 +606,10 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
     command match {
       case InsertIntoHadoopFsRelationCommand(
             outputPath,
-            _,
-            _,
-            _,
-            _,
+            staticPartitions,
+            ifPartitionNotExists,
+            partitionColumns,
+            bucketSpec,
             fileFormat,
             options,
             child,
@@ -617,6 +617,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
             _,
             _,
             outputColumnNames) =>
+        if (mode != SaveMode.Append) {
+          throw new UnsupportedOperationException(
+            s"Filesystem writes only support SaveMode.Append, found $mode")
+        }
+        if (staticPartitions.nonEmpty || ifPartitionNotExists || partitionColumns.nonEmpty) {
+          throw new UnsupportedOperationException("Partitioned filesystem writes are not supported")
+        }
+        if (bucketSpec.nonEmpty) {
+          throw new UnsupportedOperationException("Bucketed filesystem writes are not supported")
+        }
         val file = FileOrFiles
           .builder()
           .fileFormat(convertFileFormat(fileFormat, options))
@@ -632,7 +642,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
           .input(visit(child))
           .operation(WriteOp.INSERT)
           .outputMode(OutputMode.UNSPECIFIED)
-          .createMode(createMode(mode))
+          .createMode(CreateMode.UNSPECIFIED)
           .tableSchema(outputSchema(child.output, outputColumnNames))
           .detail(FileHolder(file))
           .build()
