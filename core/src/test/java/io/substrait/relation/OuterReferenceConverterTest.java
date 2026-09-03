@@ -332,6 +332,74 @@ class OuterReferenceConverterTest extends TestBase {
     assertEquals(stepsOut, OuterReferenceConverter.toStepsOut(idBased));
   }
 
+  @Test
+  void outerReferenceUnderAWindowRelationIsConverted() {
+    // The correlated filter sits in the window relation's input rather than in its bounds, so the
+    // reference is reachable only once the rewrite descends into that input. Asserting on the
+    // id-based plan rather than on a round trip, which was an identity in both directions before.
+    SimpleExtension.WindowFunctionVariant declaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+
+    Rel correlatedFilter =
+        sb.filter(
+            input ->
+                sb.equal(
+                    sb.fieldReference(input, 0),
+                    FieldReference.newRootStructOuterReference(1, TypeCreator.REQUIRED.I64, 1)),
+            customerTableScan);
+    Rel window =
+        ConsistentPartitionWindow.builder()
+            .input(correlatedFilter)
+            .windowFunctions(
+                List.of(
+                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+                        .declaration(declaration)
+                        .arguments(List.of(sb.fieldReference(correlatedFilter, 0)))
+                        .outputType(TypeCreator.NULLABLE.I64)
+                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                        .invocation(Expression.AggregationInvocation.ALL)
+                        .lowerBound(WindowBound.UNBOUNDED)
+                        .upperBound(WindowBound.CURRENT_ROW)
+                        .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()))
+            .build();
+
+    Rel stepsOut =
+        sb.project(
+            input ->
+                List.of(
+                    sb.fieldReference(input, 0),
+                    sb.scalarSubquery(
+                        sb.project(
+                            input2 -> List.of(sb.fieldReference(input2, 1)),
+                            Remap.of(List.of(1)),
+                            window),
+                        TypeCreator.NULLABLE.I64)),
+            Remap.of(List.of(2, 3)),
+            orderTableScan);
+
+    Rel idBased = OuterReferenceConverter.toIdBased(stepsOut);
+
+    assertNotEquals(stepsOut, idBased);
+
+    Project outerProject = (Project) idBased;
+    assertEquals(1, outerProject.getInput().getRelAnchor().orElseThrow(AssertionError::new));
+
+    Expression.ScalarSubquery subquery =
+        (Expression.ScalarSubquery) outerProject.getExpressions().get(1);
+    Filter filter =
+        (Filter) ((ConsistentPartitionWindow) ((Project) subquery.input()).getInput()).getInput();
+    Expression.ScalarFunctionInvocation equal =
+        (Expression.ScalarFunctionInvocation) filter.getCondition();
+    FieldReference outerRef = (FieldReference) equal.arguments().get(1);
+    assertEquals(1, outerRef.outerReferenceRelReference().orElseThrow(AssertionError::new));
+    assertFalse(outerRef.outerReferenceStepsOut().isPresent());
+
+    assertEquals(stepsOut, OuterReferenceConverter.toStepsOut(idBased));
+  }
+
   /** A one-step correlated-subquery plan whose outer reference binds to {@code bindingScan}. */
   private Rel oneStepPlanBoundTo(Rel bindingScan) {
     return sb.project(
