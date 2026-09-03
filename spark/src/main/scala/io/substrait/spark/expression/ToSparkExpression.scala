@@ -148,10 +148,12 @@ class ToSparkExpression(
   override def visit(
       expr: SExpression.IntervalYearLiteral,
       context: EmptyVisitationContext): Literal = {
-    // Spark uses a single months Int as the "physical" type for YearMonthInterval. Both operands
-    // are int32 on the wire, so unlike the day-time case nothing widens the arithmetic and a large
-    // year count wraps a positive interval into a negative one; report it instead.
-    val months = Math.addExact(Math.multiplyExact(expr.years(), 12), expr.months())
+    // Spark uses a single months Int as the "physical" type for YearMonthInterval, and both
+    // components are int32, so the flattened total can outrun that carrier: a large year count
+    // used to wrap a positive interval into a negative one. Only the total is significant, so
+    // the check belongs on it rather than on the intermediate product.
+    val months =
+      Math.toIntExact(expr.years().toLong * Util.MONTHS_PER_YEAR + expr.months())
     Literal(months, ToSparkType.convert(expr.getType))
   }
 

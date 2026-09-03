@@ -308,17 +308,23 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
   }
 
   test("a year-month interval reports overflow instead of wrapping") {
-    // years and months are int32 on the wire and Spark's physical type is a months Int, so there
-    // is no Long operand to widen this the way the day-time case is widened. Far outside the
-    // spec's 10,000-year bound, but it used to turn a large positive interval into a negative one:
-    // 178,956,971 years came out as -2,147,483,644 months, and Int.MaxValue years as -12.
+    // years and months are both int32 and Spark's physical type is a months Int, so the flattened
+    // total can outrun the carrier: 178,956,971 years used to come out as -2,147,483,644 months,
+    // and Int.MinValue years as exactly 0 — a zero-length interval. This is the carrier's bound,
+    // not the spec's much tighter 10,000-year one, so it takes a producer already far past that.
     intercept[ArithmeticException](
       sparkLiteral(ExpressionCreator.intervalYear(false, 178956971, 0)))
     intercept[ArithmeticException](
-      sparkLiteral(ExpressionCreator.intervalYear(false, Int.MaxValue, 0)))
+      sparkLiteral(ExpressionCreator.intervalYear(false, 178956970, 8)))
+    intercept[ArithmeticException](
+      sparkLiteral(ExpressionCreator.intervalYear(false, Int.MinValue, 0)))
 
-    // The spec's maximum still converts, and the months carry through.
-    val atTheBound = sparkLiteral(ExpressionCreator.intervalYear(false, 10000, 0))
+    // Only the total is significant, so an intermediate past Int.MaxValue is not itself an error.
+    val mixedSigns = sparkLiteral(ExpressionCreator.intervalYear(false, 178956971, -12))
+    assert(mixedSigns.value === 2147483640)
+
+    // The spec's maximum still converts, and the months component carries through.
+    val atTheBound = sparkLiteral(ExpressionCreator.intervalYear(false, 9999, 12))
     assert(atTheBound.value === 120000)
     assert(atTheBound.dataType === YearMonthIntervalType.DEFAULT)
   }
