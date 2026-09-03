@@ -52,6 +52,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -61,11 +62,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -862,6 +866,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                 throw new UnsupportedOperationException(
                     "UPDATE cannot flatten a window projection");
               }
+              if (project.getProjects().stream().anyMatch(expr -> !isDeterministic(expr))) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot flatten a nondeterministic projection");
+              }
               sourceExpressions = resolveProjectedRefs(sourceExpressions, project);
               conditions = new ArrayList<>(resolveProjectedRefs(conditions, project));
               input = project.getInput();
@@ -879,7 +887,15 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             throw new UnsupportedOperationException(
                 "UPDATE requires a scan of its target table beneath projections and filters");
           }
-          Expression condition = toExpression(RexUtil.composeConjunction(rexBuilder, conditions));
+          if (conditions.size() > 1
+              && conditions.stream().anyMatch(expr -> !isDeterministic(expr))) {
+            throw new UnsupportedOperationException("UPDATE cannot merge nondeterministic filters");
+          }
+          Expression condition =
+              toExpression(
+                  conditions.size() == 1
+                      ? conditions.get(0)
+                      : RexUtil.composeConjunction(rexBuilder, conditions));
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
           List<String> allTableColumnNames = table.getRowType().getFieldNames();
@@ -936,6 +952,52 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         return projects.get(inputRef.getIndex());
       }
     }.apply(expressions);
+  }
+
+  private static boolean isDeterministic(RexNode expression) {
+    DeterminismChecker checker = new DeterminismChecker();
+    expression.accept(checker);
+    return checker.deterministic;
+  }
+
+  /** Includes subquery relations, which RexUtil.isDeterministic does not inspect. */
+  private static final class DeterminismChecker extends RexShuttle {
+    private boolean deterministic = true;
+
+    @Override
+    public RexNode visitCall(RexCall call) {
+      deterministic &= call.getOperator().isDeterministic();
+      return deterministic ? super.visitCall(call) : call;
+    }
+
+    @Override
+    public SqlAggFunction visitOverAggFunction(SqlAggFunction function) {
+      deterministic &= function.isDeterministic();
+      return function;
+    }
+
+    @Override
+    public RexNode visitSubQuery(RexSubQuery subQuery) {
+      new RelVisitor() {
+        @Override
+        public void visit(RelNode node, int ordinal, RelNode parent) {
+          if (!deterministic) {
+            return;
+          }
+          node.accept(DeterminismChecker.this);
+          if (node instanceof org.apache.calcite.rel.core.Aggregate) {
+            // Aggregate operators and their direct arguments are not visited by accept(RexShuttle).
+            for (AggregateCall call :
+                ((org.apache.calcite.rel.core.Aggregate) node).getAggCallList()) {
+              deterministic &= call.getAggregation().isDeterministic();
+              apply(call.rexList);
+            }
+          }
+          super.visit(node, ordinal, parent);
+        }
+      }.go(subQuery.rel);
+      return deterministic ? super.visitSubQuery(subQuery) : subQuery;
+    }
   }
 
   /**
