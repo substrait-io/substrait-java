@@ -1,6 +1,8 @@
 package io.substrait.isthmus.calcite.rel;
 
+import io.substrait.relation.AbstractWriteRel.CreateMode;
 import java.util.List;
+import java.util.Objects;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
@@ -13,30 +15,47 @@ public class CreateTable extends SingleRel {
 
   private final List<String> tableName;
   private final RelDataType tableSchema;
+  private final CreateMode createMode;
 
   private CreateTable(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       List<String> tableName,
       RelDataType tableSchema,
-      RelNode input) {
+      RelNode input,
+      CreateMode createMode) {
     super(cluster, traitSet, input);
     this.tableName = tableName;
     this.tableSchema = DdlSchemas.requireFilledBy(tableSchema, input, "table");
+    this.createMode = Objects.requireNonNull(createMode, "createMode");
   }
 
   /**
    * CreateTable Constructor, taking the row type of the input as the schema of the table to create.
+   * Retains the historical replace-if-exists behavior; use the overload with an explicit mode to
+   * choose another policy.
    *
    * @param tableName tablename components
    * @param input RelNode input
    */
   public CreateTable(List<String> tableName, RelNode input) {
-    this(input.getCluster(), input.getTraitSet(), tableName, input.getRowType(), input);
+    this(tableName, input, CreateMode.REPLACE_IF_EXISTS);
   }
 
   /**
-   * CreateTable Constructor.
+   * Creates a table with the input's schema and an explicit policy for an existing table.
+   *
+   * @param tableName table name components
+   * @param input the query filling the table
+   * @param createMode the policy when the target table already exists
+   */
+  public CreateTable(List<String> tableName, RelNode input, CreateMode createMode) {
+    this(input.getCluster(), input.getTraitSet(), tableName, input.getRowType(), input, createMode);
+  }
+
+  /**
+   * CreateTable Constructor. Retains the historical replace-if-exists behavior; use the overload
+   * with an explicit mode to choose another policy.
    *
    * @param tableName tablename components
    * @param tableSchema the schema of the table to create, which the input fills but need not name
@@ -44,7 +63,20 @@ public class CreateTable extends SingleRel {
    * @param input RelNode input
    */
   public CreateTable(List<String> tableName, RelDataType tableSchema, RelNode input) {
-    this(input.getCluster(), input.getTraitSet(), tableName, tableSchema, input);
+    this(tableName, tableSchema, input, CreateMode.REPLACE_IF_EXISTS);
+  }
+
+  /**
+   * Creates a table with a declared schema and an explicit policy for an existing table.
+   *
+   * @param tableName table name components
+   * @param tableSchema the declared schema of the table
+   * @param input the query filling the table
+   * @param createMode the policy when the target table already exists
+   */
+  public CreateTable(
+      List<String> tableName, RelDataType tableSchema, RelNode input, CreateMode createMode) {
+    this(input.getCluster(), input.getTraitSet(), tableName, tableSchema, input, createMode);
   }
 
   /**
@@ -68,7 +100,8 @@ public class CreateTable extends SingleRel {
   public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("tableName", getTableName())
-        .item("tableSchema", getTableSchema().getFullTypeString());
+        .item("tableSchema", getTableSchema().getFullTypeString())
+        .item("createMode", getCreateMode());
   }
 
   /**
@@ -85,7 +118,8 @@ public class CreateTable extends SingleRel {
       throw new IllegalArgumentException(
           "CreateTable requires exactly one input, but got " + inputs.size());
     }
-    return new CreateTable(getCluster(), traitSet, tableName, tableSchema, inputs.get(0));
+    return new CreateTable(
+        getCluster(), traitSet, tableName, tableSchema, inputs.get(0), createMode);
   }
 
   /**
@@ -106,5 +140,14 @@ public class CreateTable extends SingleRel {
    */
   public RelDataType getTableSchema() {
     return tableSchema;
+  }
+
+  /**
+   * Returns the policy to apply when the target table already exists.
+   *
+   * @return the creation mode
+   */
+  public CreateMode getCreateMode() {
+    return createMode;
   }
 }

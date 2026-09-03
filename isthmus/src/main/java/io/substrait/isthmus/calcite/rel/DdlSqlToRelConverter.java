@@ -1,5 +1,6 @@
 package io.substrait.isthmus.calcite.rel;
 
+import io.substrait.relation.AbstractWriteRel.CreateMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -92,18 +93,27 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
    *
    * @param sqlCreateTable the CREATE TABLE node
    * @return a {@link RelRoot} wrapping a synthetic {@code CreateTable} relational node
-   * @throws IllegalArgumentException if the statement is not a CTAS
+   * @throws IllegalArgumentException if the statement is not a CTAS or combines OR REPLACE and IF
+   *     NOT EXISTS
    */
   protected RelRoot handleCreateTable(final SqlCreateTable sqlCreateTable) {
     if (sqlCreateTable.query == null) {
       throw new IllegalArgumentException("Only create table as select statements are supported");
     }
+    if (sqlCreateTable.getReplace() && sqlCreateTable.ifNotExists) {
+      throw new IllegalArgumentException(
+          "CREATE TABLE cannot combine OR REPLACE and IF NOT EXISTS");
+    }
+    final CreateMode createMode =
+        sqlCreateTable.getReplace()
+            ? CreateMode.REPLACE_IF_EXISTS
+            : sqlCreateTable.ifNotExists ? CreateMode.IGNORE_IF_EXISTS : CreateMode.ERROR_IF_EXISTS;
     final RelNode input = converter.convertQuery(sqlCreateTable.query, true, true).rel;
     final RelDataType schema = declaredSchema(sqlCreateTable.columnList, input);
     return RelRoot.of(
         schema == null
-            ? new CreateTable(sqlCreateTable.name.names, input)
-            : new CreateTable(sqlCreateTable.name.names, schema, input),
+            ? new CreateTable(sqlCreateTable.name.names, input, createMode)
+            : new CreateTable(sqlCreateTable.name.names, schema, input, createMode),
         sqlCreateTable.getKind());
   }
 
