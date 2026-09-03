@@ -330,8 +330,8 @@ class DialectGenerator(
 object DialectGenerator
   extends DialectGenerator(
     SparkExtension.SparkScalarFunctions,
-    SparkExtension.SparkAggregateFunctions,
-    SparkExtension.SparkWindowFunctions) {
+    SparkExtension.StandardAggregateFunctions,
+    SparkExtension.StandardWindowFunctions) {
 
   def main(args: Array[String]) = {
     val yaml = generateYaml()

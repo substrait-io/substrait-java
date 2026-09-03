@@ -42,13 +42,13 @@ object SparkExtension {
     ret.toSeq
   }
 
-  lazy val SparkAggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant] =
+  lazy val StandardAggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant] =
     EXTENSION_COLLECTION.aggregateFunctions().asScala.toSeq
 
-  lazy val SparkWindowFunctions: Seq[SimpleExtension.WindowFunctionVariant] =
+  lazy val StandardWindowFunctions: Seq[SimpleExtension.WindowFunctionVariant] =
     EXTENSION_COLLECTION.windowFunctions().asScala.toSeq
 
-  val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(SparkAggregateFunctions)
+  val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(StandardAggregateFunctions)
 
-  val toWindowFunction: ToWindowFunction = ToWindowFunction(SparkWindowFunctions)
+  val toWindowFunction: ToWindowFunction = ToWindowFunction(StandardWindowFunctions)
 }

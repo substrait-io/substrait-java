@@ -46,9 +46,9 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
   private def generatorWith(extras: SimpleExtension.ExtensionCollection*): DialectGenerator =
     new DialectGenerator(
       SparkExtension.SparkScalarFunctions,
-      SparkExtension.SparkAggregateFunctions ++
+      SparkExtension.StandardAggregateFunctions ++
         extras.flatMap(_.aggregateFunctions().asScala.toSeq),
-      SparkExtension.SparkWindowFunctions
+      SparkExtension.StandardWindowFunctions
     )
 
   override def beforeAll(): Unit = {
@@ -65,14 +65,20 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     assertResult(java.util.List.of())(errors)
   }
 
-  test("generate validated YAML") {
-    val tempPathName = "build/tmp/test/dialect.yaml"
-    val tempFile = new File(tempPathName)
-    if (tempFile.exists()) {
+  test("the CLI writes the published dialect to the file it is given") {
+    // `main` creates the file before it opens a writer on it, so asserting that it exists passes
+    // whatever was written to it -- including nothing. Read the file back instead.
+    val tempFile = new File("build/tmp/test/dialect.yaml")
+    tempFile.getParentFile.mkdirs()
+    tempFile.delete()
+    try {
+      DialectGenerator.main(Array(tempFile.getPath))
+      val written = Source.fromFile(tempFile)
+      try assertResult(published)(written.mkString)
+      finally written.close()
+    } finally {
       tempFile.delete()
     }
-    DialectGenerator.main(Array(tempPathName))
-    assertResult(true)(tempFile.exists())
   }
 
   test("compare generated dialect") {
