@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Streams;
 import io.substrait.expression.Expression;
@@ -16,8 +17,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
+import org.apache.calcite.sql.dialect.SparkSqlDialect;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class AggregationFunctionsTest extends PlanTestBase {
@@ -132,6 +138,30 @@ class AggregationFunctionsTest extends PlanTestBase {
             input -> functions(input, aggFunction),
             numericTypesTable);
     assertFullRoundTrip(rel);
+  }
+
+  static Stream<Type> floatingPointTypes() {
+    return Stream.of(R.FP32, R.FP64, N.FP32, N.FP64);
+  }
+
+  @ParameterizedTest
+  @MethodSource("floatingPointTypes")
+  void floatingPointSum0UnparsesWithZeroFallback(Type inputType) {
+    NamedScan scan = sb.namedScan(List.of("t"), List.of("x"), List.of(inputType));
+    for (Aggregate.Measure measure :
+        List.of(sb.sum0(scan, 0), sb.sum0(sb.fieldReference(scan, 0)))) {
+      Aggregate rel =
+          Aggregate.builder().input(scan).addGroupings(sb.grouping()).addMeasures(measure).build();
+      for (SqlDialect dialect :
+          List.of(
+              CalciteSqlDialect.DEFAULT, PostgresqlSqlDialect.DEFAULT, SparkSqlDialect.DEFAULT)) {
+        String sql =
+            new SubstraitToSql(converterProvider)
+                .convert(sb.plan(sb.root(rel, List.of("result"))), dialect)
+                .get(0);
+        assertTrue(sql.contains("COALESCE(SUM("), sql);
+      }
+    }
   }
 
   @Test

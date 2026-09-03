@@ -1471,11 +1471,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing MIN
    */
   public Aggregate.Measure min(Expression expr) {
-    return singleArgumentArithmeticAggregate(
-        expr,
-        "min",
-        // min output is always nullable
-        TypeCreator.asNullable(expr.getType()));
+    return singleArgumentArithmeticAggregate(expr, "min");
   }
 
   /**
@@ -1496,11 +1492,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing MAX
    */
   public Aggregate.Measure max(Expression expr) {
-    return singleArgumentArithmeticAggregate(
-        expr,
-        "max",
-        // max output is always nullable
-        TypeCreator.asNullable(expr.getType()));
+    return singleArgumentArithmeticAggregate(expr, "max");
   }
 
   /**
@@ -1521,11 +1513,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing AVG
    */
   public Aggregate.Measure avg(Expression expr) {
-    return singleArgumentArithmeticAggregate(
-        expr,
-        "avg",
-        // avg output is always nullable
-        TypeCreator.asNullable(expr.getType()));
+    return singleArgumentArithmeticAggregate(expr, "avg");
   }
 
   /**
@@ -1546,11 +1534,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing SUM
    */
   public Aggregate.Measure sum(Expression expr) {
-    return singleArgumentArithmeticAggregate(
-        expr,
-        "sum",
-        // sum output is always nullable
-        TypeCreator.asNullable(expr.getType()));
+    return singleArgumentArithmeticAggregate(expr, "sum");
   }
 
   /**
@@ -1561,7 +1545,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing SUM0
    */
   public Aggregate.Measure sum0(Rel input, int field) {
-    return sum(fieldReference(input, field));
+    return sum0(fieldReference(input, field));
   }
 
   /**
@@ -1571,11 +1555,7 @@ public class SubstraitBuilder {
    * @return a new {@link Aggregate.Measure} representing SUM0
    */
   public Aggregate.Measure sum0(Expression expr) {
-    return singleArgumentArithmeticAggregate(
-        expr,
-        "sum0",
-        // sum0 output is always NOT NULL I64
-        R.I64);
+    return singleArgumentArithmeticAggregate(expr, "sum0");
   }
 
   /**
@@ -1766,7 +1746,7 @@ public class SubstraitBuilder {
   }
 
   private Aggregate.Measure singleArgumentArithmeticAggregate(
-      Expression expr, String functionName, Type outputType) {
+      Expression expr, String functionName) {
     String typeString = ToTypeString.apply(expr.getType());
     SimpleExtension.AggregateFunctionVariant declaration =
         extensions.getAggregateFunction(
@@ -1776,7 +1756,7 @@ public class SubstraitBuilder {
     return measure(
         AggregateFunctionInvocation.builder()
             .arguments(Arrays.asList(expr))
-            .outputType(outputType)
+            .outputType(declaration.resolveType(Arrays.asList(expr.getType())))
             .declaration(declaration)
             // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
             // as it does not allow decomposition. Use it as the default for now.
