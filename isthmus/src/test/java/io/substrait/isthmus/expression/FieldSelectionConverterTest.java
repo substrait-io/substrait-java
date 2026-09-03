@@ -123,6 +123,66 @@ class FieldSelectionConverterTest {
   }
 
   @ParameterizedTest
+  @MethodSource("nullOrInvalidIndexes")
+  void rejectsDiscardingThrowingArray(SqlOperator operator, Integer index) {
+    RexNode cast =
+        rexBuilder.makeAbstractCast(intType, rexBuilder.makeLiteral("not an integer"), false);
+    RexNode throwingArray = rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, cast);
+    RexNode nestedArray =
+        rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, throwingArray);
+    RexNode nestedSelection =
+        rexBuilder.makeCall(SqlStdOperatorTable.ITEM, nestedArray, integer(1));
+
+    for (RexNode input : List.of(throwingArray, nestedSelection)) {
+      RexNode call = rexBuilder.makeCall(operator, input, nullableIndex(index));
+      RexExecutable executable =
+          RexExecutorImpl.getExecutable(rexBuilder, List.of(call), typeFactory.builder().build());
+      executable.setDataContext(DataContexts.EMPTY);
+      assertThrows(NumberFormatException.class, executable::execute);
+      assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("nullOrInvalidIndexes")
+  void rejectsDiscardingNonliteralArray(SqlOperator operator, Integer index) {
+    RexNode text = rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR, 20), 0);
+    RexNode cast = rexBuilder.makeAbstractCast(intType, text, false);
+    RexNode array = rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, cast);
+    RexNode call = rexBuilder.makeCall(operator, array, nullableIndex(index));
+
+    assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+  }
+
+  @ParameterizedTest
+  @MethodSource("nullOrInvalidIndexes")
+  void literalAndColumnArraysCanBeDiscarded(SqlOperator operator, Integer index) {
+    RexNode column = rexBuilder.makeInputRef(array().getType(), 0);
+    for (RexNode input : List.of(array(), column)) {
+      Expression converted =
+          rexBuilder.makeCall(operator, input, nullableIndex(index)).accept(converter);
+      assertEquals(
+          TypeCreator.NULLABLE.I32,
+          assertInstanceOf(Expression.NullLiteral.class, converted).getType());
+    }
+  }
+
+  private static Stream<Arguments> nullOrInvalidIndexes() {
+    return Stream.of(
+        Arguments.of(SqlStdOperatorTable.ITEM, 0),
+        Arguments.of(SqlStdOperatorTable.ITEM, -1),
+        Arguments.of(SqlStdOperatorTable.ITEM, null),
+        Arguments.of(SqlLibraryOperators.SAFE_OFFSET, -1),
+        Arguments.of(SqlLibraryOperators.SAFE_OFFSET, null),
+        Arguments.of(SqlLibraryOperators.SAFE_ORDINAL, 0),
+        Arguments.of(SqlLibraryOperators.SAFE_ORDINAL, null));
+  }
+
+  private RexNode nullableIndex(Integer index) {
+    return index == null ? rexBuilder.makeNullLiteral(intType) : integer(index);
+  }
+
+  @ParameterizedTest
   @ValueSource(longs = {2147483649L, 4294967297L, Long.MAX_VALUE})
   void unrepresentableOffsetsAreRejected(long index) {
     RexNode call = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, array(), integer(index));
