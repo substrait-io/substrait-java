@@ -1214,7 +1214,8 @@ public class ProtoRelConverter {
         break;
       case CUSTOM_FUNCTION_REFERENCE:
         comparisonType =
-            ComparisonJoinKey.CustomComparison.of(comparison.getCustomFunctionReference());
+            ComparisonJoinKey.CustomComparison.of(
+                lookup.getScalarFunction(comparison.getCustomFunctionReference(), extensions));
         break;
       default:
         throw new IllegalArgumentException(
