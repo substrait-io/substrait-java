@@ -10,8 +10,6 @@ import java.util.stream.Collectors;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelRule;
-import org.apache.calcite.plan.hep.HepPlanner;
-import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -69,26 +67,6 @@ public class VirtualTableExpansionRule extends RelRule<VirtualTableExpansionRule
   @Override
   public void onMatch(RelOptRuleCall call) {
     call.transformTo(expand(call.rel(0)));
-  }
-
-  /**
-   * Expands every {@link VirtualTable} in the given tree, leaving the rest of it alone.
-   *
-   * <p>For a consumer that has to hand the tree to something knowing only Calcite's own relations:
-   * {@link org.apache.calcite.rel.rel2sql.RelToSqlConverter} has no case for a relation it does not
-   * know and throws an {@link AssertionError} naming it. Isthmus' own SQL generation does not need
-   * this -- {@link io.substrait.isthmus.sql.SubstraitRelToSqlConverter} has the case instead, which
-   * a tree pass cannot substitute for: a table inside a {@code RexSubQuery} is in no relation's
-   * inputs, so nothing walking them reaches it.
-   *
-   * @param relNode the tree to expand
-   * @return the tree with every virtual table expanded
-   */
-  public static RelNode expandAll(RelNode relNode) {
-    HepPlanner planner =
-        new HepPlanner(new HepProgramBuilder().addRuleInstance(instance()).build());
-    planner.setRoot(relNode);
-    return planner.findBestExp();
   }
 
   /**

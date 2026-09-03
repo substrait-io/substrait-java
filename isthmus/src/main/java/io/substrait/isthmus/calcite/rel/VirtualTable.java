@@ -175,7 +175,9 @@ public class VirtualTable extends AbstractRelNode {
       }
       RelDataType columnType = typeFactory.leastRestrictive(valueTypes);
       // Nothing in Calcite's type system unifies every pair -- a rewrite that leaves two rows with
-      // no common type keeps the declared one, and the constructor is left to report the row.
+      // no common type keeps the declared one, which then fits neither. The constructor checks the
+      // count and not the types, so the expansion is where that surfaces: Project.isValid with
+      // assertions on, and a projection whose declared type does not fit its expressions without.
       columnTypes.add(
           columnType == null ? rowType.getFieldList().get(column).getType() : columnType);
     }
