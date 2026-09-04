@@ -8,6 +8,7 @@ import io.substrait.TestBase;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
@@ -226,6 +227,28 @@ class SubstraitBuilderTest extends TestBase {
       assertNotNull(builder.or(b1, b2));
       assertNotNull(builder.not(b1));
       assertNotNull(builder.isNull(b1));
+    }
+
+    @Test
+    void testWindowFunctionWithOrdering() {
+      // The single shape the sorts-carrying overload exists for: a RANGE bound with a Preceding
+      // side, which requires exactly one ordering expression.
+      final NamedScan scan = createSimpleScan();
+      final Expression.WindowFunctionInvocation windowFn =
+          builder.windowFn(
+              DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+              "lead:any",
+              Type.I32.builder().nullable(false).build(),
+              Expression.AggregationPhase.INITIAL_TO_RESULT,
+              Expression.AggregationInvocation.ALL,
+              builder.sortFields(scan, 0),
+              Expression.WindowBoundsType.RANGE,
+              WindowBound.Preceding.of(builder.i32(5)),
+              WindowBound.CURRENT_ROW,
+              builder.fieldReference(scan, 0));
+
+      assertNotNull(windowFn);
+      assertEquals(1, windowFn.sort().size());
     }
   }
 
