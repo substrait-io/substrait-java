@@ -27,20 +27,21 @@ import java.util.OptionalInt;
  * type classes whose parameter is an integer to substitute: {@code DECIMAL<P,S>}, {@code
  * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
  * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
- * interval_compound<P>}. No standard extension returns a parameterized {@code fixedbinary} or
- * {@code interval_compound} -- those two are supported for symmetry, and pinned against
- * hand-written declarations rather than the catalog.
+ * interval_compound<P>}. No standard extension declares a parameterized {@code fixedbinary} or
+ * {@code interval_compound} at all, as an argument or as a return -- those two are supported for
+ * symmetry, and pinned against hand-written declarations rather than the catalog.
  *
- * <p>What still fails on the standard extension catalog is a return of {@code list<anyN>}, whose
- * parameter is a type to evaluate rather than an integer to substitute ({@code filter}, {@code
- * sort}, {@code transform}, {@code string_split}, {@code regexp_string_split}, {@code
- * regexp_match_substring_all}), and a multi-line return program -- the decimal variants of {@code
- * add}, {@code subtract}, {@code multiply}, {@code divide}, {@code modulus}, {@code ceil}, {@code
- * floor}, {@code round} and the {@code bitwise_*} family, together with {@code
- * assume_timezone:date_str_i8} and the {@code strptime_*} family. Among the standard aggregates,
- * {@code quantile} cannot be derived at all: its declared return {@code LIST?<any>} uses a plain
- * {@code any}, which carries no identity to bind. Both lists are pinned against the catalog by
- * {@code ParameterizedReturnTypeTest}.
+ * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
+ * into a container -- so an element parameter it would otherwise substitute, as in {@code
+ * list<varchar<L1>>}, is out of reach just as an element type to evaluate is. A multi-line return
+ * program still fails because evaluating one needs integer arithmetic over the bound parameters
+ * rather than substitution. And a plain {@code any} cannot be derived at all: unlike {@code any1}
+ * it names nothing, so there is no identity to bind.
+ *
+ * <p>Which shipped variants those cover is pinned by {@code ParameterizedReturnTypeTest} against
+ * the declarations the catalog ships, and deliberately not repeated here -- the catalog is owned
+ * upstream, so a list of names in this Javadoc would go stale on a {@code substrait-packaging} bump
+ * with nothing to catch it.
  */
 public class TypeExpressionEvaluator {
 
@@ -248,12 +249,13 @@ public class TypeExpressionEvaluator {
      * argument to a function returning a concrete type.
      *
      * @param declared the declared argument type
-     * @return {@code true} if the type is a list, map or struct declaration
+     * @return {@code true} if the type is a list, map, struct or function declaration
      */
     private boolean isContainer(ParameterizedType declared) {
       return declared instanceof ParameterizedType.ListType
           || declared instanceof ParameterizedType.Map
-          || declared instanceof ParameterizedType.Struct;
+          || declared instanceof ParameterizedType.Struct
+          || declared instanceof ParameterizedType.Func;
     }
 
     private void bindType(String name, Type actual) {

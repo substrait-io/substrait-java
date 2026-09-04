@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
+import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -86,11 +87,13 @@ class ParameterizedReturnTypeTest {
 
   @Test
   void aContainerDeclarationIsNotRefusedForABindingItNeverMakes() {
-    // Binding does not descend into a list declaration, so a `list<any1>` argument binds nothing.
-    // Both of these declare a concrete return and need no binding at all, so refusing the shape
-    // would reject calls that resolve today.
+    // Binding descends into none of the container declarations, so a `list<any1>` or a
+    // `func<any1 -> boolean?>` argument binds nothing. All four of these declare a concrete return
+    // and need no binding at all, so refusing the shape would reject calls that resolve today.
     assertEquals(R.I64, resolve("cardinality:list", R.list(R.I64)));
     assertEquals(N.I64, resolve("index_in:any_list", R.I64, R.list(R.I64)));
+    assertEquals(N.BOOLEAN, resolve("all_match:list_func", R.list(R.I64), N.BOOLEAN));
+    assertEquals(N.BOOLEAN, resolve("any_match:list_func", R.list(R.I64), N.BOOLEAN));
   }
 
   @Test
@@ -133,23 +136,9 @@ class ParameterizedReturnTypeTest {
    */
   @Test
   void theShapesTheCatalogDoesNotDeclareDeriveToo() {
-    assertEquals(
-        R.fixedBinary(9),
-        derive(
-            ParameterizedType.FixedBinary.builder().nullable(false).length(parameter("L1")).build(),
-            R.fixedBinary(9)));
-    assertEquals(
-        R.intervalCompound(3),
-        derive(
-            ParameterizedType.IntervalCompound.builder()
-                .nullable(false)
-                .precision(parameter("P"))
-                .build(),
-            R.intervalCompound(3)));
-  }
-
-  private static ParameterizedType.StringLiteral parameter(String name) {
-    return ParameterizedType.StringLiteral.builder().nullable(false).value(name).build();
+    ParameterizedTypeCreator P = ParameterizedTypeCreator.REQUIRED;
+    assertEquals(R.fixedBinary(9), derive(P.fixedBinaryE("L1"), R.fixedBinary(9)));
+    assertEquals(R.intervalCompound(3), derive(P.intervalCompoundE("P"), R.intervalCompound(3)));
   }
 
   /** Derives the return of a one-argument declaration whose argument has the return's own shape. */
@@ -167,10 +156,10 @@ class ParameterizedReturnTypeTest {
   }
 
   /**
-   * The two return shapes the evaluator does not derive, pinned by the variants that carry them so
-   * that the list in {@link TypeExpressionEvaluator}'s Javadoc cannot go stale on its own. A
-   * parameter that is a type to evaluate rather than an integer to substitute is the first; a
-   * multi-line return program is the second.
+   * The census of what the evaluator does not derive: a {@code list} return is the first shape, a
+   * multi-line return program the second. {@link TypeExpressionEvaluator}'s Javadoc describes those
+   * shapes and points here rather than naming variants, so this test is the only place a {@code
+   * substrait-packaging} bump can make the two disagree.
    */
   @Test
   void theReturnShapesThatAreNotDerivedYet() {
@@ -203,6 +192,15 @@ class ParameterizedReturnTypeTest {
             "strptime_timestamp:str_str_str_i8",
             "subtract:dec_dec"),
         variantsReturning(TypeExpression.ReturnProgram.class));
+
+    // The lists above pin which variants carry each shape; these pin that the shapes actually fail,
+    // so making one derivable cannot leave the census passing and the Javadoc stale.
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> resolve("add:dec_dec", R.decimal(10, 2), R.decimal(10, 2)));
   }
 
   private static List<String> variantsReturning(Class<?> returnShape) {
