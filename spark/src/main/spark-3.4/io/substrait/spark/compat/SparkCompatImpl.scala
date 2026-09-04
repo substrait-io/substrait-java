@@ -8,6 +8,8 @@ import io.substrait.relation
 
 class SparkCompatImpl extends SparkCompat {
 
+  override def supportsCaseInsensitivePartitionOverlap: Boolean = false
+
   override def createLogicalRelation(
       relation: HadoopFsRelation,
       output: Seq[AttributeReference],
