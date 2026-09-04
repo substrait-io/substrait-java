@@ -61,12 +61,7 @@ class RelCopyOnWriteVisitorTest extends TestBase {
                     .upperBound(upper)
                     .boundsType(Expression.WindowBoundsType.RANGE)
                     .build()))
-        .sorts(
-            Arrays.asList(
-                Expression.SortField.builder()
-                    .expr(sb.fieldReference(input, 0))
-                    .direction(Expression.SortDirection.ASC_NULLS_FIRST)
-                    .build()))
+        .sorts(sb.sortFields(input, 0))
         .build();
   }
 
