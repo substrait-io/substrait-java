@@ -23,15 +23,25 @@ import java.util.OptionalInt;
  * UnsupportedOperationException}. The evaluator never falls back to a caller-supplied type: an
  * unresolved expression is an error, not a default.
  *
- * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}) and parameterized
- * decimals ({@code DECIMAL<P,S>}). What actually fails on the standard extension catalog is the
- * other parameterized type classes — {@code varchar<L1>}, {@code fixedchar<L1>}, {@code
- * precision_time<P>}, {@code precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code
- * interval_day<P>}, {@code list<anyN>}, parameterized structs — and multi-line return programs;
- * {@code concat}, {@code concat_ws}, {@code assume_timezone} and the {@code strptime_*} family are
- * all rejected today. Among the standard aggregates, {@code quantile} is the one whose output type
- * cannot be derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
- * carries no identity to bind (spec v0.99.0).
+ * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}), and the parameterized
+ * type classes whose parameter is an integer to substitute: {@code DECIMAL<P,S>}, {@code
+ * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
+ * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
+ * interval_compound<P>}. No standard extension declares a parameterized {@code fixedbinary} or
+ * {@code interval_compound} at all, as an argument or as a return -- those two are supported for
+ * symmetry, and pinned against hand-written declarations rather than the catalog.
+ *
+ * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
+ * into a container -- so an element parameter it would otherwise substitute, as in {@code
+ * list<varchar<L1>>}, is out of reach just as an element type to evaluate is. A multi-line return
+ * program still fails because evaluating one needs integer arithmetic over the bound parameters
+ * rather than substitution. And a plain {@code any} cannot be derived at all: unlike {@code any1}
+ * it names nothing, so there is no identity to bind.
+ *
+ * <p>Which shipped variants those cover is pinned by {@code ParameterizedReturnTypeTest} against
+ * the declarations the catalog ships, and deliberately not repeated here -- the catalog is owned
+ * upstream, so a list of names in this Javadoc would go stale on a {@code substrait-packaging} bump
+ * with nothing to catch it.
  */
 public class TypeExpressionEvaluator {
 
@@ -173,7 +183,79 @@ public class TypeExpressionEvaluator {
         Type.Decimal actualDecimal = (Type.Decimal) actual;
         bindInteger(declaredDecimal.precision().value(), actualDecimal.precision(), bindNames);
         bindInteger(declaredDecimal.scale().value(), actualDecimal.scale(), bindNames);
+      } else if (declared instanceof ParameterizedType.FixedChar
+          && actual instanceof Type.FixedChar) {
+        bindInteger(
+            ((ParameterizedType.FixedChar) declared).length().value(),
+            ((Type.FixedChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.VarChar && actual instanceof Type.VarChar) {
+        bindInteger(
+            ((ParameterizedType.VarChar) declared).length().value(),
+            ((Type.VarChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.FixedBinary
+          && actual instanceof Type.FixedBinary) {
+        bindInteger(
+            ((ParameterizedType.FixedBinary) declared).length().value(),
+            ((Type.FixedBinary) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTime
+          && actual instanceof Type.PrecisionTime) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTime) declared).precision().value(),
+            ((Type.PrecisionTime) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestamp
+          && actual instanceof Type.PrecisionTimestamp) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestamp) declared).precision().value(),
+            ((Type.PrecisionTimestamp) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestampTZ
+          && actual instanceof Type.PrecisionTimestampTZ) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestampTZ) declared).precision().value(),
+            ((Type.PrecisionTimestampTZ) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalDay
+          && actual instanceof Type.IntervalDay) {
+        bindInteger(
+            ((ParameterizedType.IntervalDay) declared).precision().value(),
+            ((Type.IntervalDay) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalCompound
+          && actual instanceof Type.IntervalCompound) {
+        bindInteger(
+            ((ParameterizedType.IntervalCompound) declared).precision().value(),
+            ((Type.IntervalCompound) actual).precision(),
+            bindNames);
+      } else if (!(declared instanceof Type) && !isContainer(declared)) {
+        // A shape one of the arms above should have taken: the declaration carries a parameter and
+        // the actual type is not the class that would bind it. Binding nothing here would enforce
+        // the shared-parameter rule for some calls and skip it for others.
+        throw new UnsupportedOperationException(
+            String.format(
+                "Cannot bind parameters from declared argument type %s to actual type %s",
+                declared, actual));
       }
+    }
+
+    /**
+     * Whether the declared type holds other types rather than an integer parameter. Binding does
+     * not descend into these, so their parameters bind nothing and a mismatch cannot be told from a
+     * shape this method simply does not reach yet -- unlike the classes above, refusing here would
+     * reject declarations that resolve today without binding anything, such as a {@code list<any1>}
+     * argument to a function returning a concrete type.
+     *
+     * @param declared the declared argument type
+     * @return {@code true} if the type is a list, map, struct or function declaration
+     */
+    private boolean isContainer(ParameterizedType declared) {
+      return declared instanceof ParameterizedType.ListType
+          || declared instanceof ParameterizedType.Map
+          || declared instanceof ParameterizedType.Struct
+          || declared instanceof ParameterizedType.Func;
     }
 
     private void bindType(String name, Type actual) {
@@ -243,6 +325,53 @@ public class TypeExpressionEvaluator {
       int precision = resolveInteger(decimal.precision().value());
       int scale = resolveInteger(decimal.scale().value());
       return TypeCreator.of(decimal.nullable()).decimal(precision, scale);
+    }
+
+    @Override
+    public Type visit(ParameterizedType.FixedChar fixedChar) {
+      return TypeCreator.of(fixedChar.nullable())
+          .fixedChar(resolveInteger(fixedChar.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.VarChar varChar) {
+      return TypeCreator.of(varChar.nullable()).varChar(resolveInteger(varChar.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.FixedBinary fixedBinary) {
+      return TypeCreator.of(fixedBinary.nullable())
+          .fixedBinary(resolveInteger(fixedBinary.length().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTime precisionTime) {
+      return TypeCreator.of(precisionTime.nullable())
+          .precisionTime(resolveInteger(precisionTime.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestamp precisionTimestamp) {
+      return TypeCreator.of(precisionTimestamp.nullable())
+          .precisionTimestamp(resolveInteger(precisionTimestamp.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestampTZ precisionTimestampTZ) {
+      return TypeCreator.of(precisionTimestampTZ.nullable())
+          .precisionTimestampTZ(resolveInteger(precisionTimestampTZ.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalDay intervalDay) {
+      return TypeCreator.of(intervalDay.nullable())
+          .intervalDay(resolveInteger(intervalDay.precision().value()));
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalCompound intervalCompound) {
+      return TypeCreator.of(intervalCompound.nullable())
+          .intervalCompound(resolveInteger(intervalCompound.precision().value()));
     }
 
     @Override
