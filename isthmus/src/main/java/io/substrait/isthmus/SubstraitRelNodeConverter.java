@@ -204,7 +204,20 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
+    node = applyFilter(node, namedScan.getFilter(), context);
     return applyRelCommon(node, namedScan);
+  }
+
+  private RelNode applyFilter(RelNode input, Optional<Expression> filter, Context context) {
+    if (filter.isEmpty()) {
+      return input;
+    }
+    // Embedded predicates use the operator's direct row, before its emit mapping. This is an
+    // internal input, not another anchored Substrait relation; enclosing scopes still own any
+    // outer references used by the predicate.
+    context.enterScope(AnchoredInput.of(Optional.empty(), input.getRowType()));
+    RexNode condition = filter.get().accept(expressionRexConverter, context);
+    return relBuilder.push(input).filter(context.exitScope(), condition).build();
   }
 
   @Override
@@ -256,6 +269,7 @@ public class SubstraitRelNodeConverter
     JoinRelType joinType = asJoinRelType(join);
     RelNode node =
         relBuilder.push(left).push(right).join(joinType, condition, context.exitScope()).build();
+    node = applyFilter(node, join.getPostJoinFilter(), context);
     return applyRelCommon(node, join, left, right);
   }
 
@@ -921,7 +935,10 @@ public class SubstraitRelNodeConverter
         tuplesBuilder.add(tupleBuilder.build());
       }
       return applyRelCommon(
-          LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+          applyFilter(
+              LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+              virtualTableScan.getFilter(),
+              context),
           virtualTableScan);
     } else {
       // A row that does not fit a LogicalValues tuple keeps its expressions, in a relation of our
@@ -930,7 +947,11 @@ public class SubstraitRelNodeConverter
       // consumer whose planner only knows Calcite's own relations can expand it with
       // VirtualTableExpansionRule.
       return applyRelCommon(
-          VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows), virtualTableScan);
+          applyFilter(
+              VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows),
+              virtualTableScan.getFilter(),
+              context),
+          virtualTableScan);
     }
   }
 
