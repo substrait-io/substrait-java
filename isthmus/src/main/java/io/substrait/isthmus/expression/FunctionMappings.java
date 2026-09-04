@@ -76,6 +76,10 @@ public class FunctionMappings {
    * Substrait declaration says {@code fixedchar<L1>}. Its name also collides with the Spark library
    * operator Calcite likewise calls {@code REVERSE}, which leaves neither candidate reachable once
    * both libraries are enabled. Isthmus defines its own to keep the declared return and the name.
+   *
+   * <p>Calcite's Enumerable convention cannot execute this operator because it has no {@code
+   * RexImpTable} implementor, unlike the library operator it replaces. It is used to preserve
+   * conversion semantics and operator identity.
    */
   public static final SqlFunction REVERSE =
       SqlBasicFunction.create(
