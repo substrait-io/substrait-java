@@ -221,7 +221,9 @@ public class RelProtoConverter
                   public io.substrait.proto.ComparisonJoinKey.ComparisonType visit(
                       ComparisonJoinKey.CustomComparison customComparison) {
                     return io.substrait.proto.ComparisonJoinKey.ComparisonType.newBuilder()
-                        .setCustomFunctionReference(customComparison.getCustomFunctionReference())
+                        .setCustomFunctionReference(
+                            extensionCollector.getFunctionReference(
+                                customComparison.getDeclaration()))
                         .build();
                   }
                 });
