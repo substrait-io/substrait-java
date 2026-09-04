@@ -156,6 +156,13 @@ tasks {
   test {
     useJUnitPlatform { includeEngines("scalatest") }
 
+    // DialectSuite reads the published dialect, so a change to it has to invalidate the tests.
+    // Only the content matters, so ignore the path and keep the task cacheable across checkouts.
+    inputs
+      .file("../spark_dialect.yaml")
+      .withPropertyName("publishedDialect")
+      .withPathSensitivity(PathSensitivity.NONE)
+
     // Set system properties for variant identification
     systemProperty("spark.version", sparkVersion)
     systemProperty("scala.version", scalaVersion)
