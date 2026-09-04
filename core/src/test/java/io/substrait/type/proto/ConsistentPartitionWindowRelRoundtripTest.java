@@ -355,6 +355,35 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
   }
 
   @Test
+  void rangePrecedingWithTwoOrderingExpressionsOnAnInvocationIsRejected() {
+    SimpleExtension.WindowFunctionVariant declaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    Expression.SortField sort =
+        Expression.SortField.builder()
+            .expr(sb.i64(1))
+            .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            Expression.WindowFunctionInvocation.builder()
+                .declaration(declaration)
+                .arguments(Collections.emptyList())
+                .partitionBy(Collections.emptyList())
+                .sort(Arrays.asList(sort, sort))
+                .outputType(R.I64)
+                .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                .invocation(Expression.AggregationInvocation.ALL)
+                .lowerBound(WindowBound.Preceding.of(5))
+                .upperBound(WindowBound.CURRENT_ROW)
+                .boundsType(Expression.WindowBoundsType.RANGE)
+                .build());
+  }
+
+  @Test
   void boundsTypeUnspecifiedWithUnboundedBoundsIsAccepted() {
     SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
         extensions.getWindowFunction(
