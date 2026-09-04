@@ -72,15 +72,17 @@ public interface WindowBound {
    * @param lowerBound the window's lower bound
    * @param upperBound the window's upper bound
    * @param sorts the window's ordering expressions
-   * @throws IllegalArgumentException if {@code boundsType} is {@code RANGE}, either bound is {@link
-   *     Preceding} or {@link Following}, and {@code sorts} does not contain exactly one ordering
-   *     expression, or that expression uses {@code SORT_DIRECTION_CLUSTERED}
+   * @param function identifies the window function being validated, for the exception message
+   * @throws IllegalArgumentException if {@code boundsType} is {@code RANGE} and either bound is
+   *     {@link Preceding} or {@link Following}, and {@code sorts} does not hold exactly one
+   *     ordering expression whose direction is not {@code SORT_DIRECTION_CLUSTERED}
    */
   static void checkRangeOrdering(
       Expression.WindowBoundsType boundsType,
       WindowBound lowerBound,
       WindowBound upperBound,
-      List<Expression.SortField> sorts) {
+      List<Expression.SortField> sorts,
+      String function) {
     boolean needsSingleOrdering =
         boundsType == Expression.WindowBoundsType.RANGE
             && (lowerBound instanceof Preceding
@@ -92,13 +94,15 @@ public interface WindowBound {
     }
     if (sorts.size() != 1) {
       throw new IllegalArgumentException(
-          "a RANGE bound with a Preceding or Following side requires exactly one ordering"
+          function
+              + ": a RANGE bound with a Preceding or Following side requires exactly one ordering"
               + " expression, but found "
               + sorts.size());
     }
     if (sorts.get(0).direction() == Expression.SortDirection.CLUSTERED) {
       throw new IllegalArgumentException(
-          "a RANGE bound with a Preceding or Following side cannot use"
+          function
+              + ": a RANGE bound with a Preceding or Following side cannot use"
               + " SORT_DIRECTION_CLUSTERED for its ordering expression");
     }
   }
