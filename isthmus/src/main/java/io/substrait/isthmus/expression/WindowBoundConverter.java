@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.WindowBound;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -96,7 +97,7 @@ public class WindowBoundConverter {
                                 "RANGE window offset "
                                     + value.get()
                                     + " does not fit the ordering expression's type "
-                                    + type)))
+                                    + type.accept(new StringTypeVisitor()))))
         .orElse(offset);
   }
 
