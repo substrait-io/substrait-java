@@ -17,7 +17,8 @@ import org.apache.calcite.rex.RexWindowBound;
  * Utility for converting Calcite {@link RexWindowBound} to Substrait {@link WindowBound}.
  *
  * <p>Supports {@code CURRENT ROW}, {@code UNBOUNDED}, and {@code PRECEDING}/{@code FOLLOWING}
- * bounds with an arbitrary offset expression.
+ * bounds with an arbitrary offset expression. A RANGE bound's integral literal offset must match
+ * the ordering expression's exact type.
  */
 public class WindowBoundConverter {
 
