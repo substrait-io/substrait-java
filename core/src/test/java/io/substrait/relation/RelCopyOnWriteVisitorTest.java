@@ -5,16 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.util.EmptyVisitationContext;
 import io.substrait.utils.RelSamples;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class RelCopyOnWriteVisitorTest extends TestBase {
@@ -169,5 +172,54 @@ class RelCopyOnWriteVisitorTest extends TestBase {
                   rel.accept(renameScans, EmptyVisitationContext.INSTANCE).isPresent(),
                   type.getSimpleName());
             });
+  }
+
+  /**
+   * The sweep above exercises only the input branch of each guard: a rewrite that reaches an
+   * expression and leaves the input alone has to come back too, which is the second half of this
+   * fix. The relations whose samples carry a field reference are pinned by name, so a relation
+   * whose visit computes an expression and then decides from its input drops out of the set rather
+   * than passing quietly -- {@code MultiBucketExchange} does exactly that on the base.
+   */
+  @Test
+  void everyRelationCarryingAnExpressionPropagatesARewriteInIt() {
+    List<Class<?>> notVisited = Arrays.asList(Expand.class, ExtensionWrite.class);
+    RelCopyOnWriteVisitor<RuntimeException> markEveryReference =
+        new RelCopyOnWriteVisitor<>(
+            relVisitor ->
+                new ExpressionCopyOnWriteVisitor<RuntimeException>(relVisitor) {
+                  @Override
+                  public Optional<Expression> visit(
+                      FieldReference reference, EmptyVisitationContext context) {
+                    return Optional.of(reference);
+                  }
+                });
+
+    List<String> rewritten = new ArrayList<>();
+    new RelSamples(sb, extensions)
+        .samples()
+        .forEach(
+            (type, rel) -> {
+              if (rel.getInputs().isEmpty() || notVisited.contains(type)) {
+                return;
+              }
+              if (rel.accept(markEveryReference, EmptyVisitationContext.INSTANCE).isPresent()) {
+                rewritten.add(type.getSimpleName());
+              }
+            });
+
+    assertEquals(
+        Arrays.asList(
+            "Aggregate",
+            "ConsistentPartitionWindow",
+            "Filter",
+            "Join",
+            "MultiBucketExchange",
+            "NestedLoopJoin",
+            "Project",
+            "SingleBucketExchange",
+            "Sort",
+            "TopN"),
+        rewritten.stream().sorted().collect(Collectors.toList()));
   }
 }
