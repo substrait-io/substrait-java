@@ -23,6 +23,7 @@ object Util {
 
   val SECONDS_PER_DAY: Long = 24 * 60 * 60
   val MICROS_PER_SECOND: Long = 1000 * 1000
+  val MONTHS_PER_YEAR: Long = 12
   val MICROSECOND_PRECISION = 6 // for PrecisionTimestamp(TZ) and IntervalDay types
 
   /** Indexed by exponent, which [[toMicroseconds]] bounds to 0..MICROSECOND_PRECISION. */
