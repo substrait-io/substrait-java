@@ -217,7 +217,7 @@ public class TypeConverter {
         return creator.list(toSubstrait(type.getComponentType(), names));
       default:
         throw new UnsupportedOperationException(
-            String.format("Unable to convert the type " + type.toString()));
+            String.format("Unable to convert the type %s", type));
     }
   }
 
