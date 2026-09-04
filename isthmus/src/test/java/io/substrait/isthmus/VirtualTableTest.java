@@ -175,6 +175,17 @@ class VirtualTableTest extends PlanTestBase {
     assertEquals(
         SqlTypeName.BIGINT,
         rewritten.getRowType().getFieldList().get(0).getType().getSqlTypeName());
+    // The widened column fits every row, but only the row the shuttle retyped carries it, so the
+    // way back refuses on the other one -- which is what the rebuilt type costs.
+    UnsupportedOperationException e =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(rewritten, converterProvider));
+    assertEquals(
+        "A virtual table's value *(6, 2) converts to I32{nullable=false} where its column is"
+            + " declared I64{nullable=false}: isthmus cannot convert a value that does not carry"
+            + " its column's type",
+        e.getMessage());
   }
 
   /**
