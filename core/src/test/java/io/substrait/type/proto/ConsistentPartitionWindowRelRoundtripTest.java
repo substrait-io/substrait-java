@@ -315,16 +315,7 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                         .upperBound(WindowBound.CURRENT_ROW)
                         .boundsType(Expression.WindowBoundsType.RANGE)
                         .build()))
-            .sorts(
-                Arrays.asList(
-                    Expression.SortField.builder()
-                        .expr(sb.fieldReference(input, 0))
-                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
-                        .build(),
-                    Expression.SortField.builder()
-                        .expr(sb.fieldReference(input, 1))
-                        .direction(Expression.SortDirection.ASC_NULLS_FIRST)
-                        .build()));
+            .sorts(sb.sortFields(input, 0, 1));
 
     assertThrows(IllegalArgumentException.class, relBuilder::build);
   }
