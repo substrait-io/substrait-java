@@ -152,8 +152,7 @@ class ToSparkExpression(
     // components are int32, so the flattened total can outrun that carrier: a large year count
     // used to wrap a positive interval into a negative one. Only the total is significant, so
     // the check belongs on it rather than on the intermediate product.
-    val months =
-      Math.toIntExact(expr.years().toLong * Util.MONTHS_PER_YEAR + expr.months())
+    val months = Math.toIntExact(expr.years() * Util.MONTHS_PER_YEAR + expr.months())
     Literal(months, ToSparkType.convert(expr.getType))
   }
 
