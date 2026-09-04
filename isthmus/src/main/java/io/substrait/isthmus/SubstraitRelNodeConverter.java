@@ -771,8 +771,7 @@ public class SubstraitRelNodeConverter
     context.enterScope(AnchoredInput.of(update.getRelAnchor(), relBuilder.peek().getRowType()));
     RexNode condition = update.getCondition().accept(expressionRexConverter, context);
 
-    NamedStruct tableSchema = update.getTableSchema();
-    List<String> fieldNames = tableSchema.names();
+    List<String> fieldNames = toRowType(update.getTableSchema()).getFieldNames();
 
     List<String> updateColumnList = new ArrayList<>();
     List<RexNode> sourceExpressionList = new ArrayList<>();
@@ -1061,10 +1060,10 @@ public class SubstraitRelNodeConverter
   }
 
   /**
-   * Converts the schema a DDL relation declares into the row type that describes it.
+   * Converts a declared schema into the row type that describes it.
    *
    * @param schema the declared schema, whose names are one per field at every level of the struct
-   * @return the row type of the object the statement creates
+   * @return the row type with field names at their corresponding nesting levels
    */
   private RelDataType toRowType(NamedStruct schema) {
     return typeConverter.toCalcite(typeFactory, schema.struct(), schema.names());
