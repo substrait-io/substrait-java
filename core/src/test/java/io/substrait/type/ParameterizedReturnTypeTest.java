@@ -131,8 +131,8 @@ class ParameterizedReturnTypeTest {
 
   /**
    * fixedbinary and interval_compound are the two parameterized shapes no standard extension
-   * declares as a return, so they are pinned against a hand-written declaration instead of the
-   * catalog.
+   * declares at all, as an argument or as a return, so they are pinned against a hand-written
+   * declaration instead of the catalog.
    */
   @Test
   void theShapesTheCatalogDoesNotDeclareDeriveToo() {
