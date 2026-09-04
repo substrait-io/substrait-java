@@ -168,9 +168,8 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Preceding} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
-     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
-     * {@link #of(Expression)} there.
+     * Creates a {@link Preceding} bound from a literal {@code i64} row offset. Valid for ROWS, or
+     * for RANGE over an {@code i64} ordering expression; use {@link #of(Expression)} otherwise.
      *
      * @param offset the row offset preceding the current row
      * @return the preceding bound
@@ -206,9 +205,8 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Following} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
-     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
-     * {@link #of(Expression)} there.
+     * Creates a {@link Following} bound from a literal {@code i64} row offset. Valid for ROWS, or
+     * for RANGE over an {@code i64} ordering expression; use {@link #of(Expression)} otherwise.
      *
      * @param offset the row offset following the current row
      * @return the following bound

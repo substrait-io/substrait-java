@@ -1990,7 +1990,9 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a window function invocation with specified arguments and window bounds.
+   * Creates a window function invocation with specified arguments and window bounds. Supplies no
+   * ordering expressions, so a RANGE bound with a Preceding or Following side is rejected outright;
+   * use the {@code sort}-carrying overload for that.
    *
    * @param urn the URN of the extension containing the function
    * @param key the function key (name and signature)
