@@ -72,7 +72,7 @@ class RelCopyOnWriteVisitorTest extends TestBase {
 
   @Test
   void consistentPartitionWindowBoundOffsetsAreRewritten() {
-    Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
+    Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I32));
     ConsistentPartitionWindow window =
         windowOver(input, WindowBound.Preceding.of(sb.i32(5)), WindowBound.Following.of(sb.i32(7)));
 
