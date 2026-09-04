@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import io.substrait.isthmus.calcite.rel.VirtualTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Calc;
@@ -61,6 +62,18 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
    */
   public OUTPUT visit(Values values) throws EXCEPTION {
     return visitOther(values);
+  }
+
+  /**
+   * Visits a {@link VirtualTable} node, the relation isthmus converts a virtual table whose rows
+   * are not all literals into.
+   *
+   * @param virtualTable the virtual table node
+   * @return the result of visiting this node
+   * @throws EXCEPTION if the visit fails
+   */
+  public OUTPUT visit(VirtualTable virtualTable) throws EXCEPTION {
+    return visitOther(virtualTable);
   }
 
   /**
@@ -261,6 +274,8 @@ public abstract class RelNodeVisitor<OUTPUT, EXCEPTION extends Throwable> {
       return this.visit((Aggregate) node);
     } else if (node instanceof TableModify) {
       return this.visit((TableModify) node);
+    } else if (node instanceof VirtualTable) {
+      return this.visit((VirtualTable) node);
     } else {
       return this.visitOther(node);
     }

@@ -8,6 +8,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.calcite.rel.CreateTable;
 import io.substrait.isthmus.calcite.rel.CreateView;
+import io.substrait.isthmus.calcite.rel.VirtualTable;
 import io.substrait.isthmus.expression.AggregateFunctionConverter;
 import io.substrait.isthmus.expression.LiteralConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
@@ -61,6 +62,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
@@ -967,6 +969,53 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .operation(AbstractDdlRel.DdlOp.CREATE)
         .object(AbstractDdlRel.DdlObject.VIEW)
         .names(createView.getViewName())
+        .build();
+  }
+
+  /**
+   * Converts the isthmus {@link VirtualTable}, which is what a virtual table whose rows are not all
+   * literals converts to.
+   *
+   * @param virtualTable Calcite virtual table
+   * @return Substrait virtual table scan
+   */
+  @Override
+  public Rel visit(VirtualTable virtualTable) {
+    // At the row type's field types rather than the values' own, as visit(Values) does: a literal
+    // narrower than its column -- Calcite infers one for a tuple value, and pushes a struct's
+    // nullability down into its fields -- would otherwise disagree with the schema built from the
+    // same row type, and VirtualTableScan rejects the relation on that.
+    List<RelDataTypeField> rowFields = virtualTable.getRowType().getFieldList();
+    LiteralConverter literalConverter = new LiteralConverter(typeConverter);
+    List<Expression.NestedStruct> rows = new ArrayList<>(virtualTable.getRows().size());
+    for (List<RexNode> row : virtualTable.getRows()) {
+      List<Expression> fields = new ArrayList<>(row.size());
+      for (int column = 0; column < row.size(); column++) {
+        RexNode value = row.get(column);
+        RelDataType declaredType = rowFields.get(column).getType();
+        Expression converted =
+            value instanceof RexLiteral
+                ? literalConverter.convert((RexLiteral) value, declaredType)
+                : toExpression(value);
+        // A value that is not a literal is converted from the expressions it is built of and
+        // takes its type from them, which the declared type cannot be put back on: casting at it
+        // would put an expression in the output the input did not have. Refused here rather than
+        // left to VirtualTableScan, whose check compares the two types without promoting either.
+        Type declared = typeConverter.toSubstrait(declaredType);
+        if (!converted.getType().equals(declared)) {
+          throw new UnsupportedOperationException(
+              String.format(
+                  "A virtual table's value %s converts to %s where its column is declared %s: "
+                      + "isthmus cannot convert a value that does not carry its column's type",
+                  value, converted.getType(), declared));
+        }
+        fields.add(converted);
+      }
+      rows.add(ExpressionCreator.nestedStruct(false, fields));
+    }
+    return VirtualTableScan.builder()
+        .initialSchema(typeConverter.toNamedStruct(virtualTable.getRowType()))
+        .addAllRows(rows)
         .build();
   }
 
