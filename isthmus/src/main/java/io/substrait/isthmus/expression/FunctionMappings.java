@@ -71,6 +71,17 @@ public class FunctionMappings {
           OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER));
 
   /**
+   * The {@code REVERSE(string)} function. Calcite's own is {@link SqlLibraryOperators#REVERSE},
+   * whose {@code ARG0_NULLABLE_VARYING} return widens a {@code CHAR} to {@code VARCHAR}, where the
+   * Substrait declaration says {@code fixedchar<L1>}. Its name also collides with the Spark library
+   * operator Calcite likewise calls {@code REVERSE}, which leaves neither candidate reachable once
+   * both libraries are enabled. Isthmus defines its own to keep the declared return and the name.
+   */
+  public static final SqlFunction REVERSE =
+      SqlBasicFunction.create(
+          "REVERSE", ReturnTypes.ARG0_NULLABLE, OperandTypes.CHARACTER, SqlFunctionCategory.STRING);
+
+  /**
    * The Substrait datetime subtraction function.
    *
    * <p>Calcite's datetime subtraction operators either infer their return type from a third
@@ -133,7 +144,7 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.LOWER, "lower"),
               s(SqlStdOperatorTable.UPPER, "upper"),
               s(SqlStdOperatorTable.INITCAP, "initcap"),
-              s(SqlLibraryOperators.REVERSE, "reverse"),
+              s(REVERSE, "reverse"),
               s(SqlStdOperatorTable.BETWEEN),
               s(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "is_not_distinct_from"),
               s(SqlStdOperatorTable.COALESCE, "coalesce"),
