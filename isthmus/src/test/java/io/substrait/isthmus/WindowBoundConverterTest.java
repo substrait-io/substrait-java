@@ -249,4 +249,32 @@ class WindowBoundConverterTest extends CalciteObjs {
 
     assertEquals(WindowBound.CURRENT_ROW, converted);
   }
+
+  @Test
+  void negativePrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
+    // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
+    // the offset: RANGE BETWEEN -5 PRECEDING is equivalent to FOLLOWING 5.
+    RexNode offset = c(-5, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.INTEGER);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(WindowBound.Following.of(ExpressionCreator.i32(false, 5)), converted);
+  }
+
+  @Test
+  void negativeFollowingOffsetIsFlippedToPrecedingWithItsMagnitude() {
+    RexNode offset = c(-5, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.following(offset);
+    RelDataType orderingType = t(SqlTypeName.INTEGER);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(WindowBound.Preceding.of(ExpressionCreator.i32(false, 5)), converted);
+  }
 }

@@ -57,19 +57,40 @@ public class WindowBoundConverter {
       return WindowBound.CURRENT_ROW;
     }
 
+    // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
+    // the offset: a negative offset is invalid, and the mirror bound with the magnitude is its
+    // equivalent. Calcite only rejects a negative offset for ROWS, so RANGE reaches here.
+    boolean preceding = rexWindowBound.isPreceding();
+    Optional<Long> negative = integralValue(converted).filter(value -> value < 0);
+    if (negative.isPresent()) {
+      preceding = !preceding;
+      converted = negate(converted, negative.get());
+    }
+
     Expression offset =
         normalizeIntegralOffset(
             converted, isRows, orderingType, rexExpressionConverter.getTypeConverter());
 
-    if (rexWindowBound.isPreceding()) {
+    if (preceding) {
       return WindowBound.Preceding.of(offset);
     }
-    if (rexWindowBound.isFollowing()) {
+    if (rexWindowBound.isFollowing() || negative.isPresent()) {
       return WindowBound.Following.of(offset);
     }
 
     throw new IllegalStateException(
         "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
+  }
+
+  private static Expression negate(Expression offset, long value) {
+    return integralLiteralOfType(offset.getType(), Math.negateExact(value))
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "window offset "
+                        + value
+                        + " cannot be negated within its own type "
+                        + offset.getType().accept(new StringTypeVisitor())));
   }
 
   private static Expression normalizeIntegralOffset(
