@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.google.common.annotations.Beta;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptRule;
@@ -382,16 +384,11 @@ public class PlanTestBase {
    * @return the virtual table scan
    */
   @SafeVarargs
-  protected final VirtualTableScan virtualTable(
-      NamedStruct schema, List<io.substrait.expression.Expression>... rows) {
-    List<io.substrait.expression.Expression.NestedStruct> structs =
-        java.util.Arrays.stream(rows)
-            .map(
-                row ->
-                    io.substrait.expression.Expression.NestedStruct.builder()
-                        .addAllFields(row)
-                        .build())
-            .collect(java.util.stream.Collectors.toList());
+  protected final VirtualTableScan virtualTable(NamedStruct schema, List<Expression>... rows) {
+    List<Expression.NestedStruct> structs =
+        Arrays.stream(rows)
+            .map(row -> Expression.NestedStruct.builder().addAllFields(row).build())
+            .collect(Collectors.toList());
     return VirtualTableScan.builder().initialSchema(schema).addAllRows(structs).build();
   }
 

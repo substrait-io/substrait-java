@@ -18,10 +18,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
@@ -39,7 +37,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("col1", "col2", "col3"), R.struct(R.I32, R.FP64, R.STRING));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(sb.i32(2), sb.fp64(4), sb.str("a")),
             List.of(sb.i32(6), sb.fp64(8.8), sb.str("b")));
@@ -58,7 +56,7 @@ class VirtualTableScanTest extends PlanTestBase {
   void expressionContainingVirtualTable() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5))),
             List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
@@ -75,29 +73,27 @@ class VirtualTableScanTest extends PlanTestBase {
   @Test
   void emptyVirtualTableScan() {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
-    assertDoesNotThrow(() -> createVirtualTableScan(schema, new ArrayList<>()));
+    assertDoesNotThrow(() -> virtualTable(schema, new ArrayList<>()));
   }
 
   @Test
   void emptyTableNonEmptySchema() {
     NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(R.I32));
-    assertDoesNotThrow(() -> createVirtualTableScan(schema));
+    assertDoesNotThrow(() -> virtualTable(schema));
   }
 
   @Test
   void emptySchemaNonEmptyTable() {
     NamedStruct schema = NamedStruct.of(List.of(), R.struct());
     assertThrows(
-        IllegalArgumentException.class,
-        () -> createVirtualTableScan(schema, List.of(sb.i32(3), sb.fp64(8))));
+        IllegalArgumentException.class, () -> virtualTable(schema, List.of(sb.i32(3), sb.fp64(8))));
   }
 
   @Test
   void nullableFieldRoundTrip() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, R.FP64));
     Expression nullableI32 = ExpressionCreator.i32(true, 6);
-    VirtualTableScan virtualTableScan =
-        createVirtualTableScan(schema, List.of(nullableI32, sb.fp64(8)));
+    VirtualTableScan virtualTableScan = virtualTable(schema, List.of(nullableI32, sb.fp64(8)));
     assertFullRoundTrip(virtualTableScan);
   }
 
@@ -106,7 +102,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(N.I32, N.FP64));
     Expression nullI32 = ExpressionCreator.typedNull(N.I32);
     Expression nullFp64 = ExpressionCreator.typedNull(N.FP64);
-    VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(nullI32, nullFp64));
+    VirtualTableScan virtualTableScan = virtualTable(schema, List.of(nullI32, nullFp64));
     assertFullRoundTrip(virtualTableScan);
   }
 
@@ -117,7 +113,7 @@ class VirtualTableScanTest extends PlanTestBase {
     Expression nullI32 = ExpressionCreator.typedNull(N.I32);
     Expression nullString = ExpressionCreator.typedNull(N.STRING);
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(schema, List.of(nullI32, sb.fp64(8), nullString));
+        virtualTable(schema, List.of(nullI32, sb.fp64(8), nullString));
     assertFullRoundTrip(virtualTableScan);
   }
 
@@ -163,8 +159,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
-            schema, List.of(ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0))));
+        virtualTable(schema, List.of(ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -180,7 +175,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0))),
             List.of(ExpressionCreator.struct(false, sb.i32(3), sb.fp64(4.0))));
@@ -202,7 +197,7 @@ class VirtualTableScanTest extends PlanTestBase {
   @Test
   void nullableSchemaStructGivesANotNullRowType() {
     NamedStruct schema = NamedStruct.of(List.of("col1"), N.struct(R.I32));
-    VirtualTableScan virtualTableScan = createVirtualTableScan(schema, List.of(sb.i32(1)));
+    VirtualTableScan virtualTableScan = virtualTable(schema, List.of(sb.i32(1)));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals("RecordType(INTEGER col1) NOT NULL", relNode.getRowType().getFullTypeString());
@@ -219,7 +214,7 @@ class VirtualTableScanTest extends PlanTestBase {
             List.of("first", "a", "b", "second", "c"),
             R.struct(R.struct(R.I32, R.FP64), R.struct(R.STRING)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(
                 ExpressionCreator.struct(false, sb.i32(1), sb.fp64(2.0)),
@@ -243,7 +238,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(R.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(
                 ExpressionCreator.nestedStruct(
@@ -266,8 +261,7 @@ class VirtualTableScanTest extends PlanTestBase {
   void listColumnConverts() {
     NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(R.list(R.I32)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
-            schema, List.of(ExpressionCreator.list(false, sb.i32(1), sb.i32(2))));
+        virtualTable(schema, List.of(ExpressionCreator.list(false, sb.i32(1), sb.i32(2))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -288,8 +282,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
-            schema, List.of(ExpressionCreator.struct(true, sb.i32(1), sb.fp64(2.0))));
+        virtualTable(schema, List.of(ExpressionCreator.struct(true, sb.i32(1), sb.fp64(2.0))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -303,8 +296,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
-            schema, List.of(ExpressionCreator.typedNull(N.struct(R.I32, R.FP64))));
+        virtualTable(schema, List.of(ExpressionCreator.typedNull(N.struct(R.I32, R.FP64))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -322,10 +314,10 @@ class VirtualTableScanTest extends PlanTestBase {
   @Test
   void aValueThatCannotTakeItsColumnsTypeIsReported() {
     VirtualTableScan inner =
-        createVirtualTableScan(NamedStruct.of(List.of("a"), R.struct(R.I32)), List.of(sb.i32(7)));
+        virtualTable(NamedStruct.of(List.of("a"), R.struct(R.I32)), List.of(sb.i32(7)));
     Expression subquery = Expression.ScalarSubquery.builder().input(inner).type(R.I32).build();
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(NamedStruct.of(List.of("col1"), R.struct(R.I32)), List.of(subquery));
+        virtualTable(NamedStruct.of(List.of("col1"), R.struct(R.I32)), List.of(subquery));
 
     IllegalArgumentException reported =
         assertThrows(
@@ -344,7 +336,7 @@ class VirtualTableScanTest extends PlanTestBase {
   void nullListColumnConverts() {
     NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(N.list(R.I32)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(schema, List.of(ExpressionCreator.typedNull(N.list(R.I32))));
+        virtualTable(schema, List.of(ExpressionCreator.typedNull(N.list(R.I32))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -358,8 +350,7 @@ class VirtualTableScanTest extends PlanTestBase {
   void nullMapColumnConverts() {
     NamedStruct schema = NamedStruct.of(List.of("col1"), R.struct(N.map(R.STRING, R.I32)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
-            schema, List.of(ExpressionCreator.typedNull(N.map(R.STRING, R.I32))));
+        virtualTable(schema, List.of(ExpressionCreator.typedNull(N.map(R.STRING, R.I32))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -377,7 +368,7 @@ class VirtualTableScanTest extends PlanTestBase {
   void structInListColumnConverts() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "a"), R.struct(R.list(R.struct(R.I32))));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(ExpressionCreator.list(false, ExpressionCreator.struct(false, sb.i32(1)))));
 
@@ -395,7 +386,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("col1", "a"), R.struct(R.map(R.STRING, R.struct(R.I32))));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(
                 ExpressionCreator.map(
@@ -420,7 +411,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(
                 ExpressionCreator.nestedStruct(
@@ -446,7 +437,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "inner", "a"), R.struct(R.struct(N.struct(R.I32))));
     VirtualTableScan virtualTableScan =
-        createVirtualTableScan(
+        virtualTable(
             schema,
             List.of(ExpressionCreator.struct(false, ExpressionCreator.struct(true, sb.i32(1)))));
 
@@ -467,7 +458,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
             .remap(Rel.Remap.of(List.of(1)))
             .build();
 
@@ -488,7 +479,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
             .hint(Hint.builder().addOutputNames("x", "y").build())
             .build();
 
@@ -510,7 +501,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
             .projection(
                 MaskExpression.builder()
                     .select(
@@ -536,7 +527,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.STRING));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
             .remap(Rel.Remap.of(List.of(1)))
             .build();
 
@@ -549,17 +540,16 @@ class VirtualTableScanTest extends PlanTestBase {
 
   /**
    * The same as {@link #outputNamesWithoutAMappingAreLeftAlone()} for a table whose rows are
-   * computed. That one comes back under a projection of its own, which is not one a mapping added
-   * and so not one the names are for.
+   * computed. It comes back as a bare {@link io.substrait.isthmus.calcite.rel.VirtualTable} now, so
+   * it passes for the reason its sibling does: with no mapping there is no projection for the names
+   * to reach.
    */
   @Test
   void outputNamesWithoutAMappingAreLeftAloneOnAComputedTable() {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(
-                createVirtualTableScan(
-                    schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
             .hint(Hint.builder().addOutputNames("x", "y").build())
             .build();
 
@@ -574,7 +564,7 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(createVirtualTableScan(schema, List.of(sb.i32(2), sb.str("a"))))
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
             .remap(Rel.Remap.of(List.of(1)))
             .hint(Hint.builder().addOutputNames("label").build())
             .build();
@@ -582,14 +572,22 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(List.of("label"), substraitToCalcite.convert(table).getRowType().getFieldNames());
   }
 
-  @SafeVarargs
-  private VirtualTableScan createVirtualTableScan(NamedStruct schema, List<Expression>... rows) {
-    List<Expression.NestedStruct> structs =
-        Arrays.stream(rows)
-            .map(row -> Expression.NestedStruct.builder().addAllFields(row).build())
-            .collect(Collectors.toList());
+  /** The same for a computed table, where the projection has no table to merge into. */
+  @Test
+  void outputNamesReachTheProjectionTheMappingAddsOnAComputedTable() {
+    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(virtualTable(schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
+            .remap(Rel.Remap.of(List.of(1)))
+            .hint(Hint.builder().addOutputNames("label").build())
+            .build();
 
-    return VirtualTableScan.builder().initialSchema(schema).addAllRows(structs).build();
+    RelNode relNode = substraitToCalcite.convert(table);
+
+    assertEquals(List.of("label"), relNode.getRowType().getFieldNames());
+    assertEquals(
+        List.of(R.FP64), SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
   }
 
   private String explain(RelNode relNode) {
