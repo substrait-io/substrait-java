@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
@@ -106,11 +107,37 @@ class WindowBoundConverterTest extends CalciteObjs {
     RexWindowBound bound = RexWindowBounds.preceding(offset);
     RelDataType orderingType = t(SqlTypeName.SMALLINT);
 
+    UnsupportedOperationException ex =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                WindowBoundConverter.toWindowBound(
+                    bound, false, Optional.of(orderingType), rexExpressionConverter));
+    assertTrue(ex.getMessage().contains("100000"));
+    assertTrue(ex.getMessage().contains("i16"));
+  }
+
+  @Test
+  void rangeOffsetAcceptsTheOrderingTypesUpperBoundButNotBeyondIt() {
+    // The boundary this narrower-type guard actually enforces: the maximum i16 value retypes
+    // cleanly, but one past it throws instead of silently keeping the literal's own (wider) type.
+    RexWindowBound acceptedBound =
+        RexWindowBounds.preceding(c(Short.MAX_VALUE, SqlTypeName.INTEGER));
+    RelDataType orderingType = t(SqlTypeName.SMALLINT);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            acceptedBound, false, Optional.of(orderingType), rexExpressionConverter);
+    assertEquals(
+        WindowBound.Preceding.of(ExpressionCreator.i16(false, Short.MAX_VALUE)), converted);
+
+    RexWindowBound rejectedBound =
+        RexWindowBounds.preceding(c(Short.MAX_VALUE + 1, SqlTypeName.INTEGER));
     assertThrows(
         UnsupportedOperationException.class,
         () ->
             WindowBoundConverter.toWindowBound(
-                bound, false, Optional.of(orderingType), rexExpressionConverter));
+                rejectedBound, false, Optional.of(orderingType), rexExpressionConverter));
   }
 
   @Test
@@ -119,11 +146,14 @@ class WindowBoundConverterTest extends CalciteObjs {
     RexWindowBound bound = RexWindowBounds.preceding(offset);
     RelDataType orderingType = t(SqlTypeName.DECIMAL, 5, 2);
 
-    assertThrows(
-        UnsupportedOperationException.class,
-        () ->
-            WindowBoundConverter.toWindowBound(
-                bound, false, Optional.of(orderingType), rexExpressionConverter));
+    UnsupportedOperationException ex =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                WindowBoundConverter.toWindowBound(
+                    bound, false, Optional.of(orderingType), rexExpressionConverter));
+    assertTrue(ex.getMessage().contains("12345"));
+    assertTrue(ex.getMessage().contains("decimal<5,2>"));
   }
 
   @Test
@@ -133,11 +163,14 @@ class WindowBoundConverterTest extends CalciteObjs {
     RexWindowBound bound = RexWindowBounds.preceding(offset);
     RelDataType orderingType = t(SqlTypeName.REAL);
 
-    assertThrows(
-        UnsupportedOperationException.class,
-        () ->
-            WindowBoundConverter.toWindowBound(
-                bound, false, Optional.of(orderingType), rexExpressionConverter));
+    UnsupportedOperationException ex =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                WindowBoundConverter.toWindowBound(
+                    bound, false, Optional.of(orderingType), rexExpressionConverter));
+    assertTrue(ex.getMessage().contains("16777217"));
+    assertTrue(ex.getMessage().contains("fp32"));
   }
 
   @Test
@@ -147,6 +180,24 @@ class WindowBoundConverterTest extends CalciteObjs {
     RexNode offset = c(5, SqlTypeName.INTEGER);
     RexWindowBound bound = RexWindowBounds.preceding(offset);
     RelDataType orderingType = t(SqlTypeName.TIMESTAMP);
+
+    UnsupportedOperationException ex =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                WindowBoundConverter.toWindowBound(
+                    bound, false, Optional.of(orderingType), rexExpressionConverter));
+    assertTrue(ex.getMessage().contains("5"));
+    assertTrue(ex.getMessage().contains("precision_timestamp<"));
+  }
+
+  @Test
+  void rangeOffsetAgainstDateOrderingTypeThrows() {
+    // Same "no such case" path as the TIMESTAMP test above, covered separately so that path isn't
+    // pinned by a single ordering type.
+    RexNode offset = c(5, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.DATE);
 
     assertThrows(
         UnsupportedOperationException.class,
