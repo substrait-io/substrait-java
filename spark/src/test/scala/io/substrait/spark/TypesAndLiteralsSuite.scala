@@ -307,6 +307,28 @@ class TypesAndLiteralsSuite extends SparkFunSuite {
       sparkLiteral(ExpressionCreator.intervalDay(false, Int.MaxValue, 0, 0L, 6)))
   }
 
+  test("a year-month interval reports overflow instead of wrapping") {
+    // years and months are both int32 and Spark's physical type is a months Int, so the flattened
+    // total can outrun the carrier: 178,956,971 years used to come out as -2,147,483,644 months,
+    // and Int.MinValue years as exactly 0 — a zero-length interval. This is the carrier's bound,
+    // not the spec's much tighter 10,000-year one, so it takes a producer already far past that.
+    intercept[ArithmeticException](
+      sparkLiteral(ExpressionCreator.intervalYear(false, 178956971, 0)))
+    intercept[ArithmeticException](
+      sparkLiteral(ExpressionCreator.intervalYear(false, 178956970, 8)))
+    intercept[ArithmeticException](
+      sparkLiteral(ExpressionCreator.intervalYear(false, Int.MinValue, 0)))
+
+    // Only the total is significant, so an intermediate past Int.MaxValue is not itself an error.
+    val mixedSigns = sparkLiteral(ExpressionCreator.intervalYear(false, 178956971, -12))
+    assert(mixedSigns.value === 2147483640)
+
+    // The spec's maximum still converts, and the months component carries through.
+    val atTheBound = sparkLiteral(ExpressionCreator.intervalYear(false, 9999, 12))
+    assert(atTheBound.value === 120000)
+    assert(atTheBound.dataType === YearMonthIntervalType.DEFAULT)
+  }
+
   test("a coarser precision on a type is rejected, since a type has no value to rescale") {
     // A Spark type carries no precision of its own, so mapping precision_timestamp<3> onto
     // TimestampNTZType would reinterpret millisecond counts as microsecond ones. Only the literal
