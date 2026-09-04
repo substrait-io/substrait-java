@@ -49,12 +49,15 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
    */
   @Value.Check
   protected void check() {
-    for (WindowRelFunctionInvocation windowFunction : getWindowFunctions()) {
+    List<WindowRelFunctionInvocation> windowFunctions = getWindowFunctions();
+    for (int i = 0; i < windowFunctions.size(); i++) {
+      WindowRelFunctionInvocation windowFunction = windowFunctions.get(i);
       WindowBound.checkRangeOrdering(
           windowFunction.boundsType(),
           windowFunction.lowerBound(),
           windowFunction.upperBound(),
-          getSorts());
+          getSorts(),
+          "window function " + i + " (" + windowFunction.declaration().key() + ")");
     }
   }
 

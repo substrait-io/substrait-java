@@ -1640,7 +1640,8 @@ public interface Expression extends FunctionArg {
     protected void check() {
       VariadicParameterConsistencyValidator.validate(declaration(), arguments());
       WindowBound.checkBoundsType(boundsType(), lowerBound(), upperBound());
-      WindowBound.checkRangeOrdering(boundsType(), lowerBound(), upperBound(), sort());
+      WindowBound.checkRangeOrdering(
+          boundsType(), lowerBound(), upperBound(), sort(), declaration().key());
     }
 
     /**
