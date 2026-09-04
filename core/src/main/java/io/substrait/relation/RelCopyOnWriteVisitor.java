@@ -392,7 +392,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     Optional<Expression> expression =
         exchange.getExpression().accept(getExpressionCopyOnWriteVisitor(), context);
 
-    if (allEmpty(input)) {
+    if (allEmpty(input, expression)) {
       return Optional.empty();
     }
 
@@ -611,6 +611,7 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(
       ConsistentPartitionWindow consistentPartitionWindow, EmptyVisitationContext context)
       throws E {
+    Optional<Rel> input = consistentPartitionWindow.getInput().accept(this, context);
     Optional<List<ConsistentPartitionWindow.WindowRelFunctionInvocation>> windowFunctions =
         transformList(
             consistentPartitionWindow.getWindowFunctions(), context, this::visitWindowRelFunction);
@@ -622,13 +623,14 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     Optional<List<Expression.SortField>> sorts =
         transformList(consistentPartitionWindow.getSorts(), context, this::visitSortField);
 
-    if (allEmpty(windowFunctions, partitionExpressions, sorts)) {
+    if (allEmpty(input, windowFunctions, partitionExpressions, sorts)) {
       return Optional.empty();
     }
 
     return Optional.of(
         ConsistentPartitionWindow.builder()
             .from(consistentPartitionWindow)
+            .input(input.orElse(consistentPartitionWindow.getInput()))
             .partitionExpressions(
                 partitionExpressions.orElse(consistentPartitionWindow.getPartitionExpressions()))
             .sorts(sorts.orElse(consistentPartitionWindow.getSorts()))
