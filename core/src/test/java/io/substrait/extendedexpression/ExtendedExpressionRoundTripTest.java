@@ -6,8 +6,10 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
+import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
@@ -39,6 +41,58 @@ class ExtendedExpressionRoundTripTest extends TestBase {
     expressionReferences.add(expressionReference);
     NamedStruct namedStruct = getImmutableNamedStruct();
     assertExtendedExpressionOperation(expressionReferences, namedStruct);
+  }
+
+  @Test
+  void preservesAggregateOrderingAndFunctionsUsedOnlyInSorts() {
+    FieldReference value = FieldReference.newRootStructReference(0, R.STRING);
+    FieldReference sortKey = FieldReference.newRootStructReference(1, R.I64);
+    AggregateFunctionInvocation function =
+        AggregateFunctionInvocation.builder()
+            .declaration(
+                extensions.getAggregateFunction(
+                    SimpleExtension.FunctionAnchor.of(
+                        DefaultExtensionCatalog.FUNCTIONS_STRING, "string_agg:str_str")))
+            .addArguments(value, ExpressionCreator.string(false, ","))
+            .outputType(R.STRING)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .addSort(
+                Expression.SortField.builder()
+                    .expr(sb.add(sortKey, sb.i64(1)))
+                    .direction(Expression.SortDirection.DESC_NULLS_LAST)
+                    .build(),
+                Expression.SortField.builder()
+                    .expr(value)
+                    .direction(Expression.SortDirection.ASC_NULLS_FIRST)
+                    .build())
+            .build();
+
+    assertExtendedExpressionOperation(
+        List.of(
+            ImmutableAggregateFunctionReference.builder()
+                .measure(Aggregate.Measure.builder().function(function).build())
+                .addOutputNames("concatenated")
+                .build()),
+        NamedStruct.of(List.of("value", "sort_key"), R.struct(R.STRING, R.I64)));
+  }
+
+  @Test
+  void preservesAggregateOptionPreferences() {
+    AggregateFunctionInvocation function =
+        AggregateFunctionInvocation.builder()
+            .from(sb.sum(FieldReference.newRootStructReference(0, R.I64)).getFunction())
+            .addOptions(
+                FunctionOption.builder().name("overflow").addValues("ERROR", "SATURATE").build())
+            .build();
+
+    assertExtendedExpressionOperation(
+        List.of(
+            ImmutableAggregateFunctionReference.builder()
+                .measure(Aggregate.Measure.builder().function(function).build())
+                .addOutputNames("total")
+                .build()),
+        NamedStruct.of(List.of("value"), R.struct(R.I64)));
   }
 
   @Test
