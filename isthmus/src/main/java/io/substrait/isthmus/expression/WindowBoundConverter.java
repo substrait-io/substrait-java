@@ -4,6 +4,7 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.WindowBound;
 import io.substrait.isthmus.TypeConverter;
+import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -16,7 +17,8 @@ import org.apache.calcite.rex.RexWindowBound;
  * Utility for converting Calcite {@link RexWindowBound} to Substrait {@link WindowBound}.
  *
  * <p>Supports {@code CURRENT ROW}, {@code UNBOUNDED}, and {@code PRECEDING}/{@code FOLLOWING}
- * bounds with an arbitrary offset expression.
+ * bounds with an arbitrary offset expression. A RANGE bound's integral literal offset must match
+ * the ordering expression's exact type.
  */
 public class WindowBoundConverter {
 
@@ -31,6 +33,8 @@ public class WindowBoundConverter {
    * @return the corresponding Substrait {@link WindowBound}
    * @throws IllegalStateException if the bound is not one of CURRENT ROW, UNBOUNDED, PRECEDING, or
    *     FOLLOWING
+   * @throws UnsupportedOperationException if a RANGE offset's integral literal does not fit the
+   *     ordering expression's exact type
    */
   public static WindowBound toWindowBound(
       RexWindowBound rexWindowBound,
@@ -45,28 +49,49 @@ public class WindowBoundConverter {
     }
 
     RexNode node = rexWindowBound.getOffset();
-    Expression offset =
-        normalizeIntegralOffset(
-            node.accept(rexExpressionConverter),
-            isRows,
-            orderingType,
-            rexExpressionConverter.getTypeConverter());
+    Expression converted = node.accept(rexExpressionConverter);
 
     // Per the spec, zero is not a valid offset; it is equivalent to CurrentRow, and producers
-    // should emit CurrentRow rather than a zero offset_expr.
-    if (integralValue(offset).filter(value -> value == 0).isPresent()) {
+    // should emit CurrentRow rather than a zero offset_expr. Checked before retyping: a zero
+    // offset needs no representation in the ordering expression's type.
+    if (integralValue(converted).filter(value -> value == 0).isPresent()) {
       return WindowBound.CURRENT_ROW;
     }
 
-    if (rexWindowBound.isPreceding()) {
+    // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
+    // the offset: a negative offset is invalid, and the mirror bound with the magnitude is its
+    // equivalent. Calcite only rejects a negative offset for ROWS, so RANGE reaches here.
+    boolean preceding = rexWindowBound.isPreceding();
+    Optional<Long> negative = integralValue(converted).filter(value -> value < 0);
+    if (negative.isPresent()) {
+      preceding = !preceding;
+      converted = negate(converted, negative.get());
+    }
+
+    Expression offset =
+        normalizeIntegralOffset(
+            converted, isRows, orderingType, rexExpressionConverter.getTypeConverter());
+
+    if (preceding) {
       return WindowBound.Preceding.of(offset);
     }
-    if (rexWindowBound.isFollowing()) {
+    if (rexWindowBound.isFollowing() || negative.isPresent()) {
       return WindowBound.Following.of(offset);
     }
 
     throw new IllegalStateException(
         "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
+  }
+
+  private static Expression negate(Expression offset, long value) {
+    return integralLiteralOfType(offset.getType(), Math.negateExact(value))
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "window offset "
+                        + value
+                        + " cannot be negated within its own type "
+                        + offset.getType().accept(new StringTypeVisitor())));
   }
 
   private static Expression normalizeIntegralOffset(
@@ -82,10 +107,19 @@ public class WindowBoundConverter {
       // The spec requires a BOUNDS_TYPE_ROWS offset_expr to be int64.
       return ExpressionCreator.i64(false, value.get());
     }
-    // BOUNDS_TYPE_RANGE: keep add(T, D) -> T defined for the ordering expression's type T.
+    // BOUNDS_TYPE_RANGE: an exact type match is isthmus's own policy, not a spec mandate.
     return orderingType
         .map(typeConverter::toSubstrait)
-        .flatMap(type -> integralLiteralOfType(type, value.get()))
+        .map(
+            type ->
+                integralLiteralOfType(type, value.get())
+                    .orElseThrow(
+                        () ->
+                            new UnsupportedOperationException(
+                                "RANGE window offset "
+                                    + value.get()
+                                    + " does not fit the ordering expression's type "
+                                    + type.accept(new StringTypeVisitor()))))
         .orElse(offset);
   }
 
