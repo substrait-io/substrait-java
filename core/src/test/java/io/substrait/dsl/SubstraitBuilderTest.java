@@ -3,6 +3,7 @@ package io.substrait.dsl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
 import io.substrait.expression.AggregateFunctionInvocation;
@@ -249,6 +250,21 @@ class SubstraitBuilderTest extends TestBase {
 
       assertNotNull(windowFn);
       assertEquals(1, windowFn.sort().size());
+
+      // The no-sorts overload cannot express this shape at all.
+      assertThrows(
+          IllegalArgumentException.class,
+          () ->
+              builder.windowFn(
+                  DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+                  "lead:any",
+                  Type.I32.builder().nullable(false).build(),
+                  Expression.AggregationPhase.INITIAL_TO_RESULT,
+                  Expression.AggregationInvocation.ALL,
+                  Expression.WindowBoundsType.RANGE,
+                  WindowBound.Preceding.of(builder.i32(5)),
+                  WindowBound.CURRENT_ROW,
+                  builder.fieldReference(scan, 0)));
     }
   }
 
