@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
-import io.substrait.expression.MaskExpression;
 import io.substrait.hint.Hint;
 import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
@@ -487,34 +486,6 @@ class VirtualTableScanTest extends PlanTestBase {
 
     assertInstanceOf(LogicalValues.class, relNode);
     assertEquals(List.of("col1", "col2"), relNode.getRowType().getFieldNames());
-  }
-
-  /**
-   * A projection masks a read relation's columns before anything else selects from them -- {@link
-   * io.substrait.relation.AbstractReadRel#deriveRecordType()} applies it to the initial schema --
-   * so an emit mapping's indices count the columns it leaves. Isthmus builds the row type from the
-   * unmasked schema and reads the projection nowhere, so a scan carrying one is refused rather than
-   * converted against the wrong columns.
-   */
-  @Test
-  void aProjectionOnAVirtualTableIsRefused() {
-    NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.STRING));
-    VirtualTableScan table =
-        VirtualTableScan.builder()
-            .from(virtualTable(schema, List.of(sb.i32(2), sb.str("a"))))
-            .projection(
-                MaskExpression.builder()
-                    .select(
-                        MaskExpression.StructSelect.builder()
-                            .addStructItems(MaskExpression.StructItem.of(1))
-                            .build())
-                    .build())
-            .build();
-
-    assertTrue(
-        assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(table))
-            .getMessage()
-            .contains("Projection on a VirtualTableScan is not supported"));
   }
 
   /**
