@@ -91,6 +91,41 @@ class ContainerReturnTypeTest {
   }
 
   @Test
+  void catalogIndexInAcceptsNullableElements() {
+    SimpleExtension.Function function =
+        DefaultExtensionCatalog.DEFAULT_COLLECTION.scalarFunctions().stream()
+            .filter(f -> f.key().equals("index_in:any_list"))
+            .findFirst()
+            .orElseThrow();
+    for (Type value : List.of(R.I32, N.I32)) {
+      for (Type element : List.of(R.I32, N.I32)) {
+        assertDerives(function, N.I64, List.of(value, R.list(element)));
+      }
+    }
+    assertInvalid(function, R.FP64, R.list(R.I32));
+    assertInvalid(function, R.I32, R.list(N.FP64));
+  }
+
+  @Test
+  void topLevelWildcardsDoNotConstrainNestedNullabilityInEitherOrder() {
+    ParameterizedType list = P.listE(ANY1);
+    SimpleExtension.Function forward = function(list, ANY1, list);
+    SimpleExtension.Function reverse = function(list, list, ANY1);
+    for (Type value : List.of(R.I32, N.I32)) {
+      for (Type element : List.of(R.I32, N.I32)) {
+        Type expected = TypeCreator.of(value.nullable()).list(element);
+        assertDerives(forward, expected, List.of(value, R.list(element)));
+        assertDerives(reverse, expected, List.of(R.list(element), value));
+      }
+    }
+    assertInvalid(forward, R.I32, R.list(N.FP64));
+    assertInvalid(reverse, R.list(N.FP64), R.I32);
+    assertInvalid(function(list, ANY1, list, list), R.I32, R.list(R.I32), R.list(N.I32));
+    assertInvalid(function(list, list, ANY1, list), R.list(R.I32), R.I32, R.list(N.I32));
+    assertInvalid(function(list, list, list, ANY1), R.list(R.I32), R.list(N.I32), R.I32);
+  }
+
+  @Test
   void nullableWildcardMarkersAreSubstitutedAcrossArgumentShapes() {
     ParameterizedType nullableElement = P.listE(Q.parameter("any1"));
     // These are the scalar-binding examples for j(any1, list<any1?>), in both argument orders.
@@ -192,11 +227,28 @@ class ContainerReturnTypeTest {
   void validatesTheDerivedElementTypeAndNullability() {
     SimpleExtension.Function function = function(P.listE(P.varCharE("L")), P.varCharE("L"));
     List<ResolvedArgument> arguments = List.of(ResolvedArgument.value(R.varChar(20)));
+    assertDerives(function, R.list(R.varChar(20)), List.of(R.varChar(20)));
     for (Type wrong :
         List.of(R.list(R.varChar(19)), R.list(N.varChar(20)), N.list(R.varChar(20)))) {
       assertThrows(
           InvalidFunctionBindingException.class,
           () -> FunctionBindingResolver.resolveAndValidate(function, arguments, List.of(), wrong));
+    }
+  }
+
+  @Test
+  void catalogFunctionArgumentsRequireFunctionTypes() {
+    for (String key : List.of("all_match:list_func", "any_match:list_func")) {
+      SimpleExtension.Function function =
+          DefaultExtensionCatalog.DEFAULT_COLLECTION.scalarFunctions().stream()
+              .filter(f -> f.key().equals(key))
+              .findFirst()
+              .orElseThrow();
+      assertDerives(function, N.BOOLEAN, List.of(R.list(R.I64), R.func(List.of(R.I64), N.BOOLEAN)));
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> function.resolveType(List.of(R.list(R.I64), N.BOOLEAN)));
+      assertInvalid(function, R.list(R.I64), N.BOOLEAN);
     }
   }
 
