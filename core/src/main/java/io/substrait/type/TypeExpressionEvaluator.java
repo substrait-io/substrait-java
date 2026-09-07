@@ -193,8 +193,9 @@ public class TypeExpressionEvaluator {
         if (bindNames && literal.isNumberedWildcard()) {
           // An unmarked nested wildcard binds the complete type, including nullability. A '?'
           // marker requires a nullable actual, but does not constrain the variable's own
-          // nullability: both i32 and i32? become i32? after substitution.
-          boolean exactNullability = !nested || !literal.nullable();
+          // nullability: both i32 and i32? become i32? after substitution. Outermost argument
+          // nullability is excluded from binding and also leaves the variable's nullability open.
+          boolean exactNullability = nested && !literal.nullable();
           Type binding = nested && !literal.nullable() ? actual : actual.withNullable(false);
           bindType(literal.value(), binding, exactNullability);
         }
