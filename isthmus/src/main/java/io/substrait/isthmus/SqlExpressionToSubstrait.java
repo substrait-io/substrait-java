@@ -208,6 +208,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
+            // Field references index the combined base schema in insertion order.
+            int fieldIndex = nameToTypeMap.size();
             nameToTypeMap.merge( // to validate the sql expression tree
                 field.getName(),
                 field.getType(),
@@ -217,7 +219,7 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
                 });
             nameToNodeMap.merge( // to convert sql expression into RexNode
                 field.getName(),
-                new RexInputRef(field.getIndex(), field.getType()),
+                new RexInputRef(fieldIndex, field.getType()),
                 (v1, v2) -> {
                   throw new IllegalArgumentException(
                       "There is no support for duplicate column names: " + field.getName());
