@@ -109,8 +109,8 @@ scalar_functions:
         return: boolean
   - name: "list_pair"
     description: >-
-      A numbered wildcard nested inside a list. Nested shapes cannot be checked structurally
-      yet, so strict validation fails closed on them.
+      A numbered wildcard nested inside a list. Both elements must bind to the same type,
+      including their nullability.
     impls:
       - args:
           - name: x
