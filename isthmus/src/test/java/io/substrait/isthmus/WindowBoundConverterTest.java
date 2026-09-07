@@ -277,4 +277,19 @@ class WindowBoundConverterTest extends CalciteObjs {
 
     assertEquals(WindowBound.Preceding.of(ExpressionCreator.i32(false, 5)), converted);
   }
+
+  @Test
+  void negativeOffsetOverflowingLongIsRejectedRatherThanThrowingArithmeticException() {
+    // Long.MIN_VALUE has no positive long representation; Math.negateExact would throw
+    // ArithmeticException, which toWindowBound does not document.
+    RexNode offset = c(Long.MIN_VALUE, SqlTypeName.BIGINT);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.BIGINT);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            WindowBoundConverter.toWindowBound(
+                bound, false, Optional.of(orderingType), rexExpressionConverter));
+  }
 }

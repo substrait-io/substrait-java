@@ -84,7 +84,14 @@ public class WindowBoundConverter {
   }
 
   private static Expression negate(Expression offset, long value) {
-    return integralLiteralOfType(offset.getType(), Math.negateExact(value))
+    long negated;
+    try {
+      negated = Math.negateExact(value);
+    } catch (ArithmeticException e) {
+      // Long.MIN_VALUE has no positive long representation.
+      throw new UnsupportedOperationException("window offset " + value + " cannot be negated");
+    }
+    return integralLiteralOfType(offset.getType(), negated)
         .orElseThrow(
             () ->
                 new UnsupportedOperationException(
