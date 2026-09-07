@@ -66,7 +66,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.immutables.value.Value;
 
@@ -376,129 +375,96 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     List<Grouping> groupings =
         sets.filter(s -> s != null).map(s -> fromGroupSet(s, input)).collect(Collectors.toList());
 
-    // get GROUP_ID() function calls
-    java.util.Set<AggregateCall> groupIdCalls =
-        aggregate.getAggCallList().stream()
-            .filter(c -> c.getAggregation().equals(SqlStdOperatorTable.GROUP_ID))
-            .collect(Collectors.toSet());
-
-    // get LITERAL_AGG() function calls — injected by SubQueryRemoveRule (CALCITE-6945) as a
-    // null-presence indicator; they carry a RexLiteral in rexList and have no Substrait binding.
-    java.util.Set<AggregateCall> literalAggCalls =
-        aggregate.getAggCallList().stream()
-            .filter(c -> c.getAggregation().getKind() == SqlKind.LITERAL_AGG)
-            .collect(Collectors.toSet());
-
-    if (!literalAggCalls.isEmpty() && groupings.size() > 1) {
+    List<AggregateCall> calls = aggregate.getAggCallList();
+    boolean hasGrouping =
+        calls.stream().anyMatch(c -> c.getAggregation().getKind() == SqlKind.GROUPING);
+    boolean hasSpecialCalls = calls.stream().anyMatch(SubstraitRelVisitor::isGroupingOrLiteralCall);
+    boolean hasLiteral =
+        calls.stream().anyMatch(c -> c.getAggregation().getKind() == SqlKind.LITERAL_AGG);
+    if (hasLiteral && groupings.size() > 1) {
       throw new UnsupportedOperationException(
           "LITERAL_AGG combined with GROUPING SETS / CUBE / ROLLUP is not supported");
     }
 
-    // Number of distinct grouping-expression output fields produced by the aggregate.
-    // Used by both remap branches and by the LITERAL_AGG project wrapper below.
-    final int groupingFieldCount =
-        Math.toIntExact(
-            groupings.stream().flatMap(g -> g.getExpressions().stream()).distinct().count());
-
-    List<AggregateCall> filteredAggCalls =
-        aggregate.getAggCallList().stream()
-            // remove GROUP_ID() and LITERAL_AGG() function calls
-            .filter(c -> !groupIdCalls.contains(c) && !literalAggCalls.contains(c))
-            .collect(Collectors.toList());
-
-    List<Measure> aggCalls =
-        filteredAggCalls.stream()
+    List<Measure> measures =
+        calls.stream()
+            .filter(c -> !isGroupingOrLiteralCall(c))
             .map(c -> fromAggCall(aggregate.getInput(), input.getRecordType(), c))
             .collect(Collectors.toList());
-
     ImmutableAggregate.Builder builder =
-        Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(aggCalls);
-
-    if (groupings.size() > 1) {
-      // substrait-java declares the grouping columns of an aggregate as the distinct grouping
-      // expressions in the order they first appear across its grouping sets -- the reconstruction
-      // it puts in place of the shared grouping-expression list the spec orders them by, which the
-      // POJO cannot hold -- while Calcite emits them ordered by field index. Where the two differ,
-      // the emit mapping carries the reordering, so that a parent converted from the same Calcite
-      // plan finds its columns where it left them.
-      List<Integer> groupingRemap = calciteGroupingOrder(groupings);
-
-      // remove the grouping set index if there was no explicit GROUP_ID() function call
-      if (groupIdCalls.isEmpty()) {
-        List<Integer> remap = new ArrayList<>(groupingRemap);
-        for (int call = 0; call < aggCalls.size(); call++) {
-          remap.add(groupingFieldCount + call);
-        }
-        builder.remap(Remap.of(remap));
-      } else {
-        // remap grouping set index at the field positions where the GROUP_ID() function calls were
-        final int filterAggCallCount = aggCalls.size();
-        final Integer groupingSetIndex = groupingFieldCount + filterAggCallCount;
-
-        final List<Integer> remap = new ArrayList<>(groupingRemap);
-
-        for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
-          AggregateCall aggCall = aggregate.getAggCallList().get(i);
-          if (filteredAggCalls.contains(aggCall)) {
-            remap.add(
-                i + groupingFieldCount, filteredAggCalls.indexOf(aggCall) + groupingFieldCount);
-          } else if (groupIdCalls.contains(aggCall)) {
-            remap.add(i + groupingFieldCount, groupingSetIndex);
-          } else {
-            // this should never get triggered
-            throw new IllegalStateException(
-                "encountered AggregateCall that is neither in filteredAggCalls nor in groupIdCalls"
-                    + aggCall);
-          }
-        }
-
-        builder.remap(Remap.of(remap));
-      }
+        Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(measures);
+    List<Integer> mapping = new ArrayList<>(calciteGroupingOrder(groupings));
+    int groupingFieldCount = mapping.size();
+    int groupingSetIndex = groupingFieldCount + measures.size();
+    for (int call = 0; call < measures.size(); call++) {
+      mapping.add(groupingFieldCount + call);
     }
-
+    if (groupings.size() > 1) {
+      // Keep the implicit ordinal only while deriving GROUPING values. The project below restores
+      // the original Calcite schema; ordinary aggregates emit just their keys and measures.
+      if (hasGrouping) {
+        mapping.add(groupingSetIndex);
+      }
+      builder.remap(Remap.of(mapping));
+    }
     Rel aggRel = builder.build();
-
-    if (literalAggCalls.isEmpty()) {
+    if (!hasSpecialCalls) {
       return aggRel;
     }
 
-    // Wrap the aggregate in a Project that replaces LITERAL_AGG output positions with their
-    // literal values and passes through all other fields via FieldReference.
-    //
-    // The aggregate output schema is: [grouping fields..., real agg measures...]
-    // The full output schema requested is: [grouping fields..., all agg calls (in original order)]
-    // For each position in the original agg call list:
-    //   - real measure  → FieldReference into the aggregate output
-    //   - LITERAL_AGG   → the literal value from aggCall.rexList
-    final int realAggCount = aggCalls.size();
-    final int totalAggOutputFields = groupingFieldCount + realAggCount;
-
-    // Build the project expression list: grouping fields first, then one expression per original
-    // agg call in declaration order.
-    List<Expression> projectExprs = new ArrayList<>();
-    for (int i = 0; i < groupingFieldCount; i++) {
-      projectExprs.add(FieldReference.newInputRelReference(i, aggRel));
+    List<Expression> output = new ArrayList<>();
+    for (int field = 0; field < groupingFieldCount; field++) {
+      output.add(FieldReference.newInputRelReference(field, aggRel));
     }
-    int realAggIndex = groupingFieldCount; // tracks next real-measure field index in aggRel output
-    for (AggregateCall aggCall : aggregate.getAggCallList()) {
-      if (literalAggCalls.contains(aggCall)) {
-        // Convert the RexLiteral stored in rexList to a Substrait literal expression
-        RexNode rexLiteral = Iterables.getOnlyElement(aggCall.rexList);
-        projectExprs.add(toExpression(rexLiteral));
-      } else if (!groupIdCalls.contains(aggCall)) {
-        // real measure: pass through by reference
-        projectExprs.add(FieldReference.newInputRelReference(realAggIndex, aggRel));
-        realAggIndex++;
+    int measureIndex = groupingFieldCount;
+    for (AggregateCall call : calls) {
+      switch (call.getAggregation().getKind()) {
+        case GROUPING:
+          output.add(groupingValue(call, aggregate.getGroupSets(), aggRel, groupingSetIndex));
+          break;
+        case GROUP_ID:
+          // A Calcite Aggregate holds distinct, sorted grouping sets. RelBuilder expands any
+          // repetitions into UNION ALL branches before they reach this visitor.
+          output.add(ExpressionCreator.i64(false, 0));
+          break;
+        case LITERAL_AGG:
+          output.add(toExpression(Iterables.getOnlyElement(call.rexList)));
+          break;
+        default:
+          output.add(FieldReference.newInputRelReference(measureIndex++, aggRel));
       }
-      // GROUP_ID calls are not present in the outer schema here (groupings.size() <= 1 branch);
-      // if groupings.size() > 1 they are handled by the remap above and should not appear here
     }
-
     return Project.builder()
-        .remap(Remap.offset(totalAggOutputFields, projectExprs.size()))
-        .expressions(projectExprs)
         .input(aggRel)
+        .expressions(output)
+        .remap(Remap.offset(aggRel.getRecordType().fields().size(), output.size()))
         .build();
+  }
+
+  private static boolean isGroupingOrLiteralCall(AggregateCall call) {
+    SqlKind kind = call.getAggregation().getKind();
+    return kind == SqlKind.GROUPING || kind == SqlKind.GROUP_ID || kind == SqlKind.LITERAL_AGG;
+  }
+
+  /** Computes SQL's membership bit mask from Substrait's declared grouping-set ordinal. */
+  private static Expression groupingValue(
+      AggregateCall call, List<ImmutableBitSet> sets, Rel aggregate, int groupingSetIndex) {
+    List<Expression.SwitchClause> clauses = new ArrayList<>();
+    Expression value = ExpressionCreator.i64(false, 0);
+    for (int index = 0; index < sets.size(); index++) {
+      long mask = 0;
+      for (int argument : call.getArgList()) {
+        mask = (mask << 1) | (sets.get(index).get(argument) ? 0 : 1);
+      }
+      value = ExpressionCreator.i64(false, mask);
+      if (index < sets.size() - 1) {
+        clauses.add(ExpressionCreator.switchClause(ExpressionCreator.i32(false, index), value));
+      }
+    }
+    return sets.size() <= 1
+        ? value
+        : ExpressionCreator.switchStatement(
+            FieldReference.newInputRelReference(groupingSetIndex, aggregate), value, clauses);
   }
 
   /**
