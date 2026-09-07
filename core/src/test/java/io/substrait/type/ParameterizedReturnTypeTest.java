@@ -86,14 +86,15 @@ class ParameterizedReturnTypeTest {
   }
 
   @Test
-  void aContainerDeclarationIsNotRefusedForABindingItNeverMakes() {
-    // Binding descends into none of the container declarations, so a `list<any1>` or a
-    // `func<any1 -> boolean?>` argument binds nothing. All four of these declare a concrete return
-    // and need no binding at all, so refusing the shape would reject calls that resolve today.
+  void concreteReturnsStillBindContainerArguments() {
     assertEquals(R.I64, resolve("cardinality:list", R.list(R.I64)));
     assertEquals(N.I64, resolve("index_in:any_list", R.I64, R.list(R.I64)));
-    assertEquals(N.BOOLEAN, resolve("all_match:list_func", R.list(R.I64), N.BOOLEAN));
-    assertEquals(N.BOOLEAN, resolve("any_match:list_func", R.list(R.I64), N.BOOLEAN));
+    assertEquals(
+        N.BOOLEAN,
+        resolve("all_match:list_func", R.list(R.I64), R.func(List.of(R.I64), N.BOOLEAN)));
+    assertEquals(
+        N.BOOLEAN,
+        resolve("any_match:list_func", R.list(R.I64), R.func(List.of(R.I64), N.BOOLEAN)));
   }
 
   @Test
@@ -155,14 +156,9 @@ class ParameterizedReturnTypeTest {
     assertEquals(N.intervalDay(6), resolve("multiply:i8_iday", R.I8, N.intervalDay(6)));
   }
 
-  /**
-   * The census of what the evaluator does not derive: a {@code list} return is the first shape, a
-   * multi-line return program the second. {@link TypeExpressionEvaluator}'s Javadoc describes those
-   * shapes and points here rather than naming variants, so this test is the only place a {@code
-   * substrait-packaging} bump can make the two disagree.
-   */
+  /** Pins the catalog's list-return and return-program shapes across packaging updates. */
   @Test
-  void theReturnShapesThatAreNotDerivedYet() {
+  void catalogReturnShapes() {
     assertEquals(
         List.of(
             "filter:list_func",
@@ -193,11 +189,9 @@ class ParameterizedReturnTypeTest {
             "subtract:dec_dec"),
         variantsReturning(TypeExpression.ReturnProgram.class));
 
-    // The lists above pin which variants carry each shape; these pin that the shapes actually fail,
-    // so making one derivable cannot leave the census passing and the Javadoc stale.
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
+    // List returns now derive recursively; return programs remain a separate expression shape.
+    assertEquals(
+        R.list(R.varChar(20)), resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
     assertThrows(
         UnsupportedOperationException.class,
         () -> resolve("add:dec_dec", R.decimal(10, 2), R.decimal(10, 2)));
