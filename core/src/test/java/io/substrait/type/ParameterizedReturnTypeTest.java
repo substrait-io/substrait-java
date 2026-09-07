@@ -156,10 +156,8 @@ class ParameterizedReturnTypeTest {
   }
 
   /**
-   * The census of what the evaluator does not derive: a {@code list} return is the first shape, a
-   * multi-line return program the second. {@link TypeExpressionEvaluator}'s Javadoc describes those
-   * shapes and points here rather than naming variants, so this test is the only place a {@code
-   * substrait-packaging} bump can make the two disagree.
+   * The census of list returns the evaluator does not derive. The catalog is owned upstream, so
+   * this catches declarations added by a {@code substrait-packaging} bump.
    */
   @Test
   void theReturnShapesThatAreNotDerivedYet() {
@@ -174,6 +172,13 @@ class ParameterizedReturnTypeTest {
             "transform:list_func"),
         variantsReturning(ParameterizedType.ListType.class));
 
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
+  }
+
+  @Test
+  void catalogReturnProgramsAreCovered() {
     assertEquals(
         List.of(
             "add:dec_dec",
@@ -193,14 +198,27 @@ class ParameterizedReturnTypeTest {
             "subtract:dec_dec"),
         variantsReturning(TypeExpression.ReturnProgram.class));
 
-    // The lists above pin which variants carry each shape; these pin that the shapes actually fail,
-    // so making one derivable cannot leave the census passing and the Javadoc stale.
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> resolve("add:dec_dec", R.decimal(10, 2), R.decimal(10, 2)));
+    // Arithmetic programs are exercised with exact expectations in ReturnProgramTypeTest.
+    // The rounding programs derive from the input's precision and scale too, including round:
+    // the pinned declaration does not read its value argument s.
+    assertEquals(R.decimal(9, 0), resolve("ceil:dec", R.decimal(10, 2)));
+    assertEquals(R.decimal(9, 0), resolve("floor:dec", R.decimal(10, 2)));
+    assertEquals(N.decimal(11, 2), resolve("round:dec_i32", R.decimal(10, 2), R.I32));
+
+    // These four declarations read integer_parameter(precision) without binding precision from
+    // any argument type. Supplying an i8 type cannot provide that argument's value.
+    for (String key : List.of("strptime_time:str_str_i8", "strptime_timestamp:str_str_i8")) {
+      assertUnboundPrecision(key, R.STRING, R.STRING, R.I8);
+    }
+    assertUnboundPrecision("strptime_timestamp:str_str_str_i8", R.STRING, R.STRING, R.STRING, R.I8);
+    assertUnboundPrecision("assume_timezone:date_str_i8", R.DATE, R.STRING, R.I8);
+  }
+
+  private static void assertUnboundPrecision(String key, Type... arguments) {
+    UnsupportedOperationException error =
+        assertThrows(UnsupportedOperationException.class, () -> resolve(key, arguments));
+    assertTrue(
+        error.getMessage().contains("Unbound type parameter 'precision'"), error.getMessage());
   }
 
   private static List<String> variantsReturning(Class<?> returnShape) {
