@@ -10,6 +10,9 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
  */
 trait SparkCompat {
 
+  /** Whether partition values override differently cased file columns in case-insensitive mode. */
+  def supportsCaseInsensitivePartitionOverlap: Boolean = true
+
   /** Create a LogicalRelation with version-appropriate constructor */
   def createLogicalRelation(
       relation: HadoopFsRelation,

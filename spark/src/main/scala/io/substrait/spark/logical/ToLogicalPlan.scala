@@ -53,7 +53,7 @@ import io.substrait.relation.physical.{BroadcastExchange, MultiBucketExchange, R
 import io.substrait.util.EmptyVisitationContext
 import org.apache.hadoop.fs.Path
 
-import java.net.URI
+import java.net.{URI, URISyntaxException}
 import java.util.Optional
 
 import scala.annotation.nowarn
@@ -440,7 +440,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val (format, options) = convertFileFormat(formats.head)
     val location = SparkCompat.instance.createInMemoryFileIndex(
       spark,
-      localFiles.getItems.asScala.map(i => new Path(i.getPath.get())).toSeq,
+      localFiles.getItems.asScala.map(i => toFilePath(i.getPath.get())).toSeq,
       Map(),
       Some(schema))
     val hadoopFsRelation = SparkCompat.instance.createHadoopFsRelation(
@@ -459,6 +459,15 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       isStreaming = false
     )
     remap(plan, localFiles.getRemap)
+  }
+
+  private def toFilePath(path: String): Path = {
+    try {
+      new Path(new URI(path))
+    } catch {
+      // Preserve support for unescaped local paths, such as filenames containing spaces.
+      case _: URISyntaxException => new Path(path)
+    }
   }
 
   def convertFileFormat(fileFormat: FileFormat): (SparkFileFormat, Map[String, String]) = {
