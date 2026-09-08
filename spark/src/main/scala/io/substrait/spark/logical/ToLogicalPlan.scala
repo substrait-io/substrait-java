@@ -333,17 +333,18 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       } else {
         projectExprs.map(toNamedExpression)
       }
+      val inheritedExpressions = if (createProject) output.map(_.toAttribute) else output
+      val allExpressions = inheritedExpressions ++ projectList
+      val remapped = if (project.getRemap.isPresent) {
+        project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
+      } else {
+        allExpressions
+      }
       if (createProject) {
-        val allExpressions = output.map(_.toAttribute) ++ projectList
-        val remapped = if (project.getRemap.isPresent) {
-          project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
-        } else {
-          allExpressions
-        }
         Project(remapped, child)
       } else {
         val aggregate: Aggregate = child.asInstanceOf[Aggregate]
-        aggregate.copy(aggregateExpressions = projectList)
+        aggregate.copy(aggregateExpressions = remapped)
       }
     }
   }
