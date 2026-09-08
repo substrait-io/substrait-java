@@ -6,6 +6,7 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.FunctionArgument;
+import io.substrait.proto.SortField;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
 import java.util.List;
@@ -56,8 +57,21 @@ public class AggregateFunctionProtoConverter {
                         args.get(i)
                             .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                 .collect(Collectors.toList()))
+        .addAllSorts(
+            measure.getFunction().sort().stream()
+                .map(
+                    sort ->
+                        SortField.newBuilder()
+                            .setExpr(exprProtoConverter.toProto(sort.expr()))
+                            .setDirection(sort.direction().toProto())
+                            .build())
+                .collect(Collectors.toList()))
         .setFunctionReference(
             functionCollector.getFunctionReference(measure.getFunction().declaration()))
+        .addAllOptions(
+            measure.getFunction().options().stream()
+                .map(ExpressionProtoConverter::from)
+                .collect(Collectors.toList()))
         .build();
   }
 }
