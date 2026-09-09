@@ -480,7 +480,7 @@ public abstract class FieldReference implements Expression {
    * Creates a field reference rooted at an expression and navigating through the given segments.
    *
    * @param expression the expression to reference into
-   * @param segments the navigation segments, outermost first
+   * @param segments the navigation segments, innermost first
    * @return the field reference
    */
   public static FieldReference ofExpression(
@@ -509,11 +509,80 @@ public abstract class FieldReference implements Expression {
    * Creates a field reference rooted at a struct and navigating through the given segments.
    *
    * @param struct the root struct type
-   * @param segments the navigation segments, outermost first
+   * @param segments the navigation segments, innermost first
    * @return the field reference
    */
   public static FieldReference ofRoot(Type.Struct struct, List<ReferenceSegment> segments) {
     return of(struct, null, segments);
+  }
+
+  /**
+   * Resolves the type that the given reference segments select out of the given type, or reports
+   * that they select nothing out of it.
+   *
+   * <p>The segments are given innermost first, in the order {@link #segments()} holds them, and are
+   * applied outermost first: the last segment selects out of {@code rootType}, the one before it
+   * out of the type that segment selected, and so on inwards. The given list is not modified.
+   *
+   * <p>Resolution is total. A segment that does not fit the type it is applied to, at any depth — a
+   * struct field offset the struct does not have, a list element or a map key on a type that is not
+   * a list or a map, a map key whose type is not the map's key type — yields an empty result
+   * instead of throwing. This lets a caller that re-derives the type cached on a reference, against
+   * a type that has since changed, tell a reference that no longer resolves from a failure of its
+   * own work, and leave such a reference as it is. An empty segment list selects nothing and also
+   * yields an empty result, matching {@link #ofRoot} and {@link #ofExpression}, which build no
+   * reference for it.
+   *
+   * @param rootType the type the outermost segment selects out of
+   * @param segments the navigation segments, innermost first
+   * @return the type the segments select, or empty if they do not all resolve against {@code
+   *     rootType}
+   */
+  public static Optional<Type> resolveType(Type rootType, List<ReferenceSegment> segments) {
+    if (segments.isEmpty()) {
+      return Optional.empty();
+    }
+    Type resolved = rootType;
+    for (int i = segments.size() - 1; i >= 0; i--) {
+      Optional<Type> selected = resolveSegmentType(segments.get(i), resolved);
+      if (!selected.isPresent()) {
+        return Optional.empty();
+      }
+      resolved = selected.get();
+    }
+    return Optional.of(resolved);
+  }
+
+  /**
+   * Resolves the type a single segment selects out of the given type, or reports that it selects
+   * nothing out of it.
+   *
+   * <p>This mirrors the type each segment derives when it is applied: a struct field selects the
+   * field at its offset, a list element selects the element type whatever its offset, as the length
+   * of a list is not part of its type, and a map key selects the value type of a map whose key type
+   * it matches, nullability included. A segment applied to a type that is not the container it
+   * navigates into, and any other kind of segment, select nothing.
+   */
+  private static Optional<Type> resolveSegmentType(ReferenceSegment segment, Type type) {
+    if (segment instanceof StructField && type instanceof Type.Struct) {
+      int offset = ((StructField) segment).offset();
+      List<Type> fields = ((Type.Struct) type).fields();
+      return offset >= 0 && offset < fields.size()
+          ? Optional.of(fields.get(offset))
+          : Optional.empty();
+    }
+    if (segment instanceof ListElement && type instanceof Type.ListType) {
+      return Optional.of(((Type.ListType) type).elementType());
+    }
+    if (segment instanceof MapKey && type instanceof Type.Map) {
+      // The type of the key literal is only read once the type is known to be a map, which is also
+      // the only case in which applying the segment reads it.
+      Type.Map map = (Type.Map) type;
+      return map.key().equals(((MapKey) segment).key().getType())
+          ? Optional.of(map.value())
+          : Optional.empty();
+    }
+    return Optional.empty();
   }
 
   private static class StructFieldFinder

@@ -38,6 +38,25 @@ public class CopyOnWriteUtils {
   }
 
   /**
+   * A {@link Supplier} that is allowed to throw the exception type of the visitation it runs
+   * within. Used to scope a rewrite so that state set up around it is always torn down.
+   *
+   * @param <T> the type of the supplied value
+   * @param <E> the exception type that may be thrown
+   */
+  @FunctionalInterface
+  public interface ThrowingSupplier<T, E extends Exception> {
+
+    /**
+     * Supplies a value.
+     *
+     * @return the supplied value
+     * @throws E if producing the value fails
+     */
+    T get() throws E;
+  }
+
+  /**
    * Functional interface for transforming values during copy-on-write operations.
    *
    * @param <T> the type of value to transform
