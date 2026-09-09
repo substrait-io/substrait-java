@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.Resources;
 import io.substrait.expression.FunctionOption;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -65,6 +66,29 @@ class FunctionBindingResolverTest {
             sum, List.of(ResolvedArgument.value(R.I32)), List.of(), N.I64);
     assertEquals(N.I64, binding.outputType());
     assertEquals(sum.getAnchor(), binding.anchor());
+  }
+
+  @Test
+  void decimalDivisionDerivesIndependentlyOfTheDeclaredOutputType() {
+    SimpleExtension.ScalarFunctionVariant divide =
+        scalar(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "divide:dec_dec");
+    List<ResolvedArgument> arguments =
+        List.of(ResolvedArgument.value(R.decimal(10, 2)), ResolvedArgument.value(R.decimal(5, 1)));
+    assertEquals(R.decimal(21, 8), FunctionBindingResolver.deriveOutputType(divide, arguments));
+    assertEquals(
+        R.decimal(21, 8),
+        FunctionBindingResolver.resolveAndValidate(divide, arguments, List.of(), R.decimal(21, 8))
+            .outputType());
+
+    for (Type declared : List.of(R.decimal(20, 2), R.decimal(21, 7), N.decimal(21, 8))) {
+      InvalidFunctionBindingException error =
+          assertThrows(
+              InvalidFunctionBindingException.class,
+              () ->
+                  FunctionBindingResolver.resolveAndValidate(
+                      divide, arguments, List.of(), declared));
+      assertTrue(error.getMessage().contains("output type"), error.getMessage());
+    }
   }
 
   @Test
