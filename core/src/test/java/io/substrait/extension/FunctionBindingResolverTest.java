@@ -405,10 +405,17 @@ class FunctionBindingResolverTest {
   }
 
   @Test
-  void failsClosedOnANestedShapeItCannotCheck() {
+  void checksNestedShapeAndNullability() {
     SimpleExtension.ScalarFunctionVariant listPair = testScalar("list_pair:list_list");
-    // A declared list<any1> against a non-list actual used to be accepted silently; a strict
-    // validator must reject a shape it cannot check rather than pass it.
+    assertDoesNotThrow(
+        () ->
+            FunctionBindingResolver.resolveAndValidate(
+                listPair,
+                List.of(
+                    ResolvedArgument.value(R.list(N.I32)), ResolvedArgument.value(R.list(N.I32))),
+                List.of(),
+                R.BOOLEAN));
+    // The container shape must match before its element can bind.
     assertThrows(
         InvalidFunctionBindingException.class,
         () ->
@@ -417,8 +424,7 @@ class FunctionBindingResolverTest {
                 List.of(ResolvedArgument.value(R.I32), ResolvedArgument.value(R.I32)),
                 List.of(),
                 R.BOOLEAN));
-    // list<i32> vs list<i32?> must not bind either: nested nullability is part of the structural
-    // match, which is exactly the check this validator cannot do yet — so it fails closed here too.
+    // Inner nullability is part of the shared wildcard binding.
     assertThrows(
         InvalidFunctionBindingException.class,
         () ->
