@@ -13,12 +13,12 @@ import org.junit.jupiter.api.Test;
  * Roundtrip test for the AutomaticDynamicFunctionMappingConverterProvider feature.
  *
  * <p>This test verifies that: 1. Substrait plans using unmapped functions (like strftime or
- * regexp_match_substring from extensions) are successfully converted. 2. With
+ * regexp_count_substring from extensions) are successfully converted. 2. With
  * AutomaticDynamicFunctionMappingConverterProvider enabled, these unmapped functions are
  * dynamically mapped to Calcite operators. 3. The roundtrip conversion (Substrait → Calcite →
  * Substrait) is stable, including for SQL queries.
  *
- * <p>The test uses unmapped functions like strftime and regexp_match_substring that are defined in
+ * <p>The test uses unmapped functions like strftime and regexp_count_substring that are defined in
  * extension YAML but not in FunctionMappings.
  */
 class AutomaticDynamicFunctionMappingRoundtripTest extends PlanTestBase {
@@ -95,7 +95,7 @@ class AutomaticDynamicFunctionMappingRoundtripTest extends PlanTestBase {
    * Test roundtrip with SQL query using multiple unmapped functions.
    *
    * <p>This test verifies that SQL queries with multiple unmapped function calls (like
-   * regexp_match_substring) can be handled when AutomaticDynamicFunctionMappingConverterProvider is
+   * regexp_count_substring) can be handled when AutomaticDynamicFunctionMappingConverterProvider is
    * used. The operator table is populated with unmapped function signatures, allowing occurrences
    * of unmapped functions to be recognized during SQL parsing and conversion.
    */
@@ -103,7 +103,7 @@ class AutomaticDynamicFunctionMappingRoundtripTest extends PlanTestBase {
   void testMultipleUnmappedFunctionsSqlRoundtrip() throws Exception {
     String createStatements = "CREATE TABLE t (date_str VARCHAR, ts_str VARCHAR)";
     String query =
-        "SELECT regexp_match_substring(date_str, '^[0-9]{4}') AS parsed_date, regexp_match_substring(ts_str, '^[0-9]{4}') AS parsed_ts FROM t";
+        "SELECT regexp_count_substring(date_str, '[0-9]') AS date_digits, regexp_count_substring(ts_str, '[0-9]') AS ts_digits FROM t";
 
     // Perform roundtrip with multiple unmapped function calls
     assertSqlSubstraitRelRoundTripLoosePojoComparison(
