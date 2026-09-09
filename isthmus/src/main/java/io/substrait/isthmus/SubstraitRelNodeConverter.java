@@ -373,21 +373,8 @@ public class SubstraitRelNodeConverter
     final boolean emitDirect = remap.isEmpty();
     final boolean groupingSetIndexGetsRemapped =
         remap.map(r -> r.indices().contains(groupingSetIndex)).orElse(false);
-    if (aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped)) {
-      aggregateCalls.add(
-          AggregateCall.create(
-              SqlStdOperatorTable.GROUP_ID,
-              false,
-              false,
-              false,
-              Collections.emptyList(),
-              Collections.emptyList(),
-              -1,
-              null,
-              RelCollations.EMPTY,
-              typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
-              null));
-    }
+    final boolean needsGroupingSetIndex =
+        aggregate.getGroupings().size() > 1 && (emitDirect || groupingSetIndexGetsRemapped);
 
     exitUncorrelatedScope(context, Aggregate.class);
 
@@ -401,13 +388,129 @@ public class SubstraitRelNodeConverter
             ? relBuilder.transform(config -> config.withDedupAggregateCalls(false))
             : relBuilder;
 
-    RelNode node = aggregateBuilder.push(child).aggregate(groupKey, aggregateCalls).build();
+    aggregateBuilder.push(child);
+    RelNode node =
+        needsGroupingSetIndex
+            ? aggregateWithGroupingSetIndex(
+                aggregateBuilder, groupExprLists, aggregateCalls, groupingSetIndex)
+            : aggregateBuilder.aggregate(groupKey, aggregateCalls).build();
     // Not applyRelCommon: the mapping applied here is the one rewritten above, not the one the
     // relation carries.
     return applyOutputNames(
-        applyRemap(node, inConvertedGroupingOrder(remap, groupExprs, aggregateCalls.size())),
+        applyRemap(
+            node,
+            inConvertedGroupingOrder(
+                remap, groupExprs, aggregateCalls.size() + (needsGroupingSetIndex ? 1 : 0))),
         aggregate,
         child);
+  }
+
+  /**
+   * Materializes the declared grouping-set ordinal. GROUPING distinguishes membership even when a
+   * grouped value is null; GROUP_ID distinguishes repetitions of the same set. Calcite may sort the
+   * sets and expand duplicates into UNION ALL branches, but these two values retain their meaning
+   * through those rewrites.
+   */
+  private RelNode aggregateWithGroupingSetIndex(
+      RelBuilder builder,
+      List<List<RexNode>> groupExprLists,
+      List<AggregateCall> aggregateCalls,
+      int groupingSetIndex) {
+    List<java.util.Set<RexNode>> sets =
+        groupExprLists.stream().map(HashSet::new).collect(Collectors.toList());
+    // Use one indicator per varying key, rather than a single bit mask with a fixed width.
+    List<RexNode> indicators =
+        groupExprLists.stream()
+            .flatMap(Collection::stream)
+            .distinct()
+            .filter(key -> sets.stream().anyMatch(set -> !set.contains(key)))
+            .collect(Collectors.toList());
+    boolean duplicates = new HashSet<>(sets).size() != sets.size();
+    // Materialize non-field keys before constructing typed calls. RelBuilder's expression-based
+    // AggCall API re-infers stored measure types and uses placeholder types during duplicate-set
+    // expansion; the AggregateCall API preserves the types from fromMeasure.
+    List<RexNode> extraKeys =
+        groupExprLists.stream()
+            .flatMap(Collection::stream)
+            .distinct()
+            .filter(key -> !(key instanceof RexInputRef))
+            .collect(Collectors.toList());
+    int inputFieldCount = builder.peek().getRowType().getFieldCount();
+    if (!extraKeys.isEmpty()) {
+      builder.projectPlus(extraKeys);
+    }
+    Map<RexNode, RexNode> keyFields = new HashMap<>();
+    for (List<RexNode> keys : groupExprLists) {
+      for (RexNode key : keys) {
+        keyFields.put(
+            key,
+            key instanceof RexInputRef
+                ? key
+                : builder.field(inputFieldCount + extraKeys.indexOf(key)));
+      }
+    }
+    List<List<RexNode>> fieldSets =
+        groupExprLists.stream()
+            .map(keys -> keys.stream().map(keyFields::get).collect(Collectors.toList()))
+            .collect(Collectors.toList());
+    RelBuilder.GroupKey groupKey = builder.groupKey(keyFields.values(), fieldSets);
+    List<AggregateCall> calls = new ArrayList<>(aggregateCalls);
+    for (RexNode key : indicators) {
+      calls.add(
+          groupingCall(
+              SqlStdOperatorTable.GROUPING,
+              List.of(((RexInputRef) keyFields.get(key)).getIndex())));
+    }
+    if (duplicates) {
+      calls.add(groupingCall(SqlStdOperatorTable.GROUP_ID, List.of()));
+    }
+    builder.aggregate(groupKey, calls);
+
+    List<RexNode> cases = new ArrayList<>();
+    Map<java.util.Set<RexNode>, Integer> occurrences = new HashMap<>();
+    RelDataType indexType = typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I32);
+    for (int index = 0; index < sets.size() - 1; index++) {
+      java.util.Set<RexNode> set = sets.get(index);
+      List<RexNode> conditions = new ArrayList<>();
+      for (int indicator = 0; indicator < indicators.size(); indicator++) {
+        RexNode field = builder.field(groupingSetIndex + indicator);
+        conditions.add(
+            builder.equals(
+                field,
+                rexBuilder.makeLiteral(
+                    set.contains(indicators.get(indicator)) ? 0L : 1L, field.getType())));
+      }
+      if (duplicates) {
+        int occurrence = occurrences.merge(set, 1, Integer::sum) - 1;
+        RexNode field = builder.field(groupingSetIndex + indicators.size());
+        conditions.add(
+            builder.equals(field, rexBuilder.makeLiteral((long) occurrence, field.getType())));
+      }
+      cases.add(builder.and(conditions));
+      cases.add(rexBuilder.makeLiteral(index, indexType));
+    }
+    cases.add(rexBuilder.makeLiteral(sets.size() - 1, indexType));
+    List<RexNode> output = new ArrayList<>();
+    for (int field = 0; field < groupingSetIndex; field++) {
+      output.add(builder.field(field));
+    }
+    output.add(rexBuilder.makeCall(SqlStdOperatorTable.CASE, cases));
+    return builder.project(output).build();
+  }
+
+  private AggregateCall groupingCall(SqlAggFunction function, List<Integer> arguments) {
+    return AggregateCall.create(
+        function,
+        false,
+        false,
+        false,
+        List.of(),
+        arguments,
+        -1,
+        null,
+        RelCollations.EMPTY,
+        typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
+        null);
   }
 
   /**
