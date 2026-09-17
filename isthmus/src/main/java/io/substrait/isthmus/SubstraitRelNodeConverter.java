@@ -1071,20 +1071,29 @@ public class SubstraitRelNodeConverter
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
-    if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
-        || namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
+    if (namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
       throw new UnsupportedOperationException(
           String.format(
-              "Can only handle CTAS NamedWrite with (%s, %s), given (%s, %s)",
-              AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
-              AbstractWriteRel.OutputMode.NO_OUTPUT,
-              namedWrite.getCreateMode(),
-              namedWrite.getOutputMode()));
+              "Can only handle CTAS NamedWrite with output mode %s, given %s",
+              AbstractWriteRel.OutputMode.NO_OUTPUT, namedWrite.getOutputMode()));
+    }
+    switch (namedWrite.getCreateMode()) {
+      case ERROR_IF_EXISTS:
+      case IGNORE_IF_EXISTS:
+      case REPLACE_IF_EXISTS:
+        break;
+      default:
+        throw new UnsupportedOperationException(
+            "Cannot convert CTAS creation mode to Calcite: " + namedWrite.getCreateMode());
     }
 
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
-    return new CreateTable(namedWrite.getNames(), toRowType(namedWrite.getTableSchema()), relNode);
+    return new CreateTable(
+        namedWrite.getNames(),
+        toRowType(namedWrite.getTableSchema()),
+        relNode,
+        namedWrite.getCreateMode());
   }
 
   @Override
