@@ -35,8 +35,10 @@ import org.apache.calcite.rel.metadata.RelMdTableReferences;
 import org.apache.calcite.rel.metadata.RelMdUniqueKeys;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
+import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.calcite.util.BuiltInMethod;
@@ -111,15 +113,12 @@ public final class RegisterAtRuntime implements Feature {
           RelMdAllPredicates.class,
           RelMdCollation.class);
 
-      register(Resources.class, SqlValidatorException.class);
-
-      // Calcite reports a syntax error by collecting the tokens the grammar expected at that
-      // point, which it does by reflectively calling these productions on the parser
-      // (SqlAbstractParserImpl.MetadataImpl.initList). Without them the parser cannot build a
-      // SqlParseException at all, and every syntax error surfaces as the reflection failure
-      // instead of as a message about the SQL.
-      registerMethods(
-          SqlDdlParserImpl.class, "ReservedFunctionName", "ContextVariable", "NonReservedKeyWord");
+      register(
+          Resources.class,
+          ReflectiveSqlOperatorTable.class,
+          SqlValidatorException.class,
+          SqlDdlParserImpl.class,
+          SqlLibraryOperators.class);
 
       for (BuiltInMethod method : BuiltInMethod.values()) {
         if (method.field != null) {
@@ -134,22 +133,6 @@ public final class RegisterAtRuntime implements Feature {
       }
     } catch (Exception e) {
       throw new IllegalStateException(e);
-    }
-  }
-
-  /**
-   * Registers the named no-argument methods of the given class for reflective lookup.
-   *
-   * @param c the class declaring the methods
-   * @param methodNames the names of the public no-argument methods to register
-   * @throws NoSuchMethodException if the class does not declare one of the methods, so that the
-   *     native image fails to build rather than silently losing the behavior that needs them
-   */
-  private static void registerMethods(Class<?> c, String... methodNames)
-      throws NoSuchMethodException {
-    RuntimeReflection.register(c);
-    for (String methodName : methodNames) {
-      RuntimeReflection.register(c.getMethod(methodName));
     }
   }
 
