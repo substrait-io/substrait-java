@@ -17,14 +17,14 @@
 package io.substrait.spark.logical
 
 import io.substrait.spark.{FileHolder, SparkExtension, ToSubstraitType}
-import io.substrait.spark.compat.WindowGroupLimitCase
+import io.substrait.spark.compat.{SparkCompat, WindowGroupLimitCase}
 import io.substrait.spark.expression._
 import io.substrait.spark.utils.Util
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.ResolvedIdentifier
+import org.apache.spark.sql.catalyst.analysis.{caseInsensitiveResolution, caseSensitiveResolution, ResolvedIdentifier}
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
@@ -38,6 +38,7 @@ import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, DataSourceV2ScanRelation, V2SessionCatalog}
 import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{NullType, StructField, StructType}
 
 import io.substrait.`type`.{NamedStruct, Type}
@@ -511,6 +512,92 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       .build()
   }
 
+  private def buildPartitionedFileScan(fsRelation: HadoopFsRelation): relation.Rel = {
+    // LocalFiles does not carry directory partition values. Encode Spark's resolved values as
+    // literals so consumers do not have to infer their types or base paths again.
+    val fileFormat = convertFileFormat(fsRelation.fileFormat, fsRelation.options)
+    val dataSchema = ToSubstraitType.toNamedStruct(fsRelation.dataSchema)
+    val resolver =
+      if (
+        SparkCompat.instance.getConf(fsRelation.sparkSession, SQLConf.CASE_SENSITIVE.key).toBoolean
+      ) {
+        caseSensitiveResolution
+      } else {
+        caseInsensitiveResolution
+      }
+
+    if (
+      !SparkCompat.instance.supportsCaseInsensitivePartitionOverlap &&
+      fsRelation.dataSchema.exists(
+        data =>
+          fsRelation.partitionSchema.exists(
+            partition => data.name != partition.name && resolver(data.name, partition.name)))
+    ) {
+      throw new UnsupportedOperationException(
+        "This Spark version cannot reliably read file and partition columns that differ only in case")
+    }
+
+    // Partition values override overlapping file columns, preserving the merged schema's order.
+    val outputMapping = fsRelation.schema.map {
+      field =>
+        val partitionIndex =
+          fsRelation.partitionSchema.indexWhere(p => resolver(p.name, field.name))
+        if (partitionIndex >= 0) {
+          fsRelation.dataSchema.size + partitionIndex
+        } else {
+          fsRelation.dataSchema.indexWhere(d => resolver(d.name, field.name))
+        }
+    }
+    val remap = relation.Rel.Remap.of(outputMapping.map(Int.box).toSeq.asJava)
+
+    val partitions = fsRelation.location.listFiles(Nil, Nil).filter(_.files.nonEmpty).map {
+      partition =>
+        val read = relation.LocalFiles
+          .builder()
+          .initialSchema(dataSchema)
+          .addAllItems(
+            partition.files
+              .map {
+                file =>
+                  FileOrFiles
+                    .builder()
+                    .fileFormat(fileFormat)
+                    .partitionIndex(0)
+                    .start(0)
+                    .length(file.getLen)
+                    .path(file.getPath.toUri.toString)
+                    .pathType(PathType.URI_FILE)
+                    .build()
+              }
+              .toSeq
+              .asJava)
+          .build()
+        val values = fsRelation.partitionSchema.zipWithIndex.map {
+          case (field, index) =>
+            ToSubstraitLiteral(
+              Literal(partition.values.get(index, field.dataType), field.dataType),
+              Some(field.nullable))
+        }
+        relation.Project
+          .builder()
+          .input(read)
+          .addAllExpressions(values.toSeq.asJava)
+          .remap(remap)
+          .build()
+    }
+
+    partitions.size match {
+      case 0 =>
+        relation.VirtualTableScan
+          .builder()
+          .initialSchema(ToSubstraitType.toNamedStruct(fsRelation.schema))
+          .build()
+      case 1 => partitions.head
+      case _ =>
+        relation.Set.builder().setOp(SetOp.UNION_ALL).addAllInputs(partitions.toSeq.asJava).build()
+    }
+  }
+
   private def convertFileFormat(
       fileFormat: DSFileFormat,
       options: Map[String, String]): FileFormat = fileFormat match {
@@ -533,7 +620,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
   }
 
   /** Read Operator: https://substrait.io/relations/logical_relations/#read-operator */
-  private def convertReadOperator(plan: LeafNode): relation.AbstractReadRel = {
+  private def convertReadOperator(plan: LeafNode): relation.Rel = {
     var tableNames: List[String] = null
     plan match {
       case logicalRelation: LogicalRelation if logicalRelation.catalogTable.isDefined =>
@@ -558,6 +645,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         buildVirtualTableScan(rdd.schema, rdd.rdd.take(_rddLimit).toIndexedSeq)
       case logicalRelation: LogicalRelation =>
         logicalRelation.relation match {
+          case fsRelation: HadoopFsRelation if fsRelation.partitionSchema.nonEmpty =>
+            buildPartitionedFileScan(fsRelation)
           case fsRelation: HadoopFsRelation =>
             buildLocalFileScan(fsRelation)
           case _ =>
