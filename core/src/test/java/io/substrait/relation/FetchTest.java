@@ -3,6 +3,8 @@ package io.substrait.relation;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
+import io.substrait.expression.Expression;
+import io.substrait.type.Type;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,18 @@ class FetchTest extends TestBase {
     fetch().offset(sb.i16(1)).count(sb.i16(2)).build();
     fetch().offset(sb.i32(1)).count(sb.i32(2)).build();
     fetch().offset(sb.i64(1)).count(sb.i64(2)).build();
+  }
+
+  /** Unbound expression types are accepted until a partially bound plan is bound. */
+  @Test
+  void unboundExpressionsAccepted() {
+    Expression.DynamicParameter parameter =
+        Expression.DynamicParameter.builder()
+            .type(Type.Unbound.builder().build())
+            .parameterReference(1)
+            .build();
+
+    fetch().offset(parameter).count(parameter).build();
   }
 
   /** A non-integer offset expression is rejected at construction time. */

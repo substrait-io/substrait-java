@@ -31,11 +31,12 @@ public abstract class Fetch extends SingleInputRel implements HasExtension {
   public abstract Optional<Expression> getCount();
 
   /**
-   * Validates that the offset and count expressions are integer-typed. Both must evaluate to a
+   * Validates that concrete offset and count expression types are integers. Both must evaluate to a
    * non-negative integer; {@code i64} is recommended but not required, so any integer width is
-   * accepted (spec v0.99.0).
+   * accepted (spec v0.99.0). Unbound types are accepted for partially bound plans.
    *
-   * @throws IllegalArgumentException if the offset or count expression is not integer-typed
+   * @throws IllegalArgumentException if the offset or count expression has a concrete non-integer
+   *     type
    */
   @Value.Check
   protected void check() {
@@ -47,7 +48,7 @@ public abstract class Fetch extends SingleInputRel implements HasExtension {
     expression.ifPresent(
         e -> {
           Type type = e.getType();
-          if (!type.isInteger()) {
+          if (!(type instanceof Type.Unbound) && !type.isInteger()) {
             throw new IllegalArgumentException(
                 "Fetch "
                     + field
