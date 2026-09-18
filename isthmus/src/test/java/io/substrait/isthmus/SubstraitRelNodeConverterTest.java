@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -597,6 +598,27 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
+    void groupingSetIndicatorsPreserveDeclaredMeasureTypes() {
+      Rel input = sb.namedScan(List.of("example"), List.of("a", "g"), List.of(R.I32, R.STRING));
+      Rel aggregate =
+          sb.aggregate(
+              i -> List.of(sb.grouping(i, 0), sb.grouping(i, 1), sb.grouping(i, 0)),
+              i ->
+                  List.of(
+                      withOutputType(sb.sum(i, 0), R.I64), withOutputType(sb.sum(i, 0), R.FP64)),
+              Optional.empty(),
+              input);
+
+      assertRowMatch(
+          substraitToCalcite.convert(aggregate).getRowType(),
+          N.I32,
+          N.STRING,
+          R.I64,
+          R.FP64,
+          R.I32);
+    }
+
+    @Test
     void declaredTypeSurvivesAggregateRollupRule() {
       Rel input = sb.namedScan(List.of("example"), List.of("a", "g"), List.of(R.I32, R.STRING));
       Rel filtered = sb.filter(i -> sb.equal(sb.fieldReference(i, 0), sb.i32(1)), input);
@@ -660,8 +682,11 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       // top, so the plans are not structurally identical — but the aggregate itself keeps both
       // groupings, the empty one included, and the measure's declared type.
       Rel back = SubstraitRelVisitor.convert(relNode, converterProvider);
+      while (back instanceof io.substrait.relation.Project) {
+        back = ((io.substrait.relation.Project) back).getInput();
+      }
       io.substrait.relation.Aggregate aggregateBack =
-          (io.substrait.relation.Aggregate) ((io.substrait.relation.Project) back).getInput();
+          assertInstanceOf(io.substrait.relation.Aggregate.class, back);
       assertEquals(aggregate.getGroupings(), aggregateBack.getGroupings());
       assertEquals(aggregate.getMeasures(), aggregateBack.getMeasures());
     }

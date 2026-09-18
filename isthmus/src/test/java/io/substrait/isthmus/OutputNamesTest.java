@@ -168,12 +168,9 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
-  void leavesAnAggregateThatEmitsDirectlyAlone() {
-    // The conversion of an aggregate over several grouping sets ends in a projection that carries
-    // the grouping-set index. Its other columns are the relation's own, in the declared order, but
-    // that one comes back as Calcite's folded GROUP_ID literal -- a BIGINT where the relation
-    // declares an i32 -- so the names are dropped rather than pinned onto a column whose type the
-    // plan does not describe.
+  void namesAnAggregateThatEmitsItsGroupingSetIndexDirectly() {
+    // The derived grouping-set index has the declared i32 type, so all output names apply.
+
     Rel aggregate =
         sb.aggregate(
             input -> List.of(sb.grouping(input, 0), sb.grouping(input, 1)),
@@ -181,13 +178,12 @@ class OutputNamesTest extends PlanTestBase {
             Optional.empty(),
             scan);
 
-    RelNode plain = substraitToCalcite.convert(aggregate);
     RelNode node =
         substraitToCalcite.convert(
             aggregate.withHint(
                 Optional.of(Hint.builder().addOutputNames("k1", "k2", "n", "g").build())));
 
-    assertEquals(plain.getRowType().getFieldNames(), node.getRowType().getFieldNames());
+    assertEquals(List.of("k1", "k2", "n", "g"), node.getRowType().getFieldNames());
   }
 
   @Test
@@ -292,10 +288,7 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
-  void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
-    // Same aggregate with the grouping-set index emitted: the relation types it i32 where the
-    // GROUP_ID call the conversion appends is i64, so the fourth column is not the fourth column
-    // the relation declares and the names would land on a column the plan does not name.
+  void namesAnAggregateThatEmitsItsGroupingSetIndexThroughAMapping() {
     Rel scan3 =
         sb.namedScan(List.of("t3"), List.of("a", "b", "c"), List.of(R.I64, N.STRING, R.FP64));
     Rel aggregate =
@@ -305,13 +298,12 @@ class OutputNamesTest extends PlanTestBase {
             Optional.of(Rel.Remap.of(List.of(0, 1, 2, 3))),
             scan3);
 
-    RelNode plain = substraitToCalcite.convert(aggregate);
     RelNode named =
         substraitToCalcite.convert(
             aggregate.withHint(
                 Optional.of(Hint.builder().addOutputNames("k_b", "k_a", "n", "gs").build())));
 
-    assertEquals(plain.getRowType().getFieldNames(), named.getRowType().getFieldNames());
+    assertEquals(List.of("k_b", "k_a", "n", "gs"), named.getRowType().getFieldNames());
   }
 
   private Rel hintedInnerProject() {
