@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.MaskExpression;
 import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
@@ -204,7 +205,7 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
-    return applyRelCommon(node, namedScan);
+    return applyRelCommon(applyProjection(node, namedScan.getProjection()), namedScan);
   }
 
   @Override
@@ -866,11 +867,6 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
-    if (virtualTableScan.getProjection().isPresent()) {
-      throw new UnsupportedOperationException(
-          "Projection on a VirtualTableScan is not supported: its columns would have to be "
-              + "masked before an emit mapping selects from them");
-    }
     // A schema's names are one per field at every level of the struct, in depth-first order, so
     // they have to be handed to the conversion rather than paired with the row type afterwards:
     // with a nested struct anywhere in the schema the two lists do not even have the same length.
@@ -921,7 +917,9 @@ public class SubstraitRelNodeConverter
         tuplesBuilder.add(tupleBuilder.build());
       }
       return applyRelCommon(
-          LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+          applyProjection(
+              LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+              virtualTableScan.getProjection()),
           virtualTableScan);
     } else {
       // A row that does not fit a LogicalValues tuple keeps its expressions, in a relation of our
@@ -930,7 +928,10 @@ public class SubstraitRelNodeConverter
       // consumer whose planner only knows Calcite's own relations can expand it with
       // VirtualTableExpansionRule.
       return applyRelCommon(
-          VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows), virtualTableScan);
+          applyProjection(
+              VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows),
+              virtualTableScan.getProjection()),
+          virtualTableScan);
     }
   }
 
@@ -1180,6 +1181,51 @@ public class SubstraitRelNodeConverter
         String.format(
             "Rel %s of type %s not handled by visitor type %s.",
             rel, rel.getClass().getCanonicalName(), this.getClass().getCanonicalName()));
+  }
+
+  /**
+   * Applies a read relation's projection to the node its scan was converted into.
+   *
+   * <p>A projection masks the columns of the initial schema, and the read produces the ones it
+   * leaves: {@link io.substrait.relation.AbstractReadRel#deriveRecordType()} applies it to that
+   * schema, so an emit mapping's indices, and every field reference a parent relation makes, count
+   * the masked columns. Building the scan from the schema alone leaves the node one column list and
+   * the relation another.
+   *
+   * <p>The columns come out in the order the mask lists them. That is the order {@link
+   * io.substrait.expression.MaskExpressionTypeProjector} builds the record type in, and the node
+   * has to carry the columns the relation says it carries. Spec v0.102.0 describes a mask as
+   * removing columns and asks whether reordering should be supported at all, so this order follows
+   * the record type the model derives rather than a rule the specification settles.
+   *
+   * <p>Only a mask that selects whole columns is converted. A mask can also select inside a column
+   * -- some of a struct's fields, some of a list's elements, some of a map's entries -- and
+   * applying that would mean rebuilding the column's value from the parts the mask keeps, which
+   * this conversion does not do. Such a mask is reported rather than applied to the columns it
+   * selects whole, which would drop the rest of what it says.
+   *
+   * @param relNode the node the read was converted into
+   * @param projection the projection the read carries, if any
+   * @return the node, with the masked columns projected out of it
+   */
+  private RelNode applyProjection(RelNode relNode, Optional<MaskExpression> projection) {
+    if (projection.isEmpty()) {
+      return relNode;
+    }
+    List<MaskExpression.StructItem> items = projection.get().getSelect().getStructItems();
+    RelDataType rowType = relNode.getRowType();
+    List<RexNode> rexList = new ArrayList<>(items.size());
+    for (MaskExpression.StructItem item : items) {
+      if (item.getChild().isPresent()) {
+        throw new UnsupportedOperationException(
+            "A read projection that selects inside a column is not supported: only a mask that "
+                + "selects whole columns is applied, and pruning a struct, a list or a map would "
+                + "have to rebuild the column's value");
+      }
+      rexList.add(
+          new RexInputRef(item.getField(), rowType.getFieldList().get(item.getField()).getType()));
+    }
+    return relBuilder.push(relNode).project(rexList).build();
   }
 
   /**
