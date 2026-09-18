@@ -2,6 +2,7 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.isthmus.AggregateFunctions;
+import io.substrait.isthmus.ListFunctions;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -29,34 +30,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
  * <p>Also provides type-based resolvers to disambiguate operators by output type.
  */
 public class FunctionMappings {
-
-  /** The transform:list_func function; applies a lambda to each element of an array. */
-  public static final SqlFunction TRANSFORM =
-      SqlBasicFunction.create(
-          "transform",
-          opBinding -> opBinding.getTypeFactory().createArrayType(opBinding.getOperandType(1), -1),
-          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
-
-  /** The filter:list_func function; filters elements of an array using a predicate lambda. */
-  public static final SqlFunction FILTER =
-      SqlBasicFunction.create(
-          "filter",
-          opBinding -> opBinding.getOperandType(0),
-          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
-
-  /** The any_match:list_func function; returns true if any element matches the predicate. */
-  public static final SqlFunction ANY_MATCH =
-      SqlBasicFunction.create(
-          "any_match",
-          opBinding -> opBinding.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
-          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
-
-  /** The all_match:list_func function; returns true if all elements match the predicate. */
-  public static final SqlFunction ALL_MATCH =
-      SqlBasicFunction.create(
-          "all_match",
-          opBinding -> opBinding.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
-          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ANY));
 
   /**
    * The {@code RIGHTSHIFT(value, shift)} function. Calcite provides {@link
@@ -191,10 +164,10 @@ public class FunctionMappings {
               s(SqlLibraryOperators.PARSE_TIME, "strptime_time"),
               s(SqlLibraryOperators.PARSE_TIMESTAMP, "strptime_timestamp"),
               s(SqlLibraryOperators.PARSE_DATE, "strptime_date"),
-              s(TRANSFORM, "transform"),
-              s(FILTER, "filter"),
-              s(ANY_MATCH, "any_match"),
-              s(ALL_MATCH, "all_match"))
+              s(ListFunctions.TRANSFORM, "transform"),
+              s(ListFunctions.FILTER, "filter"),
+              s(ListFunctions.ANY_MATCH, "any_match"),
+              s(ListFunctions.ALL_MATCH, "all_match"))
           .build();
 
   /** Aggregate operator signatures mapped to Substrait function names. */
