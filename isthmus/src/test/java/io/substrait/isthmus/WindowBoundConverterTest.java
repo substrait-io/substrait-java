@@ -279,6 +279,21 @@ class WindowBoundConverterTest extends CalciteObjs {
   }
 
   @Test
+  void negativeOffsetIsMirroredWhenItsMagnitudeDoesNotFitItsOwnType() {
+    // The magnitude only has to fit the ordering column, not the offset literal's own type:
+    // Integer.MIN_VALUE negates to 2147483648, which is not an i32 but is an i64.
+    RexNode offset = c(Integer.MIN_VALUE, SqlTypeName.INTEGER);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.BIGINT);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(WindowBound.Following.of(ExpressionCreator.i64(false, 2147483648L)), converted);
+  }
+
+  @Test
   void negativeOffsetOverflowingLongIsRejectedRatherThanThrowingArithmeticException() {
     // Long.MIN_VALUE has no positive long representation; Math.negateExact would throw
     // ArithmeticException, which toWindowBound does not document.
