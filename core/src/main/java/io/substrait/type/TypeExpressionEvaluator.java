@@ -468,8 +468,7 @@ public class TypeExpressionEvaluator {
     public Object visit(TypeExpression.ReturnProgram program) {
       // The grammar lets an assignment's right-hand side be a program of its own, and nothing
       // defines its scope. The locals here are one flat map, so an inner program's assignments
-      // would
-      // leak into the enclosing one; refuse it instead.
+      // would leak into the enclosing one; refuse it instead.
       if (inProgram) {
         throw new UnsupportedOperationException(
             "Cannot evaluate a return program nested in another: " + program);
