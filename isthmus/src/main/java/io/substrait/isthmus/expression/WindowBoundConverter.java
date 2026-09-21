@@ -34,7 +34,8 @@ public class WindowBoundConverter {
    * @throws IllegalStateException if the bound is not one of CURRENT ROW, UNBOUNDED, PRECEDING, or
    *     FOLLOWING
    * @throws UnsupportedOperationException if a RANGE offset's integral literal does not fit the
-   *     ordering expression's exact type
+   *     ordering expression's exact type, or if a negative offset's magnitude has no positive
+   *     representation
    */
   public static WindowBound toWindowBound(
       RexWindowBound rexWindowBound,
