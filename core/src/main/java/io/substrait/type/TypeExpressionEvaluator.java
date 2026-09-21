@@ -33,9 +33,13 @@ import java.util.OptionalInt;
  * representation are checked rather than wrapped. An integer literal itself must fit in 32 bits,
  * because the parser reads it as an {@code int}. The spec settles neither of two choices made here:
  * integer division truncates toward zero, and {@code AND} and {@code OR} evaluate both operands.
- * Both follow substrait-go. No standard extension declares a parameterized {@code fixedbinary} or
- * {@code interval_compound} at all, as an argument or as a return -- those two are supported for
- * symmetry, and pinned against hand-written declarations rather than the catalog.
+ * Both follow substrait-go. The two branches of a conditional must agree in kind (type, integer or
+ * boolean), checked from their shape without evaluating the branch not taken. Neither the spec nor
+ * substrait-go asks for this; it makes a declaration whose branches disagree fail for every
+ * argument, not only for those that choose the bad branch. No standard extension declares a
+ * parameterized {@code fixedbinary} or {@code interval_compound} at all, as an argument or as a
+ * return -- those two are supported for symmetry, and pinned against hand-written declarations
+ * rather than the catalog.
  *
  * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
  * into a container -- so an element parameter it would otherwise substitute, as in {@code
@@ -484,6 +488,7 @@ public class TypeExpressionEvaluator {
 
     @Override
     public Object visit(TypeExpression.IfOperation conditional) {
+      branchKind(conditional);
       return evaluate(
           evaluate(conditional.ifCondition(), Boolean.class)
               ? conditional.thenExpr()
@@ -582,6 +587,70 @@ public class TypeExpressionEvaluator {
 
     private Type intervalCompound(boolean nullable, TypeExpression precision) {
       return TypeCreator.of(nullable).intervalCompound(resolveInteger(precision));
+    }
+
+    /**
+     * Checks that both branches of a conditional agree in kind and returns that kind, or null when
+     * neither branch's shape says. Only the chosen branch is evaluated, so without this a
+     * declaration whose branches disagree fails only for the arguments that choose the bad one.
+     */
+    private Class<?> branchKind(TypeExpression.IfOperation conditional) {
+      Class<?> thenKind = kindOf(conditional.thenExpr());
+      Class<?> elseKind = kindOf(conditional.elseExpr());
+      if (thenKind != null && elseKind != null && thenKind != elseKind) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "The branches of %s differ in kind: %s and %s",
+                conditional, thenKind.getSimpleName(), elseKind.getSimpleName()));
+      }
+      return thenKind != null ? thenKind : elseKind;
+    }
+
+    /**
+     * The kind an expression evaluates to, read from its shape without evaluating it: {@link Type},
+     * {@link Long} or {@link Boolean}, the kinds {@link #evaluate} checks. A name is looked up in
+     * the same order {@link #visit(ParameterizedType.StringLiteral)} resolves it; a name bound to
+     * nothing yields null, since only evaluating it would fail.
+     */
+    private Class<?> kindOf(TypeExpression expression) {
+      if (expression instanceof ParameterizedType.StringLiteral) {
+        String name = ((ParameterizedType.StringLiteral) expression).value();
+        Object local = locals.get(name);
+        if (local != null) {
+          return local instanceof Type ? Type.class : local.getClass();
+        }
+        if (bindings.boundInteger(name) != null) {
+          return Long.class;
+        }
+        if (bindings.boundType(name) != null) {
+          return Type.class;
+        }
+        return parseIntegerLiteral(name).isPresent() ? Long.class : null;
+      }
+      if (expression instanceof TypeExpression.IntegerLiteral) {
+        return Long.class;
+      }
+      if (expression instanceof TypeExpression.NotOperation) {
+        return Boolean.class;
+      }
+      if (expression instanceof TypeExpression.BinaryOperation) {
+        switch (((TypeExpression.BinaryOperation) expression).opType()) {
+          case ADD:
+          case SUBTRACT:
+          case MULTIPLY:
+          case DIVIDE:
+          case MIN:
+          case MAX:
+            return Long.class;
+          default:
+            return Boolean.class;
+        }
+      }
+      if (expression instanceof TypeExpression.IfOperation) {
+        return branchKind((TypeExpression.IfOperation) expression);
+      }
+      // Everything else is a type: concrete, parameterized, or a program whose last line is one.
+      return Type.class;
     }
 
     private int resolveInteger(TypeExpression expression) {

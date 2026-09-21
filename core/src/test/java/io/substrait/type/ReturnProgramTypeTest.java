@@ -118,6 +118,22 @@ class ReturnProgramTypeTest {
   }
 
   @Test
+  void conditionalBranchesMustAgreeInKind() {
+    for (String expression :
+        List.of(
+            "L > 5 ? i64 : 3",
+            "L < 5 ? i64 : 3",
+            "varchar<L > 5 ? L : (L > 0)>",
+            "wide = L > 5\nvarchar<L > 5 ? L : wide>",
+            "L > 5 ? i64 : (L > 0 ? string : 1)")) {
+      assertThrows(UnsupportedOperationException.class, () -> evaluate(expression), expression);
+    }
+    // A name bound to nothing has no kind to compare, so an untaken branch may still use one.
+    assertEquals(R.varChar(10), evaluate("varchar<L > 5 ? L : missing>"));
+    assertEquals(R.STRING, evaluate("L < 5 ? i64 : (L > 0 ? string : binary)"));
+  }
+
+  @Test
   void booleanOperationsEvaluateBothOperands() {
     assertArithmeticFailure("varchar<(L < 0 AND L / 0 > 0) ? 1 : 2>");
     assertArithmeticFailure("varchar<(L > 0 OR L / 0 > 0) ? 1 : 2>");
