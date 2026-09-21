@@ -103,7 +103,8 @@ class ReturnProgramTypeTest {
     assertEquals(R.varChar(10), evaluate("varchar<L > 5 ? L : missing>"));
     assertEquals(R.varChar(10), evaluate("varchar<L < 5 ? 1 / 0 : L>"));
     assertEquals(R.I64, evaluate("(L = 10) ? i64 : string"));
-    assertEquals(R.varChar(10), evaluate("varchar<!(L < 5) AND L > 0 ? L : 1>"));
+    // `!` binds looser than AND in the shipped grammar, so this is !((L < 5) AND (L < 0)).
+    assertEquals(R.varChar(1), evaluate("varchar<!(L < 5) AND L < 0 ? 1 : 2>"));
     assertEquals(R.varChar(10), evaluate("varchar<L = 10 OR L < 0 ? L : 1>"));
     assertEquals(N.I64, evaluate("if L >= 10 then i64? else string"));
     assertEquals(R.STRING, evaluate("L != 10 ? i64 : string"));

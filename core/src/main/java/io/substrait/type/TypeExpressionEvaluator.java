@@ -28,10 +28,13 @@ import java.util.OptionalInt;
  * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
  * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
  * interval_compound<P>}. Integer arithmetic, comparisons, boolean operations and conditionals can
- * appear in those parameters or in the assignments of a multi-line return program. Arithmetic uses
- * signed 64-bit values; overflow and narrowing to a type parameter's 32-bit representation are
- * checked rather than wrapped. No standard extension declares a parameterized {@code fixedbinary}
- * or {@code interval_compound} at all, as an argument or as a return -- those two are supported for
+ * appear in those parameters or in the assignments of a multi-line return program. Intermediate
+ * results are signed 64-bit values; overflow and narrowing to a type parameter's 32-bit
+ * representation are checked rather than wrapped. An integer literal itself must fit in 32 bits,
+ * because the parser reads it as an {@code int}. The spec settles neither of two choices made here:
+ * integer division truncates toward zero, and {@code AND} and {@code OR} evaluate both operands.
+ * Both follow substrait-go. No standard extension declares a parameterized {@code fixedbinary} or
+ * {@code interval_compound} at all, as an argument or as a return -- those two are supported for
  * symmetry, and pinned against hand-written declarations rather than the catalog.
  *
  * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
@@ -39,7 +42,7 @@ import java.util.OptionalInt;
  * list<varchar<L1>>}, is out of reach just as an element type to evaluate is. A program referring
  * to an argument's value rather than a parameter of its type still fails: this API receives only
  * argument types. A plain {@code any} cannot be derived at all: unlike {@code any1} it names
- * nothing, so there is no identity to bind. Type-covering expressions are not supported either.
+ * nothing, so there is no identity to bind.
  *
  * <p>Which shipped variants those cover is pinned by {@code ParameterizedReturnTypeTest} against
  * the declarations the catalog ships, and deliberately not repeated here -- the catalog is owned
@@ -334,55 +337,48 @@ public class TypeExpressionEvaluator {
 
     @Override
     public Type visit(ParameterizedType.Decimal decimal) {
-      int precision = resolveInteger(decimal.precision());
-      int scale = resolveInteger(decimal.scale());
-      return TypeCreator.of(decimal.nullable()).decimal(precision, scale);
+      return decimal(decimal.nullable(), decimal.precision(), decimal.scale());
     }
 
     @Override
     public Type visit(ParameterizedType.FixedChar fixedChar) {
-      return TypeCreator.of(fixedChar.nullable()).fixedChar(resolveInteger(fixedChar.length()));
+      return fixedChar(fixedChar.nullable(), fixedChar.length());
     }
 
     @Override
     public Type visit(ParameterizedType.VarChar varChar) {
-      return TypeCreator.of(varChar.nullable()).varChar(resolveInteger(varChar.length()));
+      return varChar(varChar.nullable(), varChar.length());
     }
 
     @Override
     public Type visit(ParameterizedType.FixedBinary fixedBinary) {
-      return TypeCreator.of(fixedBinary.nullable())
-          .fixedBinary(resolveInteger(fixedBinary.length()));
+      return fixedBinary(fixedBinary.nullable(), fixedBinary.length());
     }
 
     @Override
     public Type visit(ParameterizedType.PrecisionTime precisionTime) {
-      return TypeCreator.of(precisionTime.nullable())
-          .precisionTime(resolveInteger(precisionTime.precision()));
+      return precisionTime(precisionTime.nullable(), precisionTime.precision());
     }
 
     @Override
     public Type visit(ParameterizedType.PrecisionTimestamp precisionTimestamp) {
-      return TypeCreator.of(precisionTimestamp.nullable())
-          .precisionTimestamp(resolveInteger(precisionTimestamp.precision()));
+      return precisionTimestamp(precisionTimestamp.nullable(), precisionTimestamp.precision());
     }
 
     @Override
     public Type visit(ParameterizedType.PrecisionTimestampTZ precisionTimestampTZ) {
-      return TypeCreator.of(precisionTimestampTZ.nullable())
-          .precisionTimestampTZ(resolveInteger(precisionTimestampTZ.precision()));
+      return precisionTimestampTZ(
+          precisionTimestampTZ.nullable(), precisionTimestampTZ.precision());
     }
 
     @Override
     public Type visit(ParameterizedType.IntervalDay intervalDay) {
-      return TypeCreator.of(intervalDay.nullable())
-          .intervalDay(resolveInteger(intervalDay.precision()));
+      return intervalDay(intervalDay.nullable(), intervalDay.precision());
     }
 
     @Override
     public Type visit(ParameterizedType.IntervalCompound intervalCompound) {
-      return TypeCreator.of(intervalCompound.nullable())
-          .intervalCompound(resolveInteger(intervalCompound.precision()));
+      return intervalCompound(intervalCompound.nullable(), intervalCompound.precision());
     }
 
     @Override
@@ -397,72 +393,68 @@ public class TypeExpressionEvaluator {
       if (integer != null) {
         return integer.longValue();
       }
+      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, taking the
+      // nullability declared on the return expression in both directions (a required return forces
+      // the type non-null, a nullable one forces it nullable). MIRROR policy, if any, is applied
+      // afterwards by the caller. This is checked before parsing the token as an integer literal
+      // because parseIntegerLiteral reports "not a number" by throwing, and a bound type name is
+      // never a numeral.
+      Type bound = bindings.boundType(stringLiteral.value());
+      if (bound != null) {
+        return bound.withNullable(stringLiteral.nullable());
+      }
       OptionalInt literal = parseIntegerLiteral(stringLiteral.value());
       if (literal.isPresent()) {
         return (long) literal.getAsInt();
       }
-      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, taking the
-      // nullability declared on the return expression in both directions (a required return forces
-      // the type non-null, a nullable one forces it nullable). MIRROR policy, if any, is applied
-      // afterwards by the caller.
-      Type bound = bindings.boundType(stringLiteral.value());
-      if (bound == null) {
-        throw new UnsupportedOperationException(
-            "Unbound type parameter '" + stringLiteral.value() + "' in return-type expression");
-      }
-      return bound.withNullable(stringLiteral.nullable());
+      throw new UnsupportedOperationException(
+          "Unbound type parameter '" + stringLiteral.value() + "' in return-type expression");
     }
 
     @Override
     public Type visit(TypeExpression.Decimal decimal) {
-      return TypeCreator.of(decimal.nullable())
-          .decimal(resolveInteger(decimal.precision()), resolveInteger(decimal.scale()));
+      return decimal(decimal.nullable(), decimal.precision(), decimal.scale());
     }
 
     @Override
     public Type visit(TypeExpression.FixedChar fixedChar) {
-      return TypeCreator.of(fixedChar.nullable()).fixedChar(resolveInteger(fixedChar.length()));
+      return fixedChar(fixedChar.nullable(), fixedChar.length());
     }
 
     @Override
     public Type visit(TypeExpression.VarChar varChar) {
-      return TypeCreator.of(varChar.nullable()).varChar(resolveInteger(varChar.length()));
+      return varChar(varChar.nullable(), varChar.length());
     }
 
     @Override
     public Type visit(TypeExpression.FixedBinary fixedBinary) {
-      return TypeCreator.of(fixedBinary.nullable())
-          .fixedBinary(resolveInteger(fixedBinary.length()));
+      return fixedBinary(fixedBinary.nullable(), fixedBinary.length());
     }
 
     @Override
     public Type visit(TypeExpression.PrecisionTime precisionTime) {
-      return TypeCreator.of(precisionTime.nullable())
-          .precisionTime(resolveInteger(precisionTime.precision()));
+      return precisionTime(precisionTime.nullable(), precisionTime.precision());
     }
 
     @Override
     public Type visit(TypeExpression.PrecisionTimestamp precisionTimestamp) {
-      return TypeCreator.of(precisionTimestamp.nullable())
-          .precisionTimestamp(resolveInteger(precisionTimestamp.precision()));
+      return precisionTimestamp(precisionTimestamp.nullable(), precisionTimestamp.precision());
     }
 
     @Override
     public Type visit(TypeExpression.PrecisionTimestampTZ precisionTimestampTZ) {
-      return TypeCreator.of(precisionTimestampTZ.nullable())
-          .precisionTimestampTZ(resolveInteger(precisionTimestampTZ.precision()));
+      return precisionTimestampTZ(
+          precisionTimestampTZ.nullable(), precisionTimestampTZ.precision());
     }
 
     @Override
     public Type visit(TypeExpression.IntervalDay intervalDay) {
-      return TypeCreator.of(intervalDay.nullable())
-          .intervalDay(resolveInteger(intervalDay.precision()));
+      return intervalDay(intervalDay.nullable(), intervalDay.precision());
     }
 
     @Override
     public Type visit(TypeExpression.IntervalCompound intervalCompound) {
-      return TypeCreator.of(intervalCompound.nullable())
-          .intervalCompound(resolveInteger(intervalCompound.precision()));
+      return intervalCompound(intervalCompound.nullable(), intervalCompound.precision());
     }
 
     @Override
@@ -502,8 +494,6 @@ public class TypeExpressionEvaluator {
           return operation.opType() == TypeExpression.BinaryOperation.OpType.AND
               ? left && right
               : left || right;
-        case COVERS:
-          throw new UnsupportedOperationException("Cannot evaluate type-covering expressions");
         default:
           break;
       }
@@ -541,6 +531,45 @@ public class TypeExpressionEvaluator {
           throw new UnsupportedOperationException(
               "Cannot evaluate operation " + operation.opType());
       }
+    }
+
+    // The ParameterizedType and TypeExpression forms of each parameterized type class evaluate
+    // alike, so both visits above delegate to one helper per class.
+
+    private Type decimal(boolean nullable, TypeExpression precision, TypeExpression scale) {
+      return TypeCreator.of(nullable).decimal(resolveInteger(precision), resolveInteger(scale));
+    }
+
+    private Type fixedChar(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).fixedChar(resolveInteger(length));
+    }
+
+    private Type varChar(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).varChar(resolveInteger(length));
+    }
+
+    private Type fixedBinary(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).fixedBinary(resolveInteger(length));
+    }
+
+    private Type precisionTime(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTime(resolveInteger(precision));
+    }
+
+    private Type precisionTimestamp(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTimestamp(resolveInteger(precision));
+    }
+
+    private Type precisionTimestampTZ(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTimestampTZ(resolveInteger(precision));
+    }
+
+    private Type intervalDay(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).intervalDay(resolveInteger(precision));
+    }
+
+    private Type intervalCompound(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).intervalCompound(resolveInteger(precision));
     }
 
     private int resolveInteger(TypeExpression expression) {
