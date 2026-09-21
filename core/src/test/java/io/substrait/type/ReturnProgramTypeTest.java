@@ -83,7 +83,9 @@ class ReturnProgramTypeTest {
         "precision_timestamp<max(3, L - 4)>; precision_timestamp<6>",
         "precision_timestamp_tz<L - 4>; precision_timestamp_tz<6>",
         "interval_day<L - 7>; interval_day<3>",
-        "interval_compound<L - 7>; interval_compound<3>"
+        "interval_compound<L - 7>; interval_compound<3>",
+        "varchar?<L + 1>; varchar?<11>",
+        "decimal?<L + 2, L - 8>; decimal?<12,2>"
       })
   void arithmeticWorksInsideTypeParameters(String expression, String expected) {
     assertEquals(TypeStringParser.parseSimple(expected, URN), evaluate(expression));
@@ -96,6 +98,9 @@ class ReturnProgramTypeTest {
     assertEquals(R.varChar(22), evaluate("L = L + 1\nL = L * 2\nvarchar<L>"));
     assertEquals(R.varChar(10), evaluate("varchar<L>"));
     assertThrows(UnsupportedOperationException.class, () -> evaluate("varchar<a>"));
+    // An inner program would write its `a` into the outer program's scope.
+    assertThrows(
+        UnsupportedOperationException.class, () -> evaluate("a = 1\nb = a = 99\ni64\nvarchar<a>"));
   }
 
   @Test

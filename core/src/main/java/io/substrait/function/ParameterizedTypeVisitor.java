@@ -1,6 +1,7 @@
 package io.substrait.function;
 
 import io.substrait.type.TypeVisitor;
+import java.util.function.Supplier;
 
 /**
  * Visitor over the concrete {@link ParameterizedType} kinds, extending {@link TypeVisitor} with the
@@ -152,6 +153,15 @@ public interface ParameterizedTypeVisitor<R, E extends Throwable> extends TypeVi
      * @param unsupportedMessage the message used for unsupported types
      */
     protected ParameterizedTypeThrowsVisitor(String unsupportedMessage) {
+      super(unsupportedMessage);
+    }
+
+    /**
+     * Creates a visitor that builds its message only when it throws.
+     *
+     * @param unsupportedMessage supplies the message used for unsupported types
+     */
+    protected ParameterizedTypeThrowsVisitor(Supplier<String> unsupportedMessage) {
       super(unsupportedMessage);
     }
 

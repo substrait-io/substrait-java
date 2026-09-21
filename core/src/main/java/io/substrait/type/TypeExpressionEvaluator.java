@@ -329,9 +329,12 @@ public class TypeExpressionEvaluator {
     // The derivation language has three value kinds: integer, boolean and type. Local assignments
     // can hold any of them; each operation checks the kind it consumes.
     private final Map<String, Object> locals = new HashMap<>();
+    private boolean inProgram;
 
     private ReturnTypeEvaluator(TypeExpression returnExpression, ParameterBindings bindings) {
-      super("Cannot evaluate return-type expression: " + returnExpression);
+      // Rendered only on failure: the expression can be a whole return program, and most
+      // derivations succeed.
+      super(() -> "Cannot evaluate return-type expression: " + returnExpression);
       this.bindings = bindings;
     }
 
@@ -459,6 +462,15 @@ public class TypeExpressionEvaluator {
 
     @Override
     public Object visit(TypeExpression.ReturnProgram program) {
+      // The grammar lets an assignment's right-hand side be a program of its own, and nothing
+      // defines its scope. The locals here are one flat map, so an inner program's assignments
+      // would
+      // leak into the enclosing one; refuse it instead.
+      if (inProgram) {
+        throw new UnsupportedOperationException(
+            "Cannot evaluate a return program nested in another: " + program);
+      }
+      inProgram = true;
       for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
         locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
       }
