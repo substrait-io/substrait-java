@@ -251,6 +251,41 @@ class WindowBoundConverterTest extends CalciteObjs {
   }
 
   @Test
+  void zeroDecimalOffsetBecomesCurrentRow() {
+    // The integral zero check above has a decimal counterpart: a zero-valued DecimalLiteral
+    // needs no representation in the ordering expression's type either.
+    RexNode offset = c(BigDecimal.ZERO, SqlTypeName.DECIMAL, 19, 1);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
+  void zeroDoubleOffsetBecomesCurrentRow() {
+    RexNode offset = c(0.0, SqlTypeName.DOUBLE);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
+  void zeroRealOffsetBecomesCurrentRow() {
+    RexNode offset = c(0.0f, SqlTypeName.REAL);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
   void negativePrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
     // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
     // the offset: RANGE BETWEEN -5 PRECEDING is equivalent to FOLLOWING 5.

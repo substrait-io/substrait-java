@@ -57,7 +57,7 @@ public class WindowBoundConverter {
     // Per the spec, zero is not a valid offset; it is equivalent to CurrentRow, and producers
     // should emit CurrentRow rather than a zero offset_expr. Checked before retyping: a zero
     // offset needs no representation in the ordering expression's type.
-    if (integralValue(converted).filter(value -> value == 0).isPresent()) {
+    if (isZero(converted)) {
       return WindowBound.CURRENT_ROW;
     }
 
@@ -84,6 +84,19 @@ public class WindowBoundConverter {
 
     throw new IllegalStateException(
         "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
+  }
+
+  /**
+   * Reports whether {@code offset} is a decimal, floating-point, or integral literal with a value
+   * of zero.
+   *
+   * @param offset the offset expression to check
+   * @return {@code true} if {@code offset} is a zero-valued literal
+   */
+  private static boolean isZero(Expression offset) {
+    return decimalValue(offset).map(value -> value.signum() == 0).orElse(false)
+        || floatingValue(offset).map(value -> value == 0).orElse(false)
+        || integralValue(offset).map(value -> value == 0).orElse(false);
   }
 
   /**
