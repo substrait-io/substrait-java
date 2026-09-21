@@ -91,14 +91,9 @@ public class WindowBoundConverter {
       // Long.MIN_VALUE has no positive long representation.
       throw new UnsupportedOperationException("window offset " + value + " cannot be negated");
     }
-    return integralLiteralOfType(offset.getType(), negated)
-        .orElseThrow(
-            () ->
-                new UnsupportedOperationException(
-                    "window offset "
-                        + value
-                        + " cannot be negated within its own type "
-                        + offset.getType().accept(new StringTypeVisitor())));
+    // Widen rather than negate in place: the magnitude need not fit the offset literal's own type,
+    // only the type normalizeIntegralOffset then retypes it to.
+    return ExpressionCreator.i64(false, negated);
   }
 
   private static Expression normalizeIntegralOffset(
