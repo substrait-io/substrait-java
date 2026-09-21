@@ -114,13 +114,16 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     val aliases = dialect.dependencies().asScala.keySet
     val functions = allFunctions(dialect)
     assert(functions.nonEmpty)
-    // The dialect schema declares `source` as a plain string, so a dangling alias validates
-    // against it; nothing but this assertion ties the two sections together. Types are covered as
-    // well as functions: `dependencies` is derived from the functions' URNs, so a USER_DEFINED type
-    // pointing at an extension no function comes from would dangle.
+    // `source` is a plain string in the schema, so a dangling alias validates against it. The
+    // forward direction cannot fail while `dependencies` and `source` are both derived from
+    // `dependencyAlias` over the same URNs -- it covers a USER_DEFINED type pointing at an
+    // extension no function comes from, which is the one case it can see. The reverse guards
+    // `dependencies` gaining an alias no emitted function references, which the byte-for-byte
+    // comparison cannot see once the published file is regenerated with it.
     val sources = functions.map(_.source()) ++
       dialect.supportedTypes().asScala.toSeq.flatMap(t => Option(t.source().orElse(null)))
     assertResult(Seq.empty)(sources.distinct.filterNot(aliases.contains))
+    assertResult(Seq.empty)(aliases.toSeq.filterNot(sources.contains))
   }
 
   test("dependency aliases are derived from the extension URN") {
@@ -151,8 +154,12 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
     val generator = generatorWith(
       sumExtension("extension:io.substrait:functions_extra"),
       sumExtension("extension:acme:functions_extra"))
+    // The message names both URNs in a fixed order, so which one is reported as the incumbent
+    // does not depend on how a Scala version hashes the URNs the functions were grouped by.
     val error = intercept[IllegalStateException](generator.generate())
-    assert(error.getMessage.contains("extra"))
+    assertResult(
+      "Dependency alias 'extra' is claimed by both 'extension:acme:functions_extra' and " +
+        "'extension:io.substrait:functions_extra'")(error.getMessage)
   }
 
   test("no aggregate or window function outside the standard extensions is advertised") {

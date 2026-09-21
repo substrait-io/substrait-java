@@ -163,6 +163,12 @@ tasks {
       .withPropertyName("publishedDialect")
       .withPathSensitivity(PathSensitivity.NONE)
 
+    // The dialect task rewrites that same file, and Gradle infers no ordering from the input and
+    // output declarations -- it reports the overlap as a validation failure instead. Without this,
+    // `./gradlew test dialect` validates the pre-regeneration content. The task is registered on
+    // the 4.0 variant only, so every variant has to name it by path.
+    mustRunAfter(":spark:spark-4.0_2.13:dialect")
+
     // Set system properties for variant identification
     systemProperty("spark.version", sparkVersion)
     systemProperty("scala.version", scalaVersion)

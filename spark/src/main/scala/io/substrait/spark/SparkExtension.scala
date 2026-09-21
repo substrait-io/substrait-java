@@ -42,9 +42,15 @@ object SparkExtension {
     ret.toSeq
   }
 
+  /**
+   * Standard extensions only: `spark.yml` declares no aggregates or windows, and
+   * [[toAggregateFunction]] / [[toWindowFunction]] bind against these same collections, so a
+   * `spark.yml` aggregate would be neither advertised in the dialect nor bindable at runtime.
+   */
   lazy val StandardAggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant] =
     EXTENSION_COLLECTION.aggregateFunctions().asScala.toSeq
 
+  /** @see [[StandardAggregateFunctions]] */
   lazy val StandardWindowFunctions: Seq[SimpleExtension.WindowFunctionVariant] =
     EXTENSION_COLLECTION.windowFunctions().asScala.toSeq
 

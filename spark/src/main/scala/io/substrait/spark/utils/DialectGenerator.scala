@@ -11,7 +11,8 @@ import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
 import io.substrait.dialect.{DdlWriteType, Dialect, DialectFunction, ExpressionKind, JoinType, Notation, ReadType, RelationKind, SetOperation, SubqueryType, SupportedExpression, SupportedRelation, SupportedType, SystemFunctionMetadata, SystemTypeMetadata, TypeKind}
 import io.substrait.extension.SimpleExtension
 
-import java.io.{File, FileWriter, InputStream, OutputStreamWriter}
+import java.io.{InputStream, OutputStreamWriter}
+import java.nio.file.{Files, Path}
 
 import scala.collection.immutable.SortedMap
 import scala.jdk.CollectionConverters._
@@ -95,7 +96,7 @@ class DialectGenerator(
    * would have to be folded in here too.
    */
   private def dependencies(functions: Seq[SourcedFunction]): SortedMap[String, String] =
-    functions.map(_.urn).distinct.foldLeft(SortedMap.empty[String, String]) {
+    functions.map(_.urn).distinct.sorted.foldLeft(SortedMap.empty[String, String]) {
       (deps, urn) =>
         val alias = dependencyAlias(urn)
         deps.get(alias) match {
@@ -333,20 +334,15 @@ object DialectGenerator
     SparkExtension.StandardAggregateFunctions,
     SparkExtension.StandardWindowFunctions) {
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
     val yaml = generateYaml()
 
-    val out = args match {
-      case Array(t) =>
-        val f = new File(t)
-        if (!f.exists()) {
-          f.createNewFile()
-        }
-        new FileWriter(t)
-      case _ => new OutputStreamWriter(System.out)
+    args match {
+      case Array(t) => Files.writeString(Path.of(t), yaml)
+      case _ =>
+        val out = new OutputStreamWriter(System.out)
+        out.write(yaml)
+        out.flush()
     }
-
-    out.write(yaml)
-    out.flush()
   }
 }
