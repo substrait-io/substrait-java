@@ -944,7 +944,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .input(inputRel)
         .tableSchema(schema)
         .operation(AbstractWriteRel.WriteOp.CTAS)
-        .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
+        .createMode(createTable.getCreateMode())
         .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
         .names(createTable.getTableName())
         .build();
