@@ -53,19 +53,45 @@ public class WindowBoundConverter {
 
     RexNode node = rexWindowBound.getOffset();
     Expression converted = node.accept(rexExpressionConverter);
-
-    // Per the spec, zero is not a valid offset; it is equivalent to CurrentRow, and producers
-    // should emit CurrentRow rather than a zero offset_expr. Checked before retyping: a zero
-    // offset needs no representation in the ordering expression's type.
-    if (isZero(converted)) {
-      return WindowBound.CURRENT_ROW;
-    }
-
-    // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
-    // the offset: a negative offset is invalid, and the mirror bound with the magnitude is its
-    // equivalent. Calcite only rejects a negative offset for ROWS, so RANGE reaches here.
     boolean preceding = rexWindowBound.isPreceding();
-    Optional<Expression> negative = negateIfNegative(converted);
+
+    // Per the spec, zero is not a valid offset (equivalent to CurrentRow) and a negative offset is
+    // invalid (the mirror bound with the magnitude is its equivalent); Calcite only rejects a
+    // negative offset for ROWS, so RANGE reaches here. Checked in this order because a -0.0
+    // offset compares equal to zero but not less than zero.
+    Optional<Expression> negative;
+    if (converted instanceof Expression.DecimalLiteral) {
+      Expression.DecimalLiteral literal = (Expression.DecimalLiteral) converted;
+      BigDecimal value =
+          DecimalUtil.getBigDecimalFromBytes(literal.value().toByteArray(), literal.scale(), 16);
+      if (value.signum() == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative =
+          value.signum() < 0
+              ? Optional.of(
+                  ExpressionCreator.decimal(
+                      false, value.negate(), literal.precision(), literal.scale()))
+              : Optional.empty();
+    } else if (converted instanceof Expression.FP64Literal) {
+      double value = ((Expression.FP64Literal) converted).value();
+      if (value == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value < 0 ? Optional.of(ExpressionCreator.fp64(false, -value)) : Optional.empty();
+    } else if (converted instanceof Expression.FP32Literal) {
+      float value = ((Expression.FP32Literal) converted).value();
+      if (value == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value < 0 ? Optional.of(ExpressionCreator.fp32(false, -value)) : Optional.empty();
+    } else {
+      Optional<Long> value = integralValue(converted);
+      if (value.filter(v -> v == 0).isPresent()) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value.filter(v -> v < 0).map(WindowBoundConverter::negateIntegral);
+    }
     if (negative.isPresent()) {
       preceding = !preceding;
       converted = negative.get();
@@ -86,55 +112,6 @@ public class WindowBoundConverter {
         "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
   }
 
-  /**
-   * Reports whether {@code offset} is a decimal, floating-point, or integral literal with a value
-   * of zero.
-   *
-   * @param offset the offset expression to check
-   * @return {@code true} if {@code offset} is a zero-valued literal
-   */
-  private static boolean isZero(Expression offset) {
-    return decimalValue(offset).map(value -> value.signum() == 0).orElse(false)
-        || floatingValue(offset).map(value -> value == 0).orElse(false)
-        || integralValue(offset).map(value -> value == 0).orElse(false);
-  }
-
-  /**
-   * Returns the negation of {@code offset}, if it is a negative literal.
-   *
-   * @param offset the offset expression to check
-   * @return the negated literal, or empty if {@code offset} is not a negative literal
-   */
-  private static Optional<Expression> negateIfNegative(Expression offset) {
-    return decimalValue(offset)
-        .filter(value -> value.signum() < 0)
-        .map(value -> decimalLiteralOfType(offset.getType(), value.negate()))
-        .or(
-            () ->
-                floatingValue(offset)
-                    .filter(value -> value < 0)
-                    .map(value -> floatingLiteralOfType(offset.getType(), -value)))
-        .or(
-            () ->
-                integralValue(offset)
-                    .filter(value -> value < 0)
-                    .map(WindowBoundConverter::negateIntegral));
-  }
-
-  private static Optional<BigDecimal> decimalValue(Expression expression) {
-    if (expression instanceof Expression.DecimalLiteral) {
-      Expression.DecimalLiteral decimal = (Expression.DecimalLiteral) expression;
-      return Optional.of(
-          DecimalUtil.getBigDecimalFromBytes(decimal.value().toByteArray(), decimal.scale(), 16));
-    }
-    return Optional.empty();
-  }
-
-  private static Expression decimalLiteralOfType(Type type, BigDecimal value) {
-    Type.Decimal decimal = (Type.Decimal) type;
-    return ExpressionCreator.decimal(type.nullable(), value, decimal.precision(), decimal.scale());
-  }
-
   private static Expression negateIntegral(long value) {
     long negated;
     try {
@@ -146,24 +123,6 @@ public class WindowBoundConverter {
     // Widen rather than negate in place: the magnitude need not fit the offset literal's own type,
     // only the type normalizeIntegralOffset then retypes it to.
     return ExpressionCreator.i64(false, negated);
-  }
-
-  private static Optional<Double> floatingValue(Expression expression) {
-    if (expression instanceof Expression.FP64Literal) {
-      return Optional.of(((Expression.FP64Literal) expression).value());
-    } else if (expression instanceof Expression.FP32Literal) {
-      return Optional.of((double) ((Expression.FP32Literal) expression).value());
-    }
-    return Optional.empty();
-  }
-
-  private static Expression floatingLiteralOfType(Type type, double value) {
-    if (type instanceof Type.FP64) {
-      return ExpressionCreator.fp64(type.nullable(), value);
-    } else if (type instanceof Type.FP32) {
-      return ExpressionCreator.fp32(type.nullable(), (float) value);
-    }
-    throw new IllegalStateException("expected a floating-point type, got " + type);
   }
 
   private static Expression normalizeIntegralOffset(
