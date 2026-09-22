@@ -1,12 +1,18 @@
 package io.substrait.isthmus;
 
+import io.substrait.isthmus.calcite.rel.VirtualTable;
+import java.util.List;
+import java.util.Set;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Holder;
+import org.apache.calcite.util.Litmus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -127,6 +133,102 @@ class OuterReferenceResolverTest extends PlanTestBase {
     Assertions.assertNotNull(anchor0);
     Assertions.assertNotNull(anchor1);
     Assertions.assertNotEquals(anchor0, anchor1);
+  }
+
+  /**
+   * A virtual table's rows are expressions, and a subquery among them is a tree the resolver only
+   * reaches through the row: a subquery's relation is not an input, so walking inputs never gets
+   * there and a correlation the subquery declares is left unbound.
+   *
+   * <p>The table itself declares nothing. It is a leaf with no inputs and so no fields to bind an
+   * id to, which puts a row's outer reference where one in a {@link
+   * org.apache.calcite.rel.core.Project} expression sits: bound by the relation around it, here the
+   * correlate the table is the right input of.
+   */
+  @Test
+  void correlationInsideASubqueryInAVirtualTableRow() {
+    final Holder<RexCorrelVariable> cor0 = Holder.empty();
+    final Holder<RexCorrelVariable> cor1 = Holder.empty();
+    tpcDsRelBuilder.scan("tpcds", "STORE_SALES").variable(cor0::set);
+
+    // SELECT i_item_sk FROM item
+    // WHERE i_item_sk = $cor0.ss_item_sk
+    //   AND i_item_sk = (SELECT p_promo_sk FROM promotion WHERE p_item_sk = item.i_item_sk)
+    tpcDsRelBuilder.scan("tpcds", "ITEM").variable(cor1::set);
+    final RexNode promoOfItem =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .scan("tpcds", "PROMOTION")
+                .filter(
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("P_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor1.get(), "I_ITEM_SK")))
+                .project(tpcDsRelBuilder.field("P_PROMO_SK"))
+                .build());
+    final RexNode itemOfSale =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .filter(
+                    List.of(cor1.get().id),
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("I_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor0.get(), "SS_ITEM_SK")),
+                    tpcDsRelBuilder.equals(tpcDsRelBuilder.field("I_ITEM_SK"), promoOfItem))
+                .project(tpcDsRelBuilder.field("I_ITEM_SK"))
+                .build());
+
+    final RelNode virtualTable =
+        VirtualTable.create(
+            tpcDsRelBuilder.getCluster(),
+            tpcDsRelBuilder.getTypeFactory().builder().add("col1", itemOfSale.getType()).build(),
+            List.of(List.of(itemOfSale)));
+    final RelNode calciteRel =
+        tpcDsRelBuilder
+            .push(virtualTable)
+            .correlate(JoinRelType.INNER, cor0.get().id, tpcDsRelBuilder.field(2, 0, "SS_ITEM_SK"))
+            .build();
+
+    final OuterReferenceResolver resolver = resolve(calciteRel);
+    final Integer anchor0 = resolver.anchorForCorrelationId(cor0.get().id);
+    // Bound by the filter inside the row's subquery, which nothing but the row walk reaches.
+    final Integer anchor1 = resolver.anchorForCorrelationId(cor1.get().id);
+
+    Assertions.assertNotNull(anchor0);
+    Assertions.assertNotNull(anchor1);
+    Assertions.assertNotEquals(anchor0, anchor1);
+  }
+
+  /**
+   * A correlation in a row is visible to Calcite's own collector, which is what a consumer's
+   * decorrelation is built on. It arrives there through {@code accept(RexShuttle)} -- {@code
+   * RelOptUtil.VariableUsedVisitor} is a shuttle, and the collector hands it to every relation.
+   *
+   * <p>Declaring the ids on the relation instead would do the opposite: {@code
+   * RelOptUtil.CorrelationCollector} subtracts {@code getVariablesSet} from what it collected, so a
+   * leaf naming the ids its rows resolve against empties its own result.
+   */
+  @Test
+  void aCorrelationInARowIsVisibleToTheCollector() {
+    final Holder<RexCorrelVariable> cor = Holder.empty();
+    tpcDsRelBuilder.scan("tpcds", "ITEM").variable(cor::set);
+    final RexNode promoOfItem =
+        RexSubQuery.scalar(
+            tpcDsRelBuilder
+                .scan("tpcds", "PROMOTION")
+                .filter(
+                    tpcDsRelBuilder.equals(
+                        tpcDsRelBuilder.field("P_ITEM_SK"),
+                        tpcDsRelBuilder.field(cor.get(), "I_ITEM_SK")))
+                .project(tpcDsRelBuilder.field("P_PROMO_SK"))
+                .build());
+    final RelNode table =
+        VirtualTable.create(
+            tpcDsRelBuilder.getCluster(),
+            tpcDsRelBuilder.getTypeFactory().builder().add("col1", promoOfItem.getType()).build(),
+            List.of(List.of(promoOfItem)));
+
+    Assertions.assertEquals(Set.of(cor.get().id), RelOptUtil.getVariablesUsed(table));
+    Assertions.assertFalse(RelOptUtil.notContainsCorrelation(table, cor.get().id, Litmus.IGNORE));
   }
 
   /**

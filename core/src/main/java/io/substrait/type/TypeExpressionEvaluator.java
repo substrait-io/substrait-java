@@ -23,15 +23,35 @@ import java.util.OptionalInt;
  * UnsupportedOperationException}. The evaluator never falls back to a caller-supplied type: an
  * unresolved expression is an error, not a default.
  *
- * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}) and parameterized
- * decimals ({@code DECIMAL<P,S>}). What actually fails on the standard extension catalog is the
- * other parameterized type classes — {@code varchar<L1>}, {@code fixedchar<L1>}, {@code
- * precision_time<P>}, {@code precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code
- * interval_day<P>}, {@code list<anyN>}, parameterized structs — and multi-line return programs;
- * {@code concat}, {@code concat_ws}, {@code assume_timezone} and the {@code strptime_*} family are
- * all rejected today. Among the standard aggregates, {@code quantile} is the one whose output type
- * cannot be derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
- * carries no identity to bind (spec v0.99.0).
+ * <p>Supported shapes are concrete types, numbered wildcards ({@code any1}), and the parameterized
+ * type classes whose parameter is an integer to substitute: {@code DECIMAL<P,S>}, {@code
+ * varchar<L1>}, {@code fixedchar<L1>}, {@code fixedbinary<L1>}, {@code precision_time<P>}, {@code
+ * precision_timestamp<P>}, {@code precision_timestamp_tz<P>}, {@code interval_day<P>} and {@code
+ * interval_compound<P>}. Integer arithmetic, comparisons, boolean operations and conditionals can
+ * appear in those parameters or in the assignments of a multi-line return program. Intermediate
+ * results are signed 64-bit values; overflow and narrowing to a type parameter's 32-bit
+ * representation are checked rather than wrapped. An integer literal itself must fit in 32 bits,
+ * because the parser reads it as an {@code int}. The spec settles neither of two choices made here:
+ * integer division truncates toward zero, and {@code AND} and {@code OR} evaluate both operands.
+ * Both follow substrait-go. The two branches of a conditional must agree in kind (type, integer or
+ * boolean), checked from their shape without evaluating the branch not taken. Neither the spec nor
+ * substrait-go asks for this; it makes a declaration whose branches disagree fail for every
+ * argument, not only for those that choose the bad branch. No standard extension declares a
+ * parameterized {@code fixedbinary} or {@code interval_compound} at all, as an argument or as a
+ * return -- those two are supported for symmetry, and pinned against hand-written declarations
+ * rather than the catalog.
+ *
+ * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
+ * into a container -- so an element parameter it would otherwise substitute, as in {@code
+ * list<varchar<L1>>}, is out of reach just as an element type to evaluate is. A program referring
+ * to an argument's value rather than a parameter of its type still fails: this API receives only
+ * argument types. A plain {@code any} cannot be derived at all: unlike {@code any1} it names
+ * nothing, so there is no identity to bind.
+ *
+ * <p>Which shipped variants those cover is pinned by {@code ParameterizedReturnTypeTest} against
+ * the declarations the catalog ships, and deliberately not repeated here -- the catalog is owned
+ * upstream, so a list of names in this Javadoc would go stale on a {@code substrait-packaging} bump
+ * with nothing to catch it.
  */
 public class TypeExpressionEvaluator {
 
@@ -75,7 +95,13 @@ public class TypeExpressionEvaluator {
       // The declared return type is already concrete; nothing to derive.
       return (Type) returnExpression;
     }
-    return returnExpression.accept(new ReturnTypeEvaluator(returnExpression, bindings));
+    try {
+      return new ReturnTypeEvaluator(returnExpression, bindings)
+          .evaluate(returnExpression, Type.class);
+    } catch (ArithmeticException e) {
+      throw new UnsupportedOperationException(
+          "Cannot evaluate return-type arithmetic: " + e.getMessage(), e);
+    }
   }
 
   /**
@@ -173,7 +199,79 @@ public class TypeExpressionEvaluator {
         Type.Decimal actualDecimal = (Type.Decimal) actual;
         bindInteger(declaredDecimal.precision().value(), actualDecimal.precision(), bindNames);
         bindInteger(declaredDecimal.scale().value(), actualDecimal.scale(), bindNames);
+      } else if (declared instanceof ParameterizedType.FixedChar
+          && actual instanceof Type.FixedChar) {
+        bindInteger(
+            ((ParameterizedType.FixedChar) declared).length().value(),
+            ((Type.FixedChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.VarChar && actual instanceof Type.VarChar) {
+        bindInteger(
+            ((ParameterizedType.VarChar) declared).length().value(),
+            ((Type.VarChar) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.FixedBinary
+          && actual instanceof Type.FixedBinary) {
+        bindInteger(
+            ((ParameterizedType.FixedBinary) declared).length().value(),
+            ((Type.FixedBinary) actual).length(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTime
+          && actual instanceof Type.PrecisionTime) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTime) declared).precision().value(),
+            ((Type.PrecisionTime) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestamp
+          && actual instanceof Type.PrecisionTimestamp) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestamp) declared).precision().value(),
+            ((Type.PrecisionTimestamp) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.PrecisionTimestampTZ
+          && actual instanceof Type.PrecisionTimestampTZ) {
+        bindInteger(
+            ((ParameterizedType.PrecisionTimestampTZ) declared).precision().value(),
+            ((Type.PrecisionTimestampTZ) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalDay
+          && actual instanceof Type.IntervalDay) {
+        bindInteger(
+            ((ParameterizedType.IntervalDay) declared).precision().value(),
+            ((Type.IntervalDay) actual).precision(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.IntervalCompound
+          && actual instanceof Type.IntervalCompound) {
+        bindInteger(
+            ((ParameterizedType.IntervalCompound) declared).precision().value(),
+            ((Type.IntervalCompound) actual).precision(),
+            bindNames);
+      } else if (!(declared instanceof Type) && !isContainer(declared)) {
+        // A shape one of the arms above should have taken: the declaration carries a parameter and
+        // the actual type is not the class that would bind it. Binding nothing here would enforce
+        // the shared-parameter rule for some calls and skip it for others.
+        throw new UnsupportedOperationException(
+            String.format(
+                "Cannot bind parameters from declared argument type %s to actual type %s",
+                declared, actual));
       }
+    }
+
+    /**
+     * Whether the declared type holds other types rather than an integer parameter. Binding does
+     * not descend into these, so their parameters bind nothing and a mismatch cannot be told from a
+     * shape this method simply does not reach yet -- unlike the classes above, refusing here would
+     * reject declarations that resolve today without binding anything, such as a {@code list<any1>}
+     * argument to a function returning a concrete type.
+     *
+     * @param declared the declared argument type
+     * @return {@code true} if the type is a list, map, struct or function declaration
+     */
+    private boolean isContainer(ParameterizedType declared) {
+      return declared instanceof ParameterizedType.ListType
+          || declared instanceof ParameterizedType.Map
+          || declared instanceof ParameterizedType.Struct
+          || declared instanceof ParameterizedType.Func;
     }
 
     private void bindType(String name, Type actual) {
@@ -229,46 +327,344 @@ public class TypeExpressionEvaluator {
    * throwing base, keeping unsupported derivations fail-closed.
    */
   private static final class ReturnTypeEvaluator
-      extends TypeExpressionVisitor.TypeExpressionThrowsVisitor<Type, RuntimeException> {
+      extends TypeExpressionVisitor.TypeExpressionThrowsVisitor<Object, RuntimeException> {
 
     private final ParameterBindings bindings;
+    // The derivation language has three value kinds: integer, boolean and type. Local assignments
+    // can hold any of them; each operation checks the kind it consumes.
+    private final Map<String, Object> locals = new HashMap<>();
+    private boolean inProgram;
 
     private ReturnTypeEvaluator(TypeExpression returnExpression, ParameterBindings bindings) {
-      super("Cannot evaluate return-type expression: " + returnExpression);
+      // Rendered only on failure: the expression can be a whole return program, and most
+      // derivations succeed.
+      super(() -> "Cannot evaluate return-type expression: " + returnExpression);
       this.bindings = bindings;
     }
 
     @Override
     public Type visit(ParameterizedType.Decimal decimal) {
-      int precision = resolveInteger(decimal.precision().value());
-      int scale = resolveInteger(decimal.scale().value());
-      return TypeCreator.of(decimal.nullable()).decimal(precision, scale);
+      return decimal(decimal.nullable(), decimal.precision(), decimal.scale());
     }
 
     @Override
-    public Type visit(ParameterizedType.StringLiteral stringLiteral) {
+    public Type visit(ParameterizedType.FixedChar fixedChar) {
+      return fixedChar(fixedChar.nullable(), fixedChar.length());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.VarChar varChar) {
+      return varChar(varChar.nullable(), varChar.length());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.FixedBinary fixedBinary) {
+      return fixedBinary(fixedBinary.nullable(), fixedBinary.length());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTime precisionTime) {
+      return precisionTime(precisionTime.nullable(), precisionTime.precision());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestamp precisionTimestamp) {
+      return precisionTimestamp(precisionTimestamp.nullable(), precisionTimestamp.precision());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.PrecisionTimestampTZ precisionTimestampTZ) {
+      return precisionTimestampTZ(
+          precisionTimestampTZ.nullable(), precisionTimestampTZ.precision());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalDay intervalDay) {
+      return intervalDay(intervalDay.nullable(), intervalDay.precision());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.IntervalCompound intervalCompound) {
+      return intervalCompound(intervalCompound.nullable(), intervalCompound.precision());
+    }
+
+    @Override
+    public Object visit(ParameterizedType.StringLiteral stringLiteral) {
+      Object local = locals.get(stringLiteral.value());
+      if (local != null) {
+        return local instanceof Type
+            ? ((Type) local).withNullable(stringLiteral.nullable())
+            : local;
+      }
+      Integer integer = bindings.boundInteger(stringLiteral.value());
+      if (integer != null) {
+        return integer.longValue();
+      }
       // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, taking the
       // nullability declared on the return expression in both directions (a required return forces
       // the type non-null, a nullable one forces it nullable). MIRROR policy, if any, is applied
-      // afterwards by the caller.
+      // afterwards by the caller. This is checked before parsing the token as an integer literal
+      // because parseIntegerLiteral reports "not a number" by throwing, and a bound type name is
+      // never a numeral.
       Type bound = bindings.boundType(stringLiteral.value());
-      if (bound == null) {
-        throw new UnsupportedOperationException(
-            "Unbound type parameter '" + stringLiteral.value() + "' in return-type expression");
+      if (bound != null) {
+        return bound.withNullable(stringLiteral.nullable());
       }
-      return bound.withNullable(stringLiteral.nullable());
+      OptionalInt literal = parseIntegerLiteral(stringLiteral.value());
+      if (literal.isPresent()) {
+        return (long) literal.getAsInt();
+      }
+      throw new UnsupportedOperationException(
+          "Unbound type parameter '" + stringLiteral.value() + "' in return-type expression");
     }
 
-    private int resolveInteger(String token) {
-      Integer bound = bindings.boundInteger(token);
-      if (bound != null) {
-        return bound;
+    @Override
+    public Type visit(TypeExpression.Decimal decimal) {
+      return decimal(decimal.nullable(), decimal.precision(), decimal.scale());
+    }
+
+    @Override
+    public Type visit(TypeExpression.FixedChar fixedChar) {
+      return fixedChar(fixedChar.nullable(), fixedChar.length());
+    }
+
+    @Override
+    public Type visit(TypeExpression.VarChar varChar) {
+      return varChar(varChar.nullable(), varChar.length());
+    }
+
+    @Override
+    public Type visit(TypeExpression.FixedBinary fixedBinary) {
+      return fixedBinary(fixedBinary.nullable(), fixedBinary.length());
+    }
+
+    @Override
+    public Type visit(TypeExpression.PrecisionTime precisionTime) {
+      return precisionTime(precisionTime.nullable(), precisionTime.precision());
+    }
+
+    @Override
+    public Type visit(TypeExpression.PrecisionTimestamp precisionTimestamp) {
+      return precisionTimestamp(precisionTimestamp.nullable(), precisionTimestamp.precision());
+    }
+
+    @Override
+    public Type visit(TypeExpression.PrecisionTimestampTZ precisionTimestampTZ) {
+      return precisionTimestampTZ(
+          precisionTimestampTZ.nullable(), precisionTimestampTZ.precision());
+    }
+
+    @Override
+    public Type visit(TypeExpression.IntervalDay intervalDay) {
+      return intervalDay(intervalDay.nullable(), intervalDay.precision());
+    }
+
+    @Override
+    public Type visit(TypeExpression.IntervalCompound intervalCompound) {
+      return intervalCompound(intervalCompound.nullable(), intervalCompound.precision());
+    }
+
+    @Override
+    public Object visit(TypeExpression.ReturnProgram program) {
+      // The grammar lets an assignment's right-hand side be a program of its own, and nothing
+      // defines its scope. The locals here are one flat map, so an inner program's assignments
+      // would leak into the enclosing one; refuse it instead.
+      if (inProgram) {
+        throw new UnsupportedOperationException(
+            "Cannot evaluate a return program nested in another: " + program);
       }
-      return parseIntegerLiteral(token)
-          .orElseThrow(
-              () ->
-                  new UnsupportedOperationException(
-                      "Unbound type parameter '" + token + "' in return-type expression"));
+      inProgram = true;
+      for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
+        locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
+      }
+      return evaluate(program.finalExpression(), Type.class);
+    }
+
+    @Override
+    public Long visit(TypeExpression.IntegerLiteral literal) {
+      return (long) literal.value();
+    }
+
+    @Override
+    public Object visit(TypeExpression.IfOperation conditional) {
+      branchKind(conditional);
+      return evaluate(
+          evaluate(conditional.ifCondition(), Boolean.class)
+              ? conditional.thenExpr()
+              : conditional.elseExpr(),
+          Object.class);
+    }
+
+    @Override
+    public Boolean visit(TypeExpression.NotOperation operation) {
+      return !evaluate(operation.inner(), Boolean.class);
+    }
+
+    @Override
+    public Object visit(TypeExpression.BinaryOperation operation) {
+      switch (operation.opType()) {
+        case AND:
+        case OR:
+          boolean left = evaluate(operation.left(), Boolean.class);
+          boolean right = evaluate(operation.right(), Boolean.class);
+          return operation.opType() == TypeExpression.BinaryOperation.OpType.AND
+              ? left && right
+              : left || right;
+        default:
+          break;
+      }
+      long left = evaluate(operation.left(), Long.class);
+      long right = evaluate(operation.right(), Long.class);
+      switch (operation.opType()) {
+        case ADD:
+          return Math.addExact(left, right);
+        case SUBTRACT:
+          return Math.subtractExact(left, right);
+        case MULTIPLY:
+          return Math.multiplyExact(left, right);
+        case DIVIDE:
+          if (left == Long.MIN_VALUE && right == -1) {
+            throw new ArithmeticException("long overflow");
+          }
+          return left / right;
+        case MIN:
+          return Math.min(left, right);
+        case MAX:
+          return Math.max(left, right);
+        case LT:
+          return left < right;
+        case GT:
+          return left > right;
+        case LTE:
+          return left <= right;
+        case GTE:
+          return left >= right;
+        case EQ:
+          return left == right;
+        case NOT_EQ:
+          return left != right;
+        default:
+          throw new UnsupportedOperationException(
+              "Cannot evaluate operation " + operation.opType());
+      }
+    }
+
+    // The ParameterizedType and TypeExpression forms of each parameterized type class evaluate
+    // alike, so both visits above delegate to one helper per class.
+
+    private Type decimal(boolean nullable, TypeExpression precision, TypeExpression scale) {
+      return TypeCreator.of(nullable).decimal(resolveInteger(precision), resolveInteger(scale));
+    }
+
+    private Type fixedChar(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).fixedChar(resolveInteger(length));
+    }
+
+    private Type varChar(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).varChar(resolveInteger(length));
+    }
+
+    private Type fixedBinary(boolean nullable, TypeExpression length) {
+      return TypeCreator.of(nullable).fixedBinary(resolveInteger(length));
+    }
+
+    private Type precisionTime(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTime(resolveInteger(precision));
+    }
+
+    private Type precisionTimestamp(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTimestamp(resolveInteger(precision));
+    }
+
+    private Type precisionTimestampTZ(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).precisionTimestampTZ(resolveInteger(precision));
+    }
+
+    private Type intervalDay(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).intervalDay(resolveInteger(precision));
+    }
+
+    private Type intervalCompound(boolean nullable, TypeExpression precision) {
+      return TypeCreator.of(nullable).intervalCompound(resolveInteger(precision));
+    }
+
+    /**
+     * Checks that both branches of a conditional agree in kind and returns that kind, or null when
+     * neither branch's shape says. Only the chosen branch is evaluated, so without this a
+     * declaration whose branches disagree fails only for the arguments that choose the bad one.
+     */
+    private Class<?> branchKind(TypeExpression.IfOperation conditional) {
+      Class<?> thenKind = kindOf(conditional.thenExpr());
+      Class<?> elseKind = kindOf(conditional.elseExpr());
+      if (thenKind != null && elseKind != null && thenKind != elseKind) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "The branches of %s differ in kind: %s and %s",
+                conditional, thenKind.getSimpleName(), elseKind.getSimpleName()));
+      }
+      return thenKind != null ? thenKind : elseKind;
+    }
+
+    /**
+     * The kind an expression evaluates to, read from its shape without evaluating it: {@link Type},
+     * {@link Long} or {@link Boolean}, the kinds {@link #evaluate} checks. A name is looked up in
+     * the same order {@link #visit(ParameterizedType.StringLiteral)} resolves it; a name bound to
+     * nothing yields null, since only evaluating it would fail.
+     */
+    private Class<?> kindOf(TypeExpression expression) {
+      if (expression instanceof ParameterizedType.StringLiteral) {
+        String name = ((ParameterizedType.StringLiteral) expression).value();
+        Object local = locals.get(name);
+        if (local != null) {
+          return local instanceof Type ? Type.class : local.getClass();
+        }
+        if (bindings.boundInteger(name) != null) {
+          return Long.class;
+        }
+        if (bindings.boundType(name) != null) {
+          return Type.class;
+        }
+        return parseIntegerLiteral(name).isPresent() ? Long.class : null;
+      }
+      if (expression instanceof TypeExpression.IntegerLiteral) {
+        return Long.class;
+      }
+      if (expression instanceof TypeExpression.NotOperation) {
+        return Boolean.class;
+      }
+      if (expression instanceof TypeExpression.BinaryOperation) {
+        switch (((TypeExpression.BinaryOperation) expression).opType()) {
+          case ADD:
+          case SUBTRACT:
+          case MULTIPLY:
+          case DIVIDE:
+          case MIN:
+          case MAX:
+            return Long.class;
+          default:
+            return Boolean.class;
+        }
+      }
+      if (expression instanceof TypeExpression.IfOperation) {
+        return branchKind((TypeExpression.IfOperation) expression);
+      }
+      // Everything else is a type: concrete, parameterized, or a program whose last line is one.
+      return Type.class;
+    }
+
+    private int resolveInteger(TypeExpression expression) {
+      return Math.toIntExact(evaluate(expression, Long.class));
+    }
+
+    private <T> T evaluate(TypeExpression expression, Class<T> expectedKind) {
+      Object result = expression instanceof Type ? expression : expression.accept(this);
+      if (!expectedKind.isInstance(result)) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "Expected %s in return-type expression, got %s",
+                expectedKind.getSimpleName(), result));
+      }
+      return expectedKind.cast(result);
     }
   }
 }

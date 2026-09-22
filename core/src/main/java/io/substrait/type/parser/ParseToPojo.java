@@ -675,14 +675,20 @@ public class ParseToPojo {
           return TypeExpression.BinaryOperation.OpType.DIVIDE;
         case ">":
           return TypeExpression.BinaryOperation.OpType.GT;
+        case ">=":
+          return TypeExpression.BinaryOperation.OpType.GTE;
         case "<":
           return TypeExpression.BinaryOperation.OpType.LT;
+        case "<=":
+          return TypeExpression.BinaryOperation.OpType.LTE;
         case "AND":
           return TypeExpression.BinaryOperation.OpType.AND;
         case "OR":
           return TypeExpression.BinaryOperation.OpType.OR;
         case "=":
           return TypeExpression.BinaryOperation.OpType.EQ;
+        case "!=":
+          return TypeExpression.BinaryOperation.OpType.NOT_EQ;
         case ":=":
           return TypeExpression.BinaryOperation.OpType.COVERS;
         default:

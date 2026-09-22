@@ -1,6 +1,89 @@
 Release Notes
 ---
 
+## [0.103.0](https://github.com/substrait-io/substrait-java/compare/v0.102.0...v0.103.0) (2026-09-06)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** - Substrait to Calcite: a virtual table whose rows are not all literals
+now converts to `io.substrait.isthmus.calcite.rel.VirtualTable` instead
+of a `UNION ALL` of single-row projections over an empty table. Code
+that hands the tree to something knowing only Calcite's own relations
+can expand it with
+`io.substrait.isthmus.calcite.rel.rules.VirtualTableExpansionRule`,
+which is one-way: converting the expansion back to Substrait gives that
+union, not the virtual table.
+- Calcite to Substrait: where a row's value carries a type its column does
+not declare - a computed value inside a nullable struct, Calcite having
+made the struct's fields nullable while the expression keeps its own -
+converting the table back now throws an `UnsupportedOperationException`
+naming the value and both types. It used to produce the `UNION ALL`
+above, which is the shape this release stops producing, so there is no
+way to keep the old output; whether the spec permits the mismatch at all
+is being settled in substrait-io/substrait#1211.
+* **core:** a plan carrying an `Expand`, an `ExtensionWrite`, a
+`NamedDdl` or an `ExtensionDdl` below a `ConsistentPartitionWindow` now
+throws `UnsupportedOperationException` from
+`io.substrait.relation.RelCopyOnWriteVisitor`, which used to stop above
+those relations and return quietly. Those four visits refuse rather than
+descend, so a consumer needing such a plan rewritten has to override
+them; `OuterReferenceConverter` runs this visitor, which makes the throw
+reachable without naming the class. Rewrites that belong below a window
+relation, or that touch only a `MultiBucketExchange`'s expression, now
+take effect instead of being discarded.
+* **isthmus:** an aggregate whose grouping sets do not first mention its fields in ascending order now converts with its grouping columns in the order the relation declares them, in both directions. For the sets `{0, 3}` and `{1, 2}`, converting the relation to Calcite emits fields 0, 3, 1, 2 rather than 0, 1, 2, 3, and converting the Calcite aggregate back gives the emit mapping `[0, 2, 3, 1]` rather than `[0, 1, 2, 3]`.
+* **isthmus:** `TypeConverter.toCalcite` now throws `IllegalArgumentException` where it previously returned a quietly narrowed type. It throws for:
+
+- a declared length the given type factory cannot hold;
+- a negative length, which a factory running without assertions accepted as a type of that width;
+- a decimal precision the given factory cannot hold, or a negative one;
+- a decimal scale above its own precision, which was built as asked;
+- a decimal precision above the 38 the spec allows, which only a type factory more permissive than the spec can reach.
+
+The raised bound also changes converted output types:
+
+- `SELECT CAST(a AS VARCHAR(100000))` converts to `varchar<100000>`, where it converted to `varchar<65536>`;
+- `a || b` over two `varchar<40000>` columns converts to `varchar<80000>`, where it converted to `string`;
+- the least restrictive type of `BINARY(100000)` and `BINARY(5)` is `VARBINARY(100000)`, where it was `VARBINARY(65536)`.
+* **isthmus:** a Calcite `CHAR(n)` literal converts to a
+`fixedchar<n>` whose text is padded to the declared width, where it
+previously carried the unpadded text and so a `fixedchar` of the text's
+own length. A character value longer than the width it is declared as is
+rejected rather than converted.
+* **isthmus:** a NamedWrite or a NamedDdl carrying an emit mapping,
+and a VirtualTableScan carrying a projection, no longer convert to
+Calcite. They used to convert with the mapping or the projection
+dropped, which produced a plan that did not describe the relation it
+came from.
+* **core:** `WindowBound.Preceding`/`Following.offset()` now
+returns `Expression` instead of `long`.
+`ExpressionProtoConverter.BoundConverter`'s public
+`convert(WindowBound)` is now an instance method (reachable via
+`ExpressionProtoConverter.toProto(WindowBound)`) instead of a static
+utility. A plan with `bounds_type` unset (`BOUNDS_TYPE_UNSPECIFIED`)
+alongside a bound that isn't Unbounded no longer parses; it must set
+`bounds_type` to `ROWS` or `RANGE`, or use `Unbounded` on both sides.
+
+### Features
+
+* **core:** derive return types parameterized by a length or precision ([#1141](https://github.com/substrait-io/substrait-java/issues/1141)) ([0b206ab](https://github.com/substrait-io/substrait-java/commit/0b206ab499446e13ff3cb8ca20a637500e470c4a))
+* **core:** support offset_expr on window bounds (spec v0.102.0) ([#1156](https://github.com/substrait-io/substrait-java/issues/1156)) ([dd5c37d](https://github.com/substrait-io/substrait-java/commit/dd5c37d1c87f79f63ba7348d9e3006e3c82a6adb)), closes [#1143](https://github.com/substrait-io/substrait-java/issues/1143)
+* **isthmus:** convert REVERSE and INITCAP from Calcite ([#1251](https://github.com/substrait-io/substrait-java/issues/1251)) ([fffa05f](https://github.com/substrait-io/substrait-java/commit/fffa05f16ee2da7804b0b964259017ed3f761623))
+* **isthmus:** let the builder transform the call converter list ([#1166](https://github.com/substrait-io/substrait-java/issues/1166)) ([436739d](https://github.com/substrait-io/substrait-java/commit/436739d65445840900afe9cd07ea9c734825628b))
+
+### Bug Fixes
+
+* **core:** visit a window relation's input when rewriting it ([#1248](https://github.com/substrait-io/substrait-java/issues/1248)) ([7643788](https://github.com/substrait-io/substrait-java/commit/7643788725abe9ea3e0fb592713f644a89b0b8ac))
+* **examples:** print a day-time interval under its own label ([#1250](https://github.com/substrait-io/substrait-java/issues/1250)) ([3557ec1](https://github.com/substrait-io/substrait-java/commit/3557ec1a9ad4e7cf2aaae9f4f25076535ab420bd))
+* **isthmus:** apply the emit mapping a virtual table carries ([#1189](https://github.com/substrait-io/substrait-java/issues/1189)) ([934a60e](https://github.com/substrait-io/substrait-java/commit/934a60ef252bc5531fa011c7d2b0d323eb427c56))
+* **isthmus:** build a character literal from the type its conversion produced ([#1171](https://github.com/substrait-io/substrait-java/issues/1171)) ([85c03c7](https://github.com/substrait-io/substrait-java/commit/85c03c761e0107d233fd71e9670350f1e37d6926))
+* **isthmus:** convert extended expressions with the provider's converter ([#1168](https://github.com/substrait-io/substrait-java/issues/1168)) ([7310fc8](https://github.com/substrait-io/substrait-java/commit/7310fc8ce620c141cb82ec60a3ef1c0ee9044f27))
+* **isthmus:** keep the declared column order of an aggregate over grouping sets ([#1161](https://github.com/substrait-io/substrait-java/issues/1161)) ([81120b9](https://github.com/substrait-io/substrait-java/commit/81120b915bf748771a46366543dac85242ba3004))
+* **isthmus:** keep the declared length of a wide character or binary type ([#1169](https://github.com/substrait-io/substrait-java/issues/1169)) ([0946799](https://github.com/substrait-io/substrait-java/commit/09467998e837f5c43cab1829208ff3cfe86eb4a0))
+* **isthmus:** report an unsupported type whatever its fields are called ([#1249](https://github.com/substrait-io/substrait-java/issues/1249)) ([2f6c3db](https://github.com/substrait-io/substrait-java/commit/2f6c3dbe4f17e9cc6de8c2474f5f9a5a3de15bf4))
+* **isthmus:** round-trip a virtual table whose rows are not all literals ([#1151](https://github.com/substrait-io/substrait-java/issues/1151)) ([fccc66e](https://github.com/substrait-io/substrait-java/commit/fccc66ebc8192362867d8cfc3e480a0484c85257))
+* **spark:** report interval_year overflow instead of wrapping ([#1140](https://github.com/substrait-io/substrait-java/issues/1140)) ([481e44f](https://github.com/substrait-io/substrait-java/commit/481e44f7bd8d56ceb136b66390f43f4e0cd00782))
+
 ## [0.102.0](https://github.com/substrait-io/substrait-java/compare/v0.101.0...v0.102.0) (2026-08-30)
 
 ### ⚠ BREAKING CHANGES

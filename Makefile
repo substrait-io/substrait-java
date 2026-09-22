@@ -1,5 +1,6 @@
 COMPONENTS := core isthmus isthmus-cli
 SCAN_COMPONENTS := $(addprefix scan-,$(COMPONENTS))
+OSV_SCANNER_ARGS ?=
 
 osv_scanner := ./osv-scanner
 kernel_name := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -17,7 +18,7 @@ scan: $(SCAN_COMPONENTS)
 
 .PHONY: $(SCAN_COMPONENTS)
 $(SCAN_COMPONENTS): scan-%: $(osv_scanner) %/gradle.lockfile
-	$(osv_scanner) scan source --lockfile $*/gradle.lockfile --config osv-scanner.toml
+	$(osv_scanner) scan source --lockfile $*/gradle.lockfile --config osv-scanner.toml $(OSV_SCANNER_ARGS)
 
 $(osv_scanner):
 	curl --silent --show-error --location --output $(osv_scanner) https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_$(kernel_name)_$(machine_hardware)

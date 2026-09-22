@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.google.common.annotations.Beta;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
+import io.substrait.expression.Expression;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -19,14 +20,20 @@ import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
+import io.substrait.relation.VirtualTableScan;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.calcite.adapter.tpcds.TpcdsSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
@@ -367,6 +374,39 @@ public class PlanTestBase {
     RelRoot relRoot = new SubstraitToCalcite(converterProvider).convert(root);
     RelNode project = relRoot.project(true);
     return SubstraitSqlDialect.toSql(project).getSql();
+  }
+
+  /**
+   * Builds a virtual table of the given rows at the given schema.
+   *
+   * @param schema the table's schema
+   * @param rows one list of values per row
+   * @return the virtual table scan
+   */
+  @SafeVarargs
+  protected final VirtualTableScan virtualTable(NamedStruct schema, List<Expression>... rows) {
+    List<Expression.NestedStruct> structs =
+        Arrays.stream(rows)
+            .map(row -> Expression.NestedStruct.builder().addAllFields(row).build())
+            .collect(Collectors.toList());
+    return VirtualTableScan.builder().initialSchema(schema).addAllRows(structs).build();
+  }
+
+  /**
+   * Runs the given rules over the given tree, exhaustively and in order.
+   *
+   * @param rel the tree to plan
+   * @param rules the rules to run
+   * @return the planned tree
+   */
+  protected RelNode plan(RelNode rel, RelOptRule... rules) {
+    HepProgramBuilder program = new HepProgramBuilder();
+    for (RelOptRule rule : rules) {
+      program.addRuleInstance(rule);
+    }
+    HepPlanner planner = new HepPlanner(program.build());
+    planner.setRoot(rel);
+    return planner.findBestExp();
   }
 
   protected io.substrait.proto.Plan toProto(Plan plan) {

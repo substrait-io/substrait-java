@@ -132,10 +132,7 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
             .build();
 
     assertEquals(
-        "LogicalProject(A=[$0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(A=[CAST('abcdef'):VARCHAR(3) NOT NULL])\n"
-            + "      LogicalValues(tuples=[[{  }]])\n",
+        "VirtualTable(rows=[[{ CAST('abcdef'):VARCHAR(3) NOT NULL }]])\n",
         RelOptUtil.toString(substraitToCalcite.convert(overlong)));
   }
 
@@ -160,10 +157,7 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
             .build();
 
     assertEquals(
-        "LogicalProject(A=[$0])\n"
-            + "  LogicalUnion(all=[true])\n"
-            + "    LogicalProject(A=[CAST(5):INTEGER])\n"
-            + "      LogicalValues(tuples=[[{  }]])\n",
+        "VirtualTable(rows=[[{ CAST(5):INTEGER }]])\n",
         RelOptUtil.toString(substraitToCalcite.convert(castRow)));
   }
 

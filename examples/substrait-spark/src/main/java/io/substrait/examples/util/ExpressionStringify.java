@@ -124,13 +124,21 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(IntervalYearLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<IntervalYearLiteral " + expr.months() + " " + expr.years() + ">";
+    return "<IntervalYearLiteral years=" + expr.years() + " months=" + expr.months() + ">";
   }
 
   @Override
   public String visit(IntervalDayLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<IntervalYearLiteral " + expr.seconds() + " " + expr.days() + ">";
+    return "<IntervalDayLiteral days="
+        + expr.days()
+        + " seconds="
+        + expr.seconds()
+        + " subseconds="
+        + expr.subseconds()
+        + " precision="
+        + expr.precision()
+        + ">";
   }
 
   @Override
@@ -331,16 +339,18 @@ public class ExpressionStringify extends ParentStringify
   @Override
   public String visit(IntervalCompoundLiteral expr, EmptyVisitationContext context)
       throws RuntimeException {
-    return "<IntervalCompoundLiteral "
-        + expr.subseconds()
-        + " "
-        + expr.seconds()
-        + " "
-        + expr.days()
-        + " "
-        + expr.months()
-        + " "
+    return "<IntervalCompoundLiteral years="
         + expr.years()
+        + " months="
+        + expr.months()
+        + " days="
+        + expr.days()
+        + " seconds="
+        + expr.seconds()
+        + " subseconds="
+        + expr.subseconds()
+        + " precision="
+        + expr.precision()
         + ">";
   }
 

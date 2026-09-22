@@ -56,7 +56,11 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
   // feed OVERRIDE_KINDS: they share generic kinds such as OTHER_FUNCTION with many standard
   // operators, which we must not shadow.
   private static final SqlOperatorTable SUBSTRAIT_SCALAR_OPERATOR_TABLE =
-      SqlOperatorTables.of(List.of(CurrentTimezoneFunction.INSTANCE, FunctionMappings.RIGHTSHIFT));
+      SqlOperatorTables.of(
+          List.of(
+              CurrentTimezoneFunction.INSTANCE,
+              FunctionMappings.RIGHTSHIFT,
+              FunctionMappings.REVERSE));
 
   // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
   // functions

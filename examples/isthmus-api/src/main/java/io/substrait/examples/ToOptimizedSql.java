@@ -3,6 +3,7 @@ package io.substrait.examples;
 import io.substrait.examples.IsthmusAppExamples.Action;
 import io.substrait.isthmus.ConverterProvider;
 import io.substrait.isthmus.SubstraitToCalcite;
+import io.substrait.isthmus.sql.SubstraitRelToSqlConverter;
 import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
@@ -45,7 +46,7 @@ public class ToOptimizedSql implements Action {
 
       // Configure Calcite Utilities
       final SqlDialect sqlDialect = SqlDialect.DatabaseProduct.MYSQL.getDialect();
-      final RelToSqlConverter relToSql = new RelToSqlConverter(sqlDialect);
+      final RelToSqlConverter relToSql = new SubstraitRelToSqlConverter(sqlDialect);
       final HepProgramBuilder programBuilder = new HepProgramBuilder();
       programBuilder.addMatchOrder(HepMatchOrder.BOTTOM_UP).addRuleCollection(SIMPLIFICATION_RULES);
       final HepPlanner planner = new HepPlanner(programBuilder.build());
