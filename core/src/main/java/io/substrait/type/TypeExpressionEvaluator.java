@@ -440,36 +440,70 @@ public class TypeExpressionEvaluator {
 
     @Override
     public Type visit(ParameterizedType.ListType list) {
-      return TypeCreator.of(list.nullable()).list(evaluateNested(list.name()));
+      return list(list.nullable(), list.name());
     }
 
     @Override
     public Type visit(ParameterizedType.Map map) {
-      return TypeCreator.of(map.nullable())
-          .map(evaluateNested(map.key()), evaluateNested(map.value()));
+      return map(map.nullable(), map.key(), map.value());
     }
 
     @Override
     public Type visit(ParameterizedType.Struct struct) {
-      return TypeCreator.of(struct.nullable())
-          .struct(struct.fields().stream().map(this::evaluateNested).collect(Collectors.toList()));
+      return struct(struct.nullable(), struct.fields());
     }
 
     @Override
     public Type visit(ParameterizedType.Func function) {
-      return TypeCreator.of(function.nullable())
+      return func(function.nullable(), function.parameterTypes(), function.returnType());
+    }
+
+    @Override
+    public Type visit(TypeExpression.ListType list) {
+      return list(list.nullable(), list.elementType());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Map map) {
+      return map(map.nullable(), map.key(), map.value());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Struct struct) {
+      return struct(struct.nullable(), struct.fields());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Func function) {
+      return func(function.nullable(), function.parameterTypes(), function.returnType());
+    }
+
+    private Type list(boolean nullable, TypeExpression element) {
+      return TypeCreator.of(nullable).list(evaluateNested(element));
+    }
+
+    private Type map(boolean nullable, TypeExpression key, TypeExpression value) {
+      return TypeCreator.of(nullable).map(evaluateNested(key), evaluateNested(value));
+    }
+
+    private Type struct(boolean nullable, List<? extends TypeExpression> fields) {
+      return TypeCreator.of(nullable)
+          .struct(fields.stream().map(this::evaluateNested).collect(Collectors.toList()));
+    }
+
+    private Type func(
+        boolean nullable, List<? extends TypeExpression> parameters, TypeExpression returnType) {
+      return TypeCreator.of(nullable)
           .func(
-              function.parameterTypes().stream()
-                  .map(this::evaluateNested)
-                  .collect(Collectors.toList()),
-              evaluateNested(function.returnType()));
+              parameters.stream().map(this::evaluateNested).collect(Collectors.toList()),
+              evaluateNested(returnType));
     }
 
     /**
      * Evaluates a type nested in a container. Unlike a top-level name, a nested name keeps the
      * nullability it was bound with, and a {@code ?} marker only widens it.
      */
-    private Type evaluateNested(ParameterizedType expression) {
+    private Type evaluateNested(TypeExpression expression) {
       if (expression instanceof ParameterizedType.StringLiteral) {
         ParameterizedType.StringLiteral variable = (ParameterizedType.StringLiteral) expression;
         Object local = locals.get(variable.value());
