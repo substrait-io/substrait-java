@@ -19,8 +19,8 @@ import org.apache.calcite.rex.RexWindowBound;
  *
  * <p>Supports {@code CURRENT ROW}, {@code UNBOUNDED}, and {@code PRECEDING}/{@code FOLLOWING}
  * bounds with an arbitrary offset expression. A RANGE bound's integral literal offset must match
- * the ordering expression's exact type. A negative integral offset is mirrored to the opposite
- * bound with its magnitude, and a zero offset becomes {@code CURRENT ROW}.
+ * the ordering expression's exact type. A negative offset is mirrored to the opposite bound with
+ * its magnitude, and a zero offset becomes {@code CURRENT ROW}.
  */
 public class WindowBoundConverter {
 
