@@ -6,6 +6,7 @@ import io.substrait.relation.{ProtoRelConverter, RelProtoConverter}
 import io.substrait.relation.Extension.WriteExtensionObject
 import io.substrait.relation.files.FileOrFiles
 
+/** File target for unpartitioned, unbucketed INSERT writes with append semantics. */
 case class FileHolder(fileOrFiles: FileOrFiles) extends WriteExtensionObject {
 
   override def toProto(converter: RelProtoConverter): protobuf.Any = {
