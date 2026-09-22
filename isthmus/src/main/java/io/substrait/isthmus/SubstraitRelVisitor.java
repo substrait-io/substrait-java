@@ -52,6 +52,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -61,10 +62,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -845,16 +850,54 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           final RelOptTable table = requireTable(modify);
 
           RelNode input = modify.getInput();
-          final Expression condition;
-          if (input instanceof org.apache.calcite.rel.core.Filter) {
-            org.apache.calcite.rel.core.Filter filter = (org.apache.calcite.rel.core.Filter) input;
-            condition = toExpression(filter.getCondition());
-          } else {
-            condition = Expression.BoolLiteral.builder().nullable(false).value(true).build();
+          List<RexNode> conditions = new ArrayList<>();
+          List<RexNode> sourceExpressions =
+              Optional.ofNullable(modify.getSourceExpressionList()).orElse(Collections.emptyList());
+          while (true) {
+            if (outerReferenceResolver != null
+                && outerReferenceResolver.anchorForTarget(input) != null) {
+              throw new UnsupportedOperationException(
+                  "UPDATE cannot remove an input that binds a correlated subquery");
+            }
+            if (input instanceof org.apache.calcite.rel.core.Project) {
+              org.apache.calcite.rel.core.Project project =
+                  (org.apache.calcite.rel.core.Project) input;
+              if (project.containsOver()) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot flatten a window projection");
+              }
+              if (project.getProjects().stream().anyMatch(expr -> !isDeterministic(expr))) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot flatten a nondeterministic projection");
+              }
+              sourceExpressions = resolveProjectedRefs(sourceExpressions, project);
+              conditions = new ArrayList<>(resolveProjectedRefs(conditions, project));
+              input = project.getInput();
+            } else if (input instanceof org.apache.calcite.rel.core.Filter) {
+              org.apache.calcite.rel.core.Filter filter =
+                  (org.apache.calcite.rel.core.Filter) input;
+              conditions.add(filter.getCondition());
+              input = filter.getInput();
+            } else {
+              break;
+            }
           }
+          if (!(input instanceof org.apache.calcite.rel.core.TableScan)
+              || !table.getQualifiedName().equals(input.getTable().getQualifiedName())) {
+            throw new UnsupportedOperationException(
+                "UPDATE requires a scan of its target table beneath projections and filters");
+          }
+          if (conditions.size() > 1
+              && conditions.stream().anyMatch(expr -> !isDeterministic(expr))) {
+            throw new UnsupportedOperationException("UPDATE cannot merge nondeterministic filters");
+          }
+          Expression condition =
+              toExpression(
+                  conditions.size() == 1
+                      ? conditions.get(0)
+                      : RexUtil.composeConjunction(rexBuilder, conditions));
 
           List<String> updateColumnNames = modify.getUpdateColumnList();
-          List<RexNode> sourceExpressions = getSourceExpressions(modify);
           List<String> allTableColumnNames = table.getRowType().getFieldNames();
           List<NamedUpdate.TransformExpression> transformations = new ArrayList<>();
 
@@ -900,34 +943,61 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return table;
   }
 
-  private List<RexNode> getSourceExpressions(TableModify modify) {
-    List<RexNode> results = modify.getSourceExpressionList();
-    if (results == null) {
-      return Collections.emptyList();
-    }
-
-    RelNode input = modify.getInput();
-    if (input instanceof org.apache.calcite.rel.core.Project) {
-      return resolveProjectedRefs(results, (org.apache.calcite.rel.core.Project) input);
-    }
-
-    return results;
-  }
-
   private List<RexNode> resolveProjectedRefs(
       List<RexNode> expressions, org.apache.calcite.rel.core.Project project) {
     List<RexNode> projects = project.getProjects();
-    return expressions.stream()
-        .map(
-            expression -> {
-              if (expression instanceof RexInputRef) {
-                int refIndex = ((RexInputRef) expression).getIndex();
-                return projects.get(refIndex);
-              }
+    return new RexShuttle() {
+      @Override
+      public RexNode visitInputRef(RexInputRef inputRef) {
+        return projects.get(inputRef.getIndex());
+      }
+    }.apply(expressions);
+  }
 
-              return expression;
-            })
-        .collect(Collectors.toList());
+  private static boolean isDeterministic(RexNode expression) {
+    DeterminismChecker checker = new DeterminismChecker();
+    expression.accept(checker);
+    return checker.deterministic;
+  }
+
+  /** Includes subquery relations, which RexUtil.isDeterministic does not inspect. */
+  private static final class DeterminismChecker extends RexShuttle {
+    private boolean deterministic = true;
+
+    @Override
+    public RexNode visitCall(RexCall call) {
+      deterministic &= call.getOperator().isDeterministic();
+      return deterministic ? super.visitCall(call) : call;
+    }
+
+    @Override
+    public SqlAggFunction visitOverAggFunction(SqlAggFunction function) {
+      deterministic &= function.isDeterministic();
+      return function;
+    }
+
+    @Override
+    public RexNode visitSubQuery(RexSubQuery subQuery) {
+      new RelVisitor() {
+        @Override
+        public void visit(RelNode node, int ordinal, RelNode parent) {
+          if (!deterministic) {
+            return;
+          }
+          node.accept(DeterminismChecker.this);
+          if (node instanceof org.apache.calcite.rel.core.Aggregate) {
+            // Aggregate operators and their direct arguments are not visited by accept(RexShuttle).
+            for (AggregateCall call :
+                ((org.apache.calcite.rel.core.Aggregate) node).getAggCallList()) {
+              deterministic &= call.getAggregation().isDeterministic();
+              apply(call.rexList);
+            }
+          }
+          super.visit(node, ordinal, parent);
+        }
+      }.go(subQuery.rel);
+      return deterministic ? super.visitSubQuery(subQuery) : subQuery;
+    }
   }
 
   /**
