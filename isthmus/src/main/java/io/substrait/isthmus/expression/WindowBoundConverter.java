@@ -6,6 +6,7 @@ import io.substrait.expression.WindowBound;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.StringTypeVisitor;
 import io.substrait.type.Type;
+import io.substrait.util.DecimalUtil;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Optional;
@@ -18,8 +19,8 @@ import org.apache.calcite.rex.RexWindowBound;
  *
  * <p>Supports {@code CURRENT ROW}, {@code UNBOUNDED}, and {@code PRECEDING}/{@code FOLLOWING}
  * bounds with an arbitrary offset expression. A RANGE bound's integral literal offset must match
- * the ordering expression's exact type. A negative integral offset is mirrored to the opposite
- * bound with its magnitude, and a zero offset becomes {@code CURRENT ROW}.
+ * the ordering expression's exact type. A negative offset is mirrored to the opposite bound with
+ * its magnitude, and a zero offset becomes {@code CURRENT ROW}.
  */
 public class WindowBoundConverter {
 
@@ -52,22 +53,48 @@ public class WindowBoundConverter {
 
     RexNode node = rexWindowBound.getOffset();
     Expression converted = node.accept(rexExpressionConverter);
-
-    // Per the spec, zero is not a valid offset; it is equivalent to CurrentRow, and producers
-    // should emit CurrentRow rather than a zero offset_expr. Checked before retyping: a zero
-    // offset needs no representation in the ordering expression's type.
-    if (integralValue(converted).filter(value -> value == 0).isPresent()) {
-      return WindowBound.CURRENT_ROW;
-    }
-
-    // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
-    // the offset: a negative offset is invalid, and the mirror bound with the magnitude is its
-    // equivalent. Calcite only rejects a negative offset for ROWS, so RANGE reaches here.
     boolean preceding = rexWindowBound.isPreceding();
-    Optional<Long> negative = integralValue(converted).filter(value -> value < 0);
+
+    // Per the spec, zero is not a valid offset (equivalent to CurrentRow) and a negative offset is
+    // invalid (the mirror bound with the magnitude is its equivalent); Calcite only rejects a
+    // negative offset for ROWS, so RANGE reaches here. Checked in this order because a -0.0
+    // offset compares equal to zero but not less than zero.
+    Optional<Expression> negative;
+    if (converted instanceof Expression.DecimalLiteral) {
+      Expression.DecimalLiteral literal = (Expression.DecimalLiteral) converted;
+      BigDecimal value =
+          DecimalUtil.getBigDecimalFromBytes(literal.value().toByteArray(), literal.scale(), 16);
+      if (value.signum() == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative =
+          value.signum() < 0
+              ? Optional.of(
+                  ExpressionCreator.decimal(
+                      false, value.negate(), literal.precision(), literal.scale()))
+              : Optional.empty();
+    } else if (converted instanceof Expression.FP64Literal) {
+      double value = ((Expression.FP64Literal) converted).value();
+      if (value == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value < 0 ? Optional.of(ExpressionCreator.fp64(false, -value)) : Optional.empty();
+    } else if (converted instanceof Expression.FP32Literal) {
+      float value = ((Expression.FP32Literal) converted).value();
+      if (value == 0) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value < 0 ? Optional.of(ExpressionCreator.fp32(false, -value)) : Optional.empty();
+    } else {
+      Optional<Long> value = integralValue(converted);
+      if (value.filter(v -> v == 0).isPresent()) {
+        return WindowBound.CURRENT_ROW;
+      }
+      negative = value.filter(v -> v < 0).map(WindowBoundConverter::negateIntegral);
+    }
     if (negative.isPresent()) {
       preceding = !preceding;
-      converted = negate(converted, negative.get());
+      converted = negative.get();
     }
 
     Expression offset =
@@ -85,7 +112,7 @@ public class WindowBoundConverter {
         "window bound was none of CURRENT ROW, UNBOUNDED, PRECEDING or FOLLOWING");
   }
 
-  private static Expression negate(Expression offset, long value) {
+  private static Expression negateIntegral(long value) {
     long negated;
     try {
       negated = Math.negateExact(value);

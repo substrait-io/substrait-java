@@ -251,6 +251,41 @@ class WindowBoundConverterTest extends CalciteObjs {
   }
 
   @Test
+  void zeroDecimalOffsetBecomesCurrentRow() {
+    // The integral zero check above has a decimal counterpart: a zero-valued DecimalLiteral
+    // needs no representation in the ordering expression's type either.
+    RexNode offset = c(BigDecimal.ZERO, SqlTypeName.DECIMAL, 19, 1);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
+  void zeroDoubleOffsetBecomesCurrentRow() {
+    RexNode offset = c(0.0, SqlTypeName.DOUBLE);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
+  void zeroRealOffsetBecomesCurrentRow() {
+    RexNode offset = c(0.0f, SqlTypeName.REAL);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.CURRENT_ROW, converted);
+  }
+
+  @Test
   void negativePrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
     // The spec carries a bound's direction in the Preceding/Following choice, not in the sign of
     // the offset: RANGE BETWEEN -5 PRECEDING is equivalent to FOLLOWING 5.
@@ -306,5 +341,96 @@ class WindowBoundConverterTest extends CalciteObjs {
         () ->
             WindowBoundConverter.toWindowBound(
                 bound, false, Optional.of(orderingType), rexExpressionConverter));
+  }
+
+  @Test
+  void negativeDecimalPrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
+    // The integral mirror above has a decimal counterpart: RANGE BETWEEN -5.5 PRECEDING is
+    // equivalent to FOLLOWING 5.5.
+    RexNode offset = c(new BigDecimal("-5.5"), SqlTypeName.DECIMAL, 19, 1);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(
+        WindowBound.Following.of(ExpressionCreator.decimal(false, new BigDecimal("5.5"), 19, 1)),
+        converted);
+  }
+
+  @Test
+  void negativeDecimalFollowingOffsetIsFlippedToPrecedingWithItsMagnitude() {
+    RexNode offset = c(new BigDecimal("-5.5"), SqlTypeName.DECIMAL, 19, 1);
+    RexWindowBound bound = RexWindowBounds.following(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(
+        WindowBound.Preceding.of(ExpressionCreator.decimal(false, new BigDecimal("5.5"), 19, 1)),
+        converted);
+  }
+
+  @Test
+  void negativeDecimalPrecedingOffsetIsNotRetypedAgainstTheOrderingType() {
+    // Unlike the integral mirror, a decimal offset's magnitude is not retyped against the
+    // ordering column: normalizeIntegralOffset only consults integralValue, so the mirrored
+    // decimal literal keeps its own precision and scale regardless of orderingType.
+    RexNode offset = c(new BigDecimal("-5.5"), SqlTypeName.DECIMAL, 19, 1);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+    RelDataType orderingType = t(SqlTypeName.DECIMAL, 5, 2);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(
+            bound, false, Optional.of(orderingType), rexExpressionConverter);
+
+    assertEquals(
+        WindowBound.Following.of(ExpressionCreator.decimal(false, new BigDecimal("5.5"), 19, 1)),
+        converted);
+  }
+
+  @Test
+  void precedingWithPositiveDoubleOffsetIsUnchanged() {
+    // A positive FP offset must not be mistaken for negative or zero by isZero/negation.
+    RexNode offset = c(5.5, SqlTypeName.DOUBLE);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.Preceding.of(ExpressionCreator.fp64(false, 5.5)), converted);
+  }
+
+  @Test
+  void precedingWithPositiveRealOffsetIsUnchanged() {
+    RexNode offset = c(5.5f, SqlTypeName.REAL);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.Preceding.of(ExpressionCreator.fp32(false, 5.5f)), converted);
+  }
+
+  @Test
+  void negativeDoublePrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
+    RexNode offset = c(-5.5, SqlTypeName.DOUBLE);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.Following.of(ExpressionCreator.fp64(false, 5.5)), converted);
+  }
+
+  @Test
+  void negativeRealPrecedingOffsetIsFlippedToFollowingWithItsMagnitude() {
+    RexNode offset = c(-5.5f, SqlTypeName.REAL);
+    RexWindowBound bound = RexWindowBounds.preceding(offset);
+
+    WindowBound converted =
+        WindowBoundConverter.toWindowBound(bound, false, Optional.empty(), rexExpressionConverter);
+
+    assertEquals(WindowBound.Following.of(ExpressionCreator.fp32(false, 5.5f)), converted);
   }
 }
