@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
@@ -261,9 +262,8 @@ class ComplexAggregateTest extends PlanTestBase {
 
   /**
    * A relation that keeps its grouping-set index maps it to the column the conversion adds for it,
-   * which sits after the grouping columns and the measures. Calcite folds the {@code GROUP_ID} call
-   * into a literal, so that is what the column holds -- which value it holds is a separate question
-   * from which column it is.
+   * which sits after the grouping columns and the measures. Its value identifies the declared set,
+   * independently of Calcite's ordering of grouping sets.
    */
   @Test
   void theGroupingSetIndexIsTheColumnTheConversionAddedForIt() {
@@ -277,8 +277,8 @@ class ComplexAggregateTest extends PlanTestBase {
     RelNode relNode = substraitToCalcite.convert(aggregate);
 
     assertEquals(
-        "LogicalProject(c=[$1], a=[$0], $f2=[$2], $f3=[0:BIGINT])\n"
-            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0}, {2}]], agg#0=[COUNT($0)])\n"
+        "LogicalProject(c=[$1], a=[$0], $f2=[$2], $f3=[CASE(AND(=($3, 0), =($4, 1)), 0, 1)])\n"
+            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0}, {2}]], agg#0=[COUNT($0)], agg#1=[GROUPING($2)], agg#2=[GROUPING($0)])\n"
             + "    LogicalTableScan(table=[[foo]])\n",
         RelOptUtil.toString(relNode));
   }
@@ -300,8 +300,8 @@ class ComplexAggregateTest extends PlanTestBase {
     RelNode relNode = substraitToCalcite.convert(aggregate);
 
     assertEquals(
-        "LogicalProject(a=[$0], c=[$1], $f2=[$2], $f3=[0:BIGINT])\n"
-            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0, 2}, {0}]], agg#0=[COUNT($0)])\n"
+        "LogicalProject(a=[$0], c=[$1], $f2=[$2], $f3=[CASE(=($3, 0), 0, 1)])\n"
+            + "  LogicalAggregate(group=[{0, 2}], groups=[[{0, 2}, {0}]], agg#0=[COUNT($0)], agg#1=[GROUPING($2)])\n"
             + "    LogicalTableScan(table=[[foo]])\n",
         RelOptUtil.toString(relNode));
   }
@@ -329,10 +329,7 @@ class ComplexAggregateTest extends PlanTestBase {
 
   @Test
   void anAggregateOverOutOfOrderGroupingSetsRoundTrips() {
-    // The grouping columns survive the trip in the order the aggregate declares them, rather than
-    // in the order Calcite happens to emit them. Only those columns are compared: the grouping-set
-    // index comes back as an i64, because the conversion builds Calcite's GROUP_ID call as a
-    // BIGINT and Calcite folds it to a literal of that type, which is a separate difference.
+    // Both the declared column order and the i32 grouping-set index survive the conversion.
     Rel aggregate =
         sb.aggregate(
             input -> List.of(sb.grouping(input, 2), sb.grouping(input, 0)),
@@ -348,7 +345,7 @@ class ComplexAggregateTest extends PlanTestBase {
     List<Type> declared = aggregate.getRecordType().fields();
     List<Type> roundTripped = converted.getRecordType().fields();
     assertEquals(declared.size(), roundTripped.size());
-    assertEquals(declared.subList(0, 2), roundTripped.subList(0, 2));
+    assertEquals(declared, roundTripped);
   }
 
   @Test
@@ -388,16 +385,12 @@ class ComplexAggregateTest extends PlanTestBase {
     // fields 0, 1 and 3 before 2, so the relation declares them in that order, while the aggregate
     // underneath emits them by field index. Types alone would not show it -- three of these four
     // columns are BIGINT.
-    assertEquals(Optional.of(Rel.Remap.of(List.of(0, 1, 3, 2, 4))), ((Aggregate) rel).getRemap());
-
-    // What the relation says it emits is what the Calcite aggregate it came from emits. The
-    // grouping-set index is left out of the comparison: Calcite types its GROUP_ID column BIGINT
-    // while Substrait gives the aggregate an i32 one, which is a difference of its own.
-    List<Type> emitted = rel.getRecordType().fields();
-    assertEquals(5, emitted.size());
-    assertRowMatch(
-        typeFactory.createStructType(calciteAggregate.getRowType().getFieldList().subList(0, 4)),
-        emitted.subList(0, 4));
+    Project project = assertInstanceOf(Project.class, rel);
+    Aggregate converted = assertInstanceOf(Aggregate.class, project.getInput());
+    assertEquals(Optional.of(Rel.Remap.of(List.of(0, 1, 3, 2))), converted.getRemap());
+    assertEquals(
+        0, assertInstanceOf(Expression.I64Literal.class, project.getExpressions().get(4)).value());
+    assertRowMatch(calciteAggregate.getRowType(), rel.getRecordType().fields());
   }
 
   /**
@@ -421,8 +414,8 @@ class ComplexAggregateTest extends PlanTestBase {
     RelNode relNode = substraitToCalcite.convert(aggregate);
 
     assertEquals(
-        "LogicalProject(a=[$0], d=[$3], b=[$1], c=[$2], $f4=[0:BIGINT])\n"
-            + "  LogicalAggregate(group=[{0, 1, 2, 3}], groups=[[{0, 3}, {1, 2}]])\n"
+        "LogicalProject(a=[$0], d=[$3], b=[$1], c=[$2], $f4=[CASE(AND(=($4, 0), =($5, 0), =($6, 1), =($7, 1)), 0, 1)])\n"
+            + "  LogicalAggregate(group=[{0, 1, 2, 3}], groups=[[{0, 3}, {1, 2}]], agg#0=[GROUPING($0)], agg#1=[GROUPING($3)], agg#2=[GROUPING($1)], agg#3=[GROUPING($2)])\n"
             + "    LogicalTableScan(table=[[foo]])\n",
         RelOptUtil.toString(relNode));
   }
