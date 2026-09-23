@@ -85,10 +85,16 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   /**
    * Converts a single SQL expression to a Substrait {@link io.substrait.proto.ExtendedExpression}.
    *
+   * <p>The expressions' {@code base_schema} holds the columns of every table, in statement order
+   * and then in column order, and a field reference indexes that combined list. Expressions refer
+   * to columns by their bare, unqualified names, so each column name must be unique across all
+   * tables.
+   *
    * @param sqlExpression a SQL expression
    * @param createStatements table creation statements defining fields referenced by the expression
    * @return the Substrait extended expression proto
    * @throws SqlParseException if parsing or validation fails
+   * @throws IllegalArgumentException if a column name appears more than once across the tables
    */
   public io.substrait.proto.ExtendedExpression convert(
       String sqlExpression, List<String> createStatements) throws SqlParseException {
@@ -98,10 +104,16 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
   /**
    * Converts multiple SQL expressions to a Substrait {@link io.substrait.proto.ExtendedExpression}.
    *
+   * <p>The expressions' {@code base_schema} holds the columns of every table, in statement order
+   * and then in column order, and a field reference indexes that combined list. Expressions refer
+   * to columns by their bare, unqualified names, so each column name must be unique across all
+   * tables.
+   *
    * @param sqlExpressions array of SQL expressions
    * @param createStatements table creation statements defining fields referenced by the expressions
    * @return the Substrait extended expression proto
    * @throws SqlParseException if parsing or validation fails
+   * @throws IllegalArgumentException if a column name appears more than once across the tables
    */
   public io.substrait.proto.ExtendedExpression convert(
       String[] sqlExpressions, List<String> createStatements) throws SqlParseException {
@@ -208,7 +220,8 @@ public class SqlExpressionToSubstrait extends SqlConverterBase {
         for (SubstraitTable t : tList) {
           rootSchema.add(t.getName(), t);
           for (RelDataTypeField field : t.getRowType(factory).getFieldList()) {
-            // Field references index the combined base schema in insertion order.
+            // Index into base_schema.struct.types, whose order is this map's insertion order.
+            // Read the size before merging, so it is the position this field will occupy.
             int fieldIndex = nameToTypeMap.size();
             nameToTypeMap.merge( // to validate the sql expression tree
                 field.getName(),
