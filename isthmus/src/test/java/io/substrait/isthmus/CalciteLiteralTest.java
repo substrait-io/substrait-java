@@ -167,6 +167,35 @@ class CalciteLiteralTest extends CalciteObjs {
     assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
   }
 
+  /**
+   * Both ends of the nanosecond range convert, and one nanosecond past either is reported. The
+   * lower end is the one a floored split can get wrong: its seconds alone do not fit in 64 bits.
+   */
+  @ParameterizedTest
+  @CsvSource({
+    "1677-09-21 00:12:43.145224192, -9223372036854775808",
+    "2262-04-11 23:47:16.854775807,  9223372036854775807",
+  })
+  void theEndsOfTheNanosecondRangeConvert(String timestamp, long nanos) {
+    assertEquals(
+        ExpressionCreator.precisionTimestamp(false, nanos, 9),
+        new LiteralConverter(TypeConverter.DEFAULT)
+            .convert(rex.makeTimestampLiteral(new TimestampString(timestamp), 9)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1677-09-21 00:12:43.145224191", "2262-04-11 23:47:16.854775808"})
+  void oneNanosecondPastTheRangeIsReported(String timestamp) {
+    RexLiteral literal = rex.makeTimestampLiteral(new TimestampString(timestamp), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
   @Test
   void tPrecisionTimestampAtNanosecondPrecision() {
     bitest(

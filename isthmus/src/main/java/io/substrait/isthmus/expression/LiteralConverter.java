@@ -420,9 +420,14 @@ public class LiteralConverter {
    */
   private static long epochUnits(
       long epochSeconds, long subSecondUnits, int precision, TimestampString timestamp) {
+    long unitsPerSecond = LongMath.pow(10, precision);
     try {
-      return Math.addExact(
-          Math.multiplyExact(epochSeconds, LongMath.pow(10, precision)), subSecondUnits);
+      // The floored seconds of the range's first second overflow on their own although the value
+      // fits once the sub-second part is added back, so a negative value borrows that second.
+      return epochSeconds < 0 && subSecondUnits > 0
+          ? Math.addExact(
+              Math.multiplyExact(epochSeconds + 1, unitsPerSecond), subSecondUnits - unitsPerSecond)
+          : Math.addExact(Math.multiplyExact(epochSeconds, unitsPerSecond), subSecondUnits);
     } catch (ArithmeticException e) {
       throw new IllegalArgumentException(
           String.format(
