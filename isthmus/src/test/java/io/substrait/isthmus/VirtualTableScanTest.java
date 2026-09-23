@@ -190,9 +190,8 @@ class VirtualTableScanTest extends PlanTestBase {
 
   /**
    * A schema struct that is itself nullable says nothing about the relation: a row type describes
-   * the columns, and Calcite derives one NOT NULL everywhere else. What the nullability does reach
-   * is the columns -- Calcite makes a struct's fields nullable along with the struct -- which is
-   * the same row type the conversion built before it was given the schema's names.
+   * the columns, and Calcite derives one NOT NULL everywhere else. Its fields keep what the schema
+   * declares for them, so a required column stays NOT NULL inside a nullable struct.
    */
   @Test
   void nullableSchemaStructGivesANotNullRowType() {
@@ -200,7 +199,8 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan = virtualTable(schema, List.of(sb.i32(1)));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
-    assertEquals("RecordType(INTEGER col1) NOT NULL", relNode.getRowType().getFullTypeString());
+    assertEquals(
+        "RecordType(INTEGER NOT NULL col1) NOT NULL", relNode.getRowType().getFullTypeString());
   }
 
   /**
@@ -401,13 +401,11 @@ class VirtualTableScanTest extends PlanTestBase {
   }
 
   /**
-   * A computed field inside a nullable struct is where the row type stops being able to say what
-   * the schema said: Calcite pushes the struct's nullability into its fields, and a value built
-   * from expressions takes its type from them, so the trip back cannot rebuild the declared type.
-   * Reported here rather than as a type mismatch from {@link VirtualTableScan}'s own check.
+   * A computed field inside a nullable struct: the row type keeps what the schema declared for the
+   * fields, so the trip back rebuilds the declared type rather than reporting that it cannot.
    */
   @Test
-  void aComputedFieldInsideANullableStructIsReportedOnTheWayBack() {
+  void aComputedFieldInsideANullableStructConvertsBack() {
     NamedStruct schema =
         NamedStruct.of(List.of("outer", "a", "b"), R.struct(N.struct(R.I32, R.FP64)));
     VirtualTableScan virtualTableScan =
@@ -418,12 +416,8 @@ class VirtualTableScanTest extends PlanTestBase {
                     true, List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(2.0)))));
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
 
-    assertTrue(
-        assertThrows(
-                UnsupportedOperationException.class,
-                () -> SubstraitRelVisitor.convert(relNode, converterProvider))
-            .getMessage()
-            .contains("does not carry its column's type"));
+    assertEquals(
+        schema.struct(), SubstraitRelVisitor.convert(relNode, converterProvider).getRecordType());
   }
 
   /**
