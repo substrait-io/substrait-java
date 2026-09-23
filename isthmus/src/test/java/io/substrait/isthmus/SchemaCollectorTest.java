@@ -122,9 +122,9 @@ class SchemaCollectorTest extends PlanTestBase {
 
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
     CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
-    hasTable(schema1, "table1", "RecordType(BOOLEAN col1)");
+    hasTable(schema1, "table1", "RecordType(BOOLEAN NOT NULL col1)");
 
-    hasTable(schema1, "table2", "RecordType(BOOLEAN col1)");
+    hasTable(schema1, "table2", "RecordType(BOOLEAN NOT NULL col1)");
   }
 
   @Test

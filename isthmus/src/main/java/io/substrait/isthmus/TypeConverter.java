@@ -535,7 +535,10 @@ public class TypeConverter {
     }
 
     private RelDataType n(Type substraitType, RelDataType type) {
-      return typeFactory.createTypeWithNullability(type, n(substraitType));
+      // enforceTypeWithNullability, not createTypeWithNullability: the latter
+      // widens a record's fields along with the record, which loses the
+      // nullability the Substrait type declares for them.
+      return typeFactory.enforceTypeWithNullability(type, n(substraitType));
     }
   }
 }
