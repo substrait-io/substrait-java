@@ -143,9 +143,64 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimeWithNanoSecond() {
+    bitest(
+        ExpressionCreator.precisionTime(
+            false, (14L * 60 * 60 + 22 * 60 + 47) * 1_000_000_000L + 123_456_789, 9),
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9));
+  }
+
+  /**
+   * A Substrait temporal value is a 64-bit count of its own unit, so the finer the unit the
+   * narrower the range: nanoseconds run out in 2262, where a Calcite TimestampString reaches 9999.
+   * A timestamp past that is reported rather than wrapped into a different instant.
+   */
+  @Test
+  void aTimestampTooLargeForItsPrecisionIsReported() {
+    RexLiteral literal =
+        rex.makeTimestampLiteral(new TimestampString("9999-12-31 23:59:59.999999999"), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  /**
+   * Both ends of the nanosecond range convert, and one nanosecond past either is reported. The
+   * lower end is the one a floored split can get wrong: its seconds alone do not fit in 64 bits.
+   */
+  @ParameterizedTest
+  @CsvSource({
+    "1677-09-21 00:12:43.145224192, -9223372036854775808",
+    "2262-04-11 23:47:16.854775807,  9223372036854775807",
+  })
+  void theEndsOfTheNanosecondRangeConvert(String timestamp, long nanos) {
     assertEquals(
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9),
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
+        ExpressionCreator.precisionTimestamp(false, nanos, 9),
+        new LiteralConverter(TypeConverter.DEFAULT)
+            .convert(rex.makeTimestampLiteral(new TimestampString(timestamp), 9)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1677-09-21 00:12:43.145224191", "2262-04-11 23:47:16.854775808"})
+  void oneNanosecondPastTheRangeIsReported(String timestamp) {
+    RexLiteral literal = rex.makeTimestampLiteral(new TimestampString(timestamp), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  @Test
+  void tPrecisionTimestampAtNanosecondPrecision() {
+    bitest(
+        ExpressionCreator.precisionTimestamp(false, 1_704_067_200_123_456_789L, 9),
+        rex.makeTimestampLiteral(new TimestampString("2024-01-01 00:00:00.123456789"), 9));
   }
 
   @Test

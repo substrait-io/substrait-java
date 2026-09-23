@@ -152,6 +152,9 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertPrecisionTimestampLiteral(4);
     assertPrecisionTimestampLiteral(5);
     assertPrecisionTimestampLiteral(6);
+    assertPrecisionTimestampLiteral(7);
+    assertPrecisionTimestampLiteral(8);
+    assertPrecisionTimestampLiteral(9);
   }
 
   void assertPrecisionTimestampLiteral(int precision) {
@@ -166,7 +169,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
 
   @Test
   void supportedPrecisionForPrecisionTimestampTZLiteral() {
-    // The same set the non-TZ literal supports: SubstraitTypeSystem configures a maximum of 6 for
+    // The same set the non-TZ literal supports: SubstraitTypeSystem configures a maximum of 9 for
     // TIMESTAMP_WITH_LOCAL_TIME_ZONE, and the TZ literal is checked against that name too.
     assertPrecisionTimestampTZLiteral(0);
     assertPrecisionTimestampTZLiteral(1);
@@ -175,6 +178,9 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     assertPrecisionTimestampTZLiteral(4);
     assertPrecisionTimestampTZLiteral(5);
     assertPrecisionTimestampTZLiteral(6);
+    assertPrecisionTimestampTZLiteral(7);
+    assertPrecisionTimestampTZLiteral(8);
+    assertPrecisionTimestampTZLiteral(9);
   }
 
   void assertPrecisionTimestampTZLiteral(int precision) {
@@ -192,12 +198,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(-1);
 
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(7);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(8);
-
-    // this would be nanoseconds which are supported in Substrait but not in Calcite
-    assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(9);
-
+    // finer than a nanosecond, which is the finest unit a Calcite TimestampString carries
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(10);
     assertThrowsUnsupportedPrecisionPrecisionTimestampLiteral(11);
 
@@ -218,12 +219,7 @@ class ExpressionConvertabilityTest extends PlanTestBase {
     // test different edge case precision values
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(-1);
 
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(7);
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(8);
-
-    // this would be nanoseconds which are supported in Substrait but not in Calcite
-    assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(9);
-
+    // finer than a nanosecond, which is the finest unit a Calcite TimestampString carries
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(10);
     assertThrowsUnsupportedPrecisionPrecisionTimestampTZLiteral(11);
 
