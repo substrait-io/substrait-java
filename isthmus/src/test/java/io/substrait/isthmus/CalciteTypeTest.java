@@ -113,7 +113,7 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void precisionTimeStamp(boolean nullable) {
-    for (int precision : new int[] {0, 3, 6}) {
+    for (int precision : new int[] {0, 3, 6, 9}) {
       testType(
           Type.withNullability(nullable).precisionTimestamp(precision),
           SqlTypeName.TIMESTAMP,
@@ -125,13 +125,30 @@ class CalciteTypeTest extends CalciteObjs {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void precisionTimestamptz(boolean nullable) {
-    for (int precision : new int[] {0, 3, 6}) {
+    for (int precision : new int[] {0, 3, 6, 9}) {
       testType(
           Type.withNullability(nullable).precisionTimestampTZ(precision),
           SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
           nullable,
           precision);
     }
+  }
+
+  /**
+   * Substrait allows 0 to 12; Calcite carries nanoseconds, and builds a type at 12 as one at 9
+   * rather than reporting that it cannot. A precision past what it can hold is refused, naming the
+   * bound, instead of being narrowed in silence.
+   */
+  @ParameterizedTest
+  @ValueSource(ints = {10, 12})
+  void aPrecisionFinerThanNanosecondsIsRefused(int precision) {
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                TypeConverter.DEFAULT.toCalcite(
+                    type, TypeCreator.REQUIRED.precisionTimestamp(precision), null));
+    assertTrue(error.getMessage().contains("max precision in Calcite type system is set to 9"));
   }
 
   @ParameterizedTest

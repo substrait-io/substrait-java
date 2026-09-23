@@ -143,9 +143,35 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimeWithNanoSecond() {
-    assertEquals(
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9),
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
+    bitest(
+        ExpressionCreator.precisionTime(
+            false, (14L * 60 * 60 + 22 * 60 + 47) * 1_000_000_000L + 123_456_789, 9),
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9));
+  }
+
+  /**
+   * A Substrait temporal value is a 64-bit count of its own unit, so the finer the unit the
+   * narrower the range: nanoseconds run out in 2262, where a Calcite TimestampString reaches 9999.
+   * A timestamp past that is reported rather than wrapped into a different instant.
+   */
+  @Test
+  void aTimestampTooLargeForItsPrecisionIsReported() {
+    RexLiteral literal =
+        rex.makeTimestampLiteral(new TimestampString("9999-12-31 23:59:59.999999999"), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  @Test
+  void tPrecisionTimestampAtNanosecondPrecision() {
+    bitest(
+        ExpressionCreator.precisionTimestamp(false, 1_704_067_200_123_456_789L, 9),
+        rex.makeTimestampLiteral(new TimestampString("2024-01-01 00:00:00.123456789"), 9));
   }
 
   @Test
