@@ -771,14 +771,28 @@ public class SubstraitRelNodeConverter
     context.enterScope(AnchoredInput.of(update.getRelAnchor(), relBuilder.peek().getRowType()));
     RexNode condition = update.getCondition().accept(expressionRexConverter, context);
 
-    List<String> fieldNames = toRowType(update.getTableSchema()).getFieldNames();
+    NamedStruct tableSchema = update.getTableSchema();
+    List<String> declaredNames = tableSchema.names();
+    List<Type> schemaFields = tableSchema.struct().fields();
+    List<String> fieldNames = new ArrayList<>(schemaFields.size());
+    for (int field = 0, nameIndex = 0; field < schemaFields.size(); field++) {
+      fieldNames.add(declaredNames.get(nameIndex));
+      nameIndex += 1 + NamedFieldCountingTypeVisitor.countNames(schemaFields.get(field));
+    }
 
     List<String> updateColumnList = new ArrayList<>();
     List<RexNode> sourceExpressionList = new ArrayList<>();
 
     for (AbstractUpdate.TransformExpression transform : update.getTransformations()) {
 
-      updateColumnList.add(fieldNames.get(transform.getColumnTarget()));
+      int columnTarget = transform.getColumnTarget();
+      if (columnTarget < 0 || columnTarget >= fieldNames.size()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Update column target %d is outside the table schema's %d top-level columns",
+                columnTarget, fieldNames.size()));
+      }
+      updateColumnList.add(fieldNames.get(columnTarget));
       sourceExpressionList.add(
           transform.getTransformation().accept(expressionRexConverter, context));
     }
@@ -1060,10 +1074,10 @@ public class SubstraitRelNodeConverter
   }
 
   /**
-   * Converts a declared schema into the row type that describes it.
+   * Converts the schema a DDL relation declares into the row type that describes it.
    *
    * @param schema the declared schema, whose names are one per field at every level of the struct
-   * @return the row type with field names at their corresponding nesting levels
+   * @return the row type of the object the statement creates
    */
   private RelDataType toRowType(NamedStruct schema) {
     return typeConverter.toCalcite(typeFactory, schema.struct(), schema.names());
