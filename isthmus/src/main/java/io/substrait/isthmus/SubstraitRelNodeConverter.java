@@ -772,14 +772,27 @@ public class SubstraitRelNodeConverter
     RexNode condition = update.getCondition().accept(expressionRexConverter, context);
 
     NamedStruct tableSchema = update.getTableSchema();
-    List<String> fieldNames = tableSchema.names();
+    List<String> declaredNames = tableSchema.names();
+    List<Type> schemaFields = tableSchema.struct().fields();
+    List<String> fieldNames = new ArrayList<>(schemaFields.size());
+    for (int field = 0, nameIndex = 0; field < schemaFields.size(); field++) {
+      fieldNames.add(declaredNames.get(nameIndex));
+      nameIndex += 1 + NamedFieldCountingTypeVisitor.countNames(schemaFields.get(field));
+    }
 
     List<String> updateColumnList = new ArrayList<>();
     List<RexNode> sourceExpressionList = new ArrayList<>();
 
     for (AbstractUpdate.TransformExpression transform : update.getTransformations()) {
 
-      updateColumnList.add(fieldNames.get(transform.getColumnTarget()));
+      int columnTarget = transform.getColumnTarget();
+      if (columnTarget < 0 || columnTarget >= fieldNames.size()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Update column target %d is outside the table schema's %d top-level columns",
+                columnTarget, fieldNames.size()));
+      }
+      updateColumnList.add(fieldNames.get(columnTarget));
       sourceExpressionList.add(
           transform.getTransformation().accept(expressionRexConverter, context));
     }

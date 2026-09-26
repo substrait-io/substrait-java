@@ -46,9 +46,11 @@ public abstract class AbstractUpdate extends ZeroInputRel implements HasExtensio
     public abstract Expression getTransformation();
 
     /**
-     * Returns the index of the target column to update.
+     * Returns the zero-based ordinal of the target column among the top-level fields of the
+     * enclosing update's {@code getTableSchema().struct()}. The library interprets this value as a
+     * top-level field ordinal, not as an index into the flattened {@code NamedStruct.names()} list.
      *
-     * @return column index
+     * @return zero-based top-level field ordinal
      */
     public abstract int getColumnTarget();
 
