@@ -1,6 +1,46 @@
 Release Notes
 ---
 
+## [0.104.0](https://github.com/substrait-io/substrait-java/compare/v0.103.0...v0.104.0) (2026-09-27)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** a RANGE window's negative decimal or floating-point
+offset, previously converted with its sign and bound label unchanged, is
+now mirrored to the opposite bound with its positive magnitude, matching
+the existing integral behavior. A zero-valued decimal or floating-point
+offset, previously left as Preceding/Following{0}, now converts to
+CurrentRow. Both match the existing integral behavior.
+* **spark:** `io.substrait.spark.utils.Dialect`, `SupportedType`,
+`TypeMetadata`, `FunctionMetadata` and `SupportedFunction` are removed;
+the dialect is modelled by `io.substrait.dialect.Dialect` and friends.
+`DialectGenerator.generate()` returns `io.substrait.dialect.Dialect`,
+and the `DialectGenerator` class now takes the scalar, aggregate and
+window function collections it generates from.
+* **isthmus:** `SqlToSubstrait` now throws
+`UnsupportedOperationException` when a `RANGE` window's integral offset
+cannot be retyped to the ordering column's type (out of range, past a
+decimal's precision, an FP round-trip that doesn't survive, or an
+ordering type with no integral form at all — the one a temporal ordering
+column hits). It previously converted successfully but produced a
+type-mismatched, already spec-invalid `offset_expr`.
+* **core:** a ConsistentPartitionWindow or WindowFunctionInvocation
+with a RANGE bound's Preceding or Following side now requires exactly
+one, non-CLUSTERED ordering expression. A plan that
+previously built or parsed with zero, multiple, or a CLUSTERED ordering
+expression in that position now throws IllegalArgumentException.
+
+### Features
+
+* **core:** evaluate return-type programs and inline arithmetic ([#1288](https://github.com/substrait-io/substrait-java/issues/1288)) ([cf581f4](https://github.com/substrait-io/substrait-java/commit/cf581f49a59860fee52733d2d5dbfe6c30a5b83a))
+
+### Bug Fixes
+
+* **core:** require exactly one ordering expression for RANGE window bounds ([#1205](https://github.com/substrait-io/substrait-java/issues/1205)) ([06a5feb](https://github.com/substrait-io/substrait-java/commit/06a5feba02548e6b44a93f09fa0776c4a4f071e9))
+* **isthmus:** mirror negative and normalize zero decimal and floating-point RANGE offsets ([#1309](https://github.com/substrait-io/substrait-java/issues/1309)) ([ade72bc](https://github.com/substrait-io/substrait-java/commit/ade72bc2a7b0ddec759eaa3a256d486467ba2087))
+* **isthmus:** reject RANGE offsets that cannot be retyped to the ordering column ([#1206](https://github.com/substrait-io/substrait-java/issues/1206)) ([615d6f2](https://github.com/substrait-io/substrait-java/commit/615d6f21ddf519765e63b076e876d6ea49c3b966))
+* **spark:** derive the dialect from core's model and the runtime's functions ([#1133](https://github.com/substrait-io/substrait-java/issues/1133)) ([aacec8d](https://github.com/substrait-io/substrait-java/commit/aacec8dbde9093b9870372ffd9066ea574410451))
+
 ## [0.103.0](https://github.com/substrait-io/substrait-java/compare/v0.102.0...v0.103.0) (2026-09-06)
 
 ### ⚠ BREAKING CHANGES
