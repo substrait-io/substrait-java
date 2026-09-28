@@ -118,15 +118,16 @@ class GroupingSetIndexTest extends PlanTestBase {
         aggregate(List.of(List.of(), List.of()), input), List.of(row(0L, 0), row(0L, 1)));
   }
 
-  private static final String EMPTY_INPUT_PRUNING =
-      "Calcite 1.42.0 prunes an aggregate over an empty input whenever its group set is"
-          + " non-empty, so every grouping set with no grouping expressions loses its row;"
-          + " PruneEmptyRules.AGGREGATE guards on Aggregate.isNotGrandTotal (group count >"
-          + " 0) rather than hasEmptyGroup(). Plain ROLLUP and CUBE shapes such as [(a), ()]"
-          + " return no rows at all.";
+  private static final String EMPTY_SET_ON_EMPTY_INPUT =
+      "CALCITE-7828: over an empty input, Calcite 1.42.0 loses the row of a grouping set with no"
+          + " grouping expressions whenever the aggregate also has a non-empty one."
+          + " PruneEmptyRules.AGGREGATE_INSTANCE prunes the aggregate, since"
+          + " Aggregate.isNotGrandTotal only checks the group count, and EnumerableAggregate"
+          + " drops the row even without that rule. Plain ROLLUP and CUBE shapes such as"
+          + " [(a), ()] return no rows at all.";
 
   @Test
-  @Disabled(EMPTY_INPUT_PRUNING)
+  @Disabled(EMPTY_SET_ON_EMPTY_INPUT)
   void mixedGroupingSetsOnEmptyInputKeepEveryEmptySet() throws SQLException {
     Rel input = virtualTable(NamedStruct.of(List.of("a", "b"), R.struct(R.I32, R.I32)));
     assertRowsAndRoundTrip(
@@ -135,7 +136,7 @@ class GroupingSetIndexTest extends PlanTestBase {
   }
 
   @Test
-  @Disabled(EMPTY_INPUT_PRUNING)
+  @Disabled(EMPTY_SET_ON_EMPTY_INPUT)
   void rollupOnEmptyInputKeepsTheGrandTotal() throws SQLException {
     Rel input = virtualTable(NamedStruct.of(List.of("a", "b"), R.struct(R.I32, R.I32)));
     assertRowsAndRoundTrip(
