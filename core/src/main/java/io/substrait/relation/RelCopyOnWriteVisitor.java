@@ -301,7 +301,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(NamedScan namedScan, EmptyVisitationContext context) throws E {
     Optional<Expression> filter =
-        outsideInputScope(() -> visitOptionalExpression(namedScan.getFilter(), context));
+        inInputScope(
+            namedScan.getInitialSchema().struct(),
+            () -> visitOptionalExpression(namedScan.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -313,7 +315,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(LocalFiles localFiles, EmptyVisitationContext context) throws E {
     Optional<Expression> filter =
-        outsideInputScope(() -> visitOptionalExpression(localFiles.getFilter(), context));
+        inInputScope(
+            localFiles.getInitialSchema().struct(),
+            () -> visitOptionalExpression(localFiles.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -398,11 +402,13 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Rel> visit(NamedUpdate update, EmptyVisitationContext context) throws E {
     Optional<Expression> condition =
-        outsideInputScope(
+        inInputScope(
+            update.getTableSchema().struct(),
             () -> update.getCondition().accept(getExpressionCopyOnWriteVisitor(), context));
 
     Optional<List<AbstractUpdate.TransformExpression>> transformations =
-        outsideInputScope(
+        inInputScope(
+            update.getTableSchema().struct(),
             () ->
                 transformList(
                     update.getTransformations(), context, this::visitTransformExpression));
@@ -574,7 +580,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws E {
     Optional<Expression> filter =
-        outsideInputScope(() -> visitOptionalExpression(virtualTableScan.getFilter(), context));
+        inInputScope(
+            virtualTableScan.getInitialSchema().struct(),
+            () -> visitOptionalExpression(virtualTableScan.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -611,7 +619,9 @@ public class RelCopyOnWriteVisitor<E extends Exception>
   public Optional<Rel> visit(ExtensionTable extensionTable, EmptyVisitationContext context)
       throws E {
     Optional<Expression> filter =
-        outsideInputScope(() -> visitOptionalExpression(extensionTable.getFilter(), context));
+        inInputScope(
+            extensionTable.getInitialSchema().struct(),
+            () -> visitOptionalExpression(extensionTable.getFilter(), context));
 
     if (allEmpty(filter)) {
       return Optional.empty();
@@ -795,12 +805,20 @@ public class RelCopyOnWriteVisitor<E extends Exception>
    *
    * <p>Only the fields of the result are ever read, so its own nullability is not meaningful.
    *
+   * <p>An input whose record type cannot be derived — a {@link Set} over inputs with differing
+   * field counts is not rejected at construction — yields {@code null}, which leaves the references
+   * resolving against it with the types they have rather than making the traversal fail.
+   *
    * @param inputs the relations the expressions are evaluated over, in field order
-   * @return the combined record type
+   * @return the combined record type, or {@code null} if it cannot be derived
    */
   protected static Type.Struct recordTypeOf(Rel... inputs) {
-    return TypeCreator.REQUIRED.struct(
-        Arrays.stream(inputs).flatMap(input -> input.getRecordType().fields().stream()));
+    try {
+      return TypeCreator.REQUIRED.struct(
+          Arrays.stream(inputs).flatMap(input -> input.getRecordType().fields().stream()));
+    } catch (RuntimeException e) {
+      return null;
+    }
   }
 
   /**
@@ -810,8 +828,8 @@ public class RelCopyOnWriteVisitor<E extends Exception>
    * record type passed in, so that references pick up the type a replaced input emits.
    *
    * @param <T> the type of the rewrite's result
-   * @param inputType the record type the expressions resolve against, or {@code null} if they do
-   *     not resolve against an input record type
+   * @param inputType the record type the expressions resolve against, or {@code null} if it is not
+   *     known
    * @param rewrite the expression rewrite to run
    * @return the result of the rewrite
    * @throws E if the rewrite fails
@@ -824,19 +842,6 @@ public class RelCopyOnWriteVisitor<E extends Exception>
     } finally {
       inputTypes.remove(inputTypes.size() - 1);
     }
-  }
-
-  /**
-   * Runs the given rewrite of expressions that do not resolve against an input record type, such as
-   * the filter of a read relation, whose references resolve against the schema being read.
-   *
-   * @param <T> the type of the rewrite's result
-   * @param rewrite the expression rewrite to run
-   * @return the result of the rewrite
-   * @throws E if the rewrite fails
-   */
-  protected <T> T outsideInputScope(CopyOnWriteUtils.ThrowingSupplier<T, E> rewrite) throws E {
-    return inInputScope(null, rewrite);
   }
 
   /**
@@ -939,7 +944,17 @@ public class RelCopyOnWriteVisitor<E extends Exception>
    */
   public Optional<FieldReference> visitFieldReference(
       FieldReference fieldReference, EmptyVisitationContext context) throws E {
-    return getExpressionCopyOnWriteVisitor().visitFieldReference(fieldReference, context);
+    // Dispatched through visit(FieldReference) rather than straight to visitFieldReference, so that
+    // a subclass overriding the standard ExpressionVisitor hook is honoured in the positions that
+    // hold a reference rather than an arbitrary expression.
+    Optional<Expression> rewritten =
+        getExpressionCopyOnWriteVisitor().visit(fieldReference, context);
+    if (rewritten.isPresent() && !(rewritten.get() instanceof FieldReference)) {
+      throw new IllegalStateException(
+          "A field reference position can only be rewritten to another field reference; got "
+              + rewritten.get().getClass().getName());
+    }
+    return rewritten.map(FieldReference.class::cast);
   }
 
   /**

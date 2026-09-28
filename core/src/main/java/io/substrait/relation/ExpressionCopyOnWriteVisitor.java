@@ -48,6 +48,23 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   }
 
   /**
+   * Runs the given rewrite of a subquery's relation tree as a subquery boundary, so that an outer
+   * reference within it re-derives its type against the scope it steps out to.
+   *
+   * <p>A subclass that overrides the {@code visit} of a subquery expression without delegating to
+   * this class must rewrite the subquery's relations through this, or the outer references within
+   * them resolve against the wrong relation.
+   *
+   * @param <T> the type of the rewrite's result
+   * @param rewrite the rewrite of the subquery's relation tree
+   * @return the result of the rewrite
+   * @throws E if the rewrite fails
+   */
+  protected final <T> T inSubqueryScope(CopyOnWriteUtils.ThrowingSupplier<T, E> rewrite) throws E {
+    return relCopyOnWriteVisitor.inSubqueryScope(rewrite);
+  }
+
+  /**
    * Utility method for visiting literals. By default, visits to literal types call this.
    *
    * @param literal the literal expression to visit
@@ -511,10 +528,12 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
    * lambda parameter, keep the type they have: neither resolves against a record type this
    * traversal tracks.
    *
-   * <p>Override this rather than {@link #visit(FieldReference, EmptyVisitationContext)} to change
-   * how references are rewritten: this is what the positions that hold a reference rather than an
-   * arbitrary expression — a {@link io.substrait.relation.physical.ScatterExchange}'s fields and a
-   * {@link io.substrait.relation.physical.ComparisonJoinKey}'s sides — are rewritten through.
+   * <p>{@link #visit(FieldReference, EmptyVisitationContext)} delegates here, and the positions
+   * that hold a reference rather than an arbitrary expression — a {@link
+   * io.substrait.relation.physical.ScatterExchange}'s fields and a {@link
+   * io.substrait.relation.physical.ComparisonJoinKey}'s sides — are rewritten through that {@code
+   * visit}, so overriding either changes how every reference is rewritten. Such a position can only
+   * be rewritten to another field reference.
    *
    * @param fieldReference the field reference to visit
    * @param context the visitation context
@@ -590,16 +609,14 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
   @Override
   public Optional<Expression> visit(
       Expression.SetPredicate setPredicate, EmptyVisitationContext context) throws E {
-    return getRelCopyOnWriteVisitor()
-        .inSubqueryScope(() -> setPredicate.tuples().accept(getRelCopyOnWriteVisitor(), context))
+    return inSubqueryScope(() -> setPredicate.tuples().accept(getRelCopyOnWriteVisitor(), context))
         .map(tuple -> Expression.SetPredicate.builder().from(setPredicate).tuples(tuple).build());
   }
 
   @Override
   public Optional<Expression> visit(
       Expression.ScalarSubquery scalarSubquery, EmptyVisitationContext context) throws E {
-    return getRelCopyOnWriteVisitor()
-        .inSubqueryScope(() -> scalarSubquery.input().accept(getRelCopyOnWriteVisitor(), context))
+    return inSubqueryScope(() -> scalarSubquery.input().accept(getRelCopyOnWriteVisitor(), context))
         .map(
             input -> Expression.ScalarSubquery.builder().from(scalarSubquery).input(input).build());
   }
@@ -610,9 +627,7 @@ public class ExpressionCopyOnWriteVisitor<E extends Exception>
     // The needles are evaluated in the current scope; only the haystack is a subquery boundary.
     Optional<List<Expression>> needles = visitExprList(inPredicate.needles(), context);
     Optional<Rel> haystack =
-        getRelCopyOnWriteVisitor()
-            .inSubqueryScope(
-                () -> inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context));
+        inSubqueryScope(() -> inPredicate.haystack().accept(getRelCopyOnWriteVisitor(), context));
 
     if (allEmpty(haystack, needles)) {
       return Optional.empty();

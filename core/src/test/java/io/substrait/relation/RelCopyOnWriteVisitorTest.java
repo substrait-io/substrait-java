@@ -295,6 +295,103 @@ class RelCopyOnWriteVisitorTest extends TestBase {
   }
 
   @Test
+  void readRelationFilterIsRetypedAgainstTheSchemaBeingRead() {
+    // Nothing replaces the scan; its filter simply carries a type the schema it reads does not
+    // have.
+    Rel plan =
+        NamedScan.builder()
+            .from((NamedScan) scan("t", R.I64))
+            .filter(FieldReference.newRootStructReference(0, N.I64))
+            .build();
+
+    NamedScan rewritten =
+        assertInstanceOf(
+            NamedScan.class,
+            plan.accept(
+                    new RelCopyOnWriteVisitor<RuntimeException>(), EmptyVisitationContext.INSTANCE)
+                .orElseThrow(() -> new AssertionError("expected the filter to be retyped")));
+    assertEquals(R.I64, rewritten.getFilter().orElseThrow().getType());
+  }
+
+  @Test
+  void updateConditionAndTransformationAreRetypedAgainstTheTableSchema() {
+    NamedUpdate update =
+        sb.namedUpdate(
+            Arrays.asList("t"),
+            Arrays.asList("a"),
+            Arrays.asList(
+                NamedUpdate.TransformExpression.builder()
+                    .columnTarget(0)
+                    .transformation(sb.i64(1))
+                    .build()),
+            sb.bool(true),
+            false);
+    Rel plan =
+        NamedUpdate.builder()
+            .from(update)
+            .condition(FieldReference.newRootStructReference(0, N.I64))
+            .transformations(
+                Arrays.asList(
+                    NamedUpdate.TransformExpression.builder()
+                        .columnTarget(0)
+                        .transformation(FieldReference.newRootStructReference(0, N.I64))
+                        .build()))
+            .build();
+
+    NamedUpdate rewritten =
+        assertInstanceOf(
+            NamedUpdate.class,
+            plan.accept(
+                    new RelCopyOnWriteVisitor<RuntimeException>(), EmptyVisitationContext.INSTANCE)
+                .orElseThrow(() -> new AssertionError("expected the expressions to be retyped")));
+    assertEquals(R.I64, rewritten.getCondition().getType());
+    assertEquals(R.I64, rewritten.getTransformations().get(0).getTransformation().getType());
+  }
+
+  @Test
+  void traversalOverASetWhoseRecordTypeCannotBeDerivedDoesNotThrow() {
+    // A set is not rejected at construction for inputs with differing field counts, so a traversal
+    // that rewrites nothing must return over it rather than fail deriving its record type.
+    Rel set = sb.set(Set.SetOp.UNION_ALL, scan("l", R.I64), scan("r", R.I64, R.I64));
+    Rel plan = sb.filter(input -> FieldReference.newRootStructReference(0, R.I64), set);
+
+    assertFalse(
+        plan.accept(new RelCopyOnWriteVisitor<RuntimeException>(), EmptyVisitationContext.INSTANCE)
+            .isPresent());
+  }
+
+  @Test
+  void referencePositionsHonourTheExpressionVisitorHook() {
+    // A subclass overriding the standard ExpressionVisitor hook for field references must reach
+    // the positions that hold a reference rather than an arbitrary expression too.
+    Rel input = scan("t", R.I64, R.STRING);
+    Rel plan =
+        ScatterExchange.builder()
+            .input(input)
+            .partitionCount(2)
+            .addFields(sb.fieldReference(input, 0))
+            .build();
+    FieldReference replacement = sb.fieldReference(input, 1);
+    RelCopyOnWriteVisitor<RuntimeException> visitor =
+        new RelCopyOnWriteVisitor<RuntimeException>(
+            relVisitor ->
+                new ExpressionCopyOnWriteVisitor<RuntimeException>(relVisitor) {
+                  @Override
+                  public Optional<Expression> visit(
+                      FieldReference reference, EmptyVisitationContext context) {
+                    return Optional.of(replacement);
+                  }
+                });
+
+    ScatterExchange rewritten =
+        assertInstanceOf(
+            ScatterExchange.class,
+            plan.accept(visitor, EmptyVisitationContext.INSTANCE)
+                .orElseThrow(() -> new AssertionError("expected the field to be rewritten")));
+    assertEquals(replacement, rewritten.getFields().get(0));
+  }
+
+  @Test
   void referenceBeyondTheNewInputIsLeftAlone() {
     // A rewrite that drops a column leaves the reference to it selecting a field the input no
     // longer has. Its type cannot be derived, and that must not fail the rewrite.
@@ -864,9 +961,8 @@ class RelCopyOnWriteVisitorTest extends TestBase {
    * whose visit computes an expression and then decides from its input drops out of the set rather
    * than passing quietly -- {@code MultiBucketExchange} does exactly that on the base.
    *
-   * <p>Both reference hooks are overridden, because a reference does not always reach the
-   * expression visitor: a scatter exchange's fields and a comparison join key's sides are rewritten
-   * through the relation visitor's own {@code visitFieldReference}, which is what puts {@code
+   * <p>Only the expression visitor's hook is overridden: a scatter exchange's fields and a
+   * comparison join key's sides are rewritten through it too, which is what puts {@code
    * ScatterExchange}, {@code HashJoin} and {@code MergeJoin} in the pinned set.
    */
   @Test
@@ -881,17 +977,7 @@ class RelCopyOnWriteVisitorTest extends TestBase {
                       FieldReference reference, EmptyVisitationContext context) {
                     return Optional.of(reference);
                   }
-                }) {
-          // The positions that hold a reference rather than an arbitrary expression -- a scatter
-          // exchange's fields and a comparison join key's sides -- are rewritten through the
-          // relation visitor's own hook, so overriding only the expression visitor's one leaves
-          // them out of the sweep.
-          @Override
-          public Optional<FieldReference> visitFieldReference(
-              FieldReference reference, EmptyVisitationContext context) {
-            return Optional.of(reference);
-          }
-        };
+                });
 
     List<String> rewritten = new ArrayList<>();
     new RelSamples(sb, extensions)
