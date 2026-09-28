@@ -33,6 +33,13 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class GroupingSetIndexTest extends PlanTestBase {
+  private static final String EMPTY_SET_ON_EMPTY_INPUT =
+      "CALCITE-7828: over an empty input, Calcite 1.42.0 loses the row of a grouping set with no"
+          + " grouping expressions whenever the aggregate also has a non-empty one."
+          + " PruneEmptyRules.AGGREGATE_INSTANCE prunes the aggregate, since"
+          + " Aggregate.isNotGrandTotal only checks the group count, and EnumerableAggregate"
+          + " drops the row even without that rule. Plain ROLLUP and CUBE shapes such as"
+          + " [(a), ()] return no rows at all.";
 
   @Test
   void indexFollowsDeclaredSetOrder() throws SQLException {
@@ -117,14 +124,6 @@ class GroupingSetIndexTest extends PlanTestBase {
     assertRowsAndRoundTrip(
         aggregate(List.of(List.of(), List.of()), input), List.of(row(0L, 0), row(0L, 1)));
   }
-
-  private static final String EMPTY_SET_ON_EMPTY_INPUT =
-      "CALCITE-7828: over an empty input, Calcite 1.42.0 loses the row of a grouping set with no"
-          + " grouping expressions whenever the aggregate also has a non-empty one."
-          + " PruneEmptyRules.AGGREGATE_INSTANCE prunes the aggregate, since"
-          + " Aggregate.isNotGrandTotal only checks the group count, and EnumerableAggregate"
-          + " drops the row even without that rule. Plain ROLLUP and CUBE shapes such as"
-          + " [(a), ()] return no rows at all.";
 
   @Test
   @Disabled(EMPTY_SET_ON_EMPTY_INPUT)
