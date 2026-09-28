@@ -431,8 +431,10 @@ public class LiteralConverter {
     } catch (ArithmeticException e) {
       throw new IllegalArgumentException(
           String.format(
+              Locale.ROOT,
               "timestamp %s does not fit in a 64-bit count of 10^-%d seconds",
-              timestamp, precision),
+              timestamp,
+              precision),
           e);
     }
   }

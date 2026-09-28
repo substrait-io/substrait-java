@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -196,6 +197,26 @@ class CalciteLiteralTest extends CalciteObjs {
     assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
   }
 
+  /**
+   * Compared with a nanosecond column, a literal is widened to the column's precision, so a
+   * sentinel date outside the nanosecond range has no value of that type and is reported. DuckDB's
+   * {@code TIMESTAMP_NS} and Arrow's {@code timestamp[ns]} refuse the same comparison.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"9999-12-31 23:59:59", "1600-01-01 00:00:00"})
+  void aFarDateComparedWithANanosecondColumnIsReported(String timestamp) throws Exception {
+    Prepare.CatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE v (ts TIMESTAMP(9))");
+    String query = "SELECT * FROM v WHERE ts > TIMESTAMP '" + timestamp + "'";
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class, () -> new SqlToSubstrait().convert(query, catalog));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
   @Test
   void tPrecisionTimestampAtNanosecondPrecision() {
     bitest(
@@ -294,7 +315,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimeKeepsItsPrecision(int precision) {
     Expression.PrecisionTimeLiteral time =
         ExpressionCreator.precisionTime(false, timeValue(precision), precision);
@@ -305,7 +326,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimestampKeepsItsPrecision(int precision) {
     PrecisionTimestampLiteral timestamp =
         ExpressionCreator.precisionTimestamp(false, timestampValue(precision), precision);
@@ -316,7 +337,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimestampTZStaysTimeZoned(int precision) {
     // Calcite has no dedicated timestamp-with-time-zone literal, but it does have the
     // TIMESTAMP_WITH_LOCAL_TIME_ZONE type that TypeConverter maps precision_timestamp_tz to, so a
@@ -431,10 +452,10 @@ class CalciteLiteralTest extends CalciteObjs {
         + subseconds(precision);
   }
 
-  /** 123 milliseconds expressed at the given precision, or none at all when there is no room. */
+  /** .123456789 seconds cut to the given precision, or none at all when there is no room. */
   private static long subseconds(int precision) {
-    // The first `precision` digits of .123456, so no precision is left with an empty fraction.
-    return 123_456L / LongMath.pow(10, 6 - precision);
+    // The first `precision` digits of .123456789, so no precision is left with an empty fraction.
+    return 123_456_789L / LongMath.pow(10, 9 - precision);
   }
 
   @Test
