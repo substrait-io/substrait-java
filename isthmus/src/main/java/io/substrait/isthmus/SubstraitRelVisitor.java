@@ -396,8 +396,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     List<Integer> mapping = new ArrayList<>(calciteGroupingOrder(groupings));
     // The distinct grouping expressions across the sets. Calcite emits one column per bit of
     // getGroupSet() instead, so a Calcite group set wider than the union of its grouping sets
+        Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(measures);
+    List<Integer> mapping = new ArrayList<>(calciteGroupingOrder(groupings));
+    // The distinct grouping expressions across the sets. Calcite emits one column per bit of
+    // getGroupSet() instead, so a Calcite group set wider than the union of its grouping sets
     // shifts every measure. Substrait has no such aggregate: each grouping expression must occur
-    // in at least one grouping set (spec v0.102.0).
+    // in at least one grouping set.
     int groupingFieldCount = mapping.size();
     int groupingSetIndex = groupingFieldCount + measures.size();
     for (int call = 0; call < measures.size(); call++) {
