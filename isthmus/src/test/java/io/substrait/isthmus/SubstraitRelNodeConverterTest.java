@@ -678,15 +678,17 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       assertTrue(calciteAgg.getGroupSets().contains(ImmutableBitSet.of()));
       assertTrue(calciteAgg.getGroupSets().contains(ImmutableBitSet.of(2)));
 
-      // Converting back materializes the grouping-set identifier column in an explicit Project on
-      // top, so the plans are not structurally identical — but the aggregate itself keeps both
-      // groupings, the empty one included, and the measure's declared type.
+      // Converting back gives Project(Project(Aggregate)): the inner Project computes the GROUPING
+      // values from the implicit index, the outer one the index from those values. The plans are
+      // therefore not structurally identical, but the aggregate itself keeps both groupings, the
+      // empty one included, and the measure's declared type.
       Rel back = SubstraitRelVisitor.convert(relNode, converterProvider);
-      while (back instanceof io.substrait.relation.Project) {
-        back = ((io.substrait.relation.Project) back).getInput();
-      }
+      io.substrait.relation.Project indexProject =
+          assertInstanceOf(io.substrait.relation.Project.class, back);
+      io.substrait.relation.Project groupingProject =
+          assertInstanceOf(io.substrait.relation.Project.class, indexProject.getInput());
       io.substrait.relation.Aggregate aggregateBack =
-          assertInstanceOf(io.substrait.relation.Aggregate.class, back);
+          assertInstanceOf(io.substrait.relation.Aggregate.class, groupingProject.getInput());
       assertEquals(aggregate.getGroupings(), aggregateBack.getGroupings());
       assertEquals(aggregate.getMeasures(), aggregateBack.getMeasures());
     }

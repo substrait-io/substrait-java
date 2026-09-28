@@ -1,9 +1,12 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
+import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.hint.Hint;
 import io.substrait.isthmus.sql.SubstraitSqlDialect;
+import io.substrait.relation.Aggregate;
 import io.substrait.relation.Filter;
 import io.substrait.relation.ImmutableProject;
 import io.substrait.relation.Project;
@@ -304,6 +307,63 @@ class OutputNamesTest extends PlanTestBase {
                 Optional.of(Hint.builder().addOutputNames("k_b", "k_a", "n", "gs").build())));
 
     assertEquals(List.of("k_b", "k_a", "n", "gs"), named.getRowType().getFieldNames());
+  }
+
+  @Test
+  void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
+    // Under CALCITE_INFERENCE a measure takes the type Calcite infers rather than the one the plan
+    // declares: SUM(i32) declared i64 becomes an INTEGER column, so the names would land on a
+    // column the plan does not describe. With the declared types they apply.
+    Rel scan32 = sb.namedScan(List.of("t32"), List.of("a", "b"), List.of(R.I32, N.STRING));
+    Rel aggregate =
+        sb.aggregate(
+                input -> List.of(sb.grouping(input, 1)),
+                input -> List.of(declaring(sb.sum(input, 0), N.I64)),
+                Optional.of(Rel.Remap.of(List.of(1, 0))),
+                scan32)
+            .withHint(Optional.of(Hint.builder().addOutputNames("total", "label").build()));
+    SubstraitToCalcite calciteInference =
+        new SubstraitToCalcite(
+            ConverterProvider.builder()
+                .aggregateConversion(
+                    new AggregateConversion(
+                        AggregateConversion.OutputTypeSource.CALCITE_INFERENCE,
+                        AggregateConversion.FunctionBindingValidation.NONE))
+                .build());
+
+    RelNode inferred = calciteInference.convert(aggregate);
+    RelNode declared = substraitToCalcite.convert(aggregate);
+
+    assertEquals(
+        calciteInference.convert(aggregate.withHint(Optional.empty())).getRowType().getFieldNames(),
+        inferred.getRowType().getFieldNames());
+    assertEquals(List.of("total", "label"), declared.getRowType().getFieldNames());
+  }
+
+  @Test
+  void dropsNamesWhereTheProjectionHasADifferentNumberOfColumns() {
+    // No conversion is known to hand applyOutputNames such a projection, so this calls it directly.
+    // Binding by position would run past the projection's columns.
+    Rel relation = scan.withHint(Optional.of(Hint.builder().addOutputNames("x", "y").build()));
+    builder.push(substraitToCalcite.convert(scan));
+    RelNode oneColumn = builder.project(builder.field(0)).build();
+
+    RelNode node =
+        new SubstraitRelNodeConverter(builder, converterProvider)
+            .applyOutputNames(oneColumn, relation);
+
+    assertSame(oneColumn, node);
+  }
+
+  private static Aggregate.Measure declaring(Aggregate.Measure measure, Type outputType) {
+    return Aggregate.Measure.builder()
+        .from(measure)
+        .function(
+            AggregateFunctionInvocation.builder()
+                .from(measure.getFunction())
+                .outputType(outputType)
+                .build())
+        .build();
   }
 
   private Rel hintedInnerProject() {

@@ -426,9 +426,13 @@ public class SubstraitRelNodeConverter
             .filter(key -> sets.stream().anyMatch(set -> !set.contains(key)))
             .collect(Collectors.toList());
     boolean duplicates = new HashSet<>(sets).size() != sets.size();
-    // Materialize non-field keys before constructing typed calls. RelBuilder's expression-based
-    // AggCall API re-infers stored measure types and uses placeholder types during duplicate-set
-    // expansion; the AggregateCall API preserves the types from fromMeasure.
+    // GROUPING takes field ordinals, so a non-field key has to become a column before the calls
+    // that reference it are built. Both RelBuilder aggregate overloads re-infer a call's type --
+    // the AggregateCall one wraps each call in AggCallImpl2, which hands AggregateCall.create a
+    // null type -- so the types fromMeasure declared survive only because it wraps the operator
+    // with an explicit return type. That wrapper is also what keeps the duplicate-set rewrite
+    // consistent: the rewrite types each UNION branch's pass-through reference from the original
+    // call while re-inferring that branch's own call under a branch-specific empty-group flag.
     List<RexNode> extraKeys =
         groupExprLists.stream()
             .flatMap(Collection::stream)
@@ -463,6 +467,24 @@ public class SubstraitRelNodeConverter
     }
     if (duplicates) {
       calls.add(groupingCall(SqlStdOperatorTable.GROUP_ID, List.of()));
+      if (aggregateCalls.isEmpty()) {
+        // RelBuilder rewrites repeated sets into UNION ALL branches. Without measures, the branch
+        // for a repeated empty set has neither keys nor calls, and RelBuilder turns it into VALUES
+        // without popping its input. A count keeps it an aggregate; the projection below drops it.
+        calls.add(
+            AggregateCall.create(
+                SqlStdOperatorTable.COUNT,
+                false,
+                false,
+                false,
+                List.of(),
+                List.of(),
+                -1,
+                null,
+                RelCollations.EMPTY,
+                typeConverter.toCalcite(typeFactory, TypeCreator.REQUIRED.I64),
+                null));
+      }
     }
     builder.aggregate(groupKey, calls);
 
@@ -1317,10 +1339,10 @@ public class SubstraitRelNodeConverter
    * inputs are compared against.
    *
    * <p>They are dropped as well where the columns of that projection are not the columns of the
-   * relation's record type, type by type. An aggregate over several grouping sets types its
-   * grouping-set index i32, where the GROUP_ID call standing for it is i64, so the two disagree on
-   * what the last column is and binding the names by position would name columns the plan does not
-   * name.
+   * relation's record type, type by type. A measure converted under {@link
+   * AggregateConversion.OutputTypeSource#CALCITE_INFERENCE} takes the type Calcite infers rather
+   * than the one the plan declares, so the two can disagree on what a column is, and binding the
+   * names by position would name columns the plan does not name.
    *
    * <p>Only the names of the top-level fields are applied. The names of the fields nested inside
    * them belong to the type of the expression that produces the field, which a projection cannot

@@ -1,13 +1,17 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.relation.Rel;
 import io.substrait.type.NamedStruct;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,7 +23,9 @@ import java.util.stream.IntStream;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelRunners;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -112,13 +118,50 @@ class GroupingSetIndexTest extends PlanTestBase {
         aggregate(List.of(List.of(), List.of()), input), List.of(row(0L, 0), row(0L, 1)));
   }
 
+  private static final String EMPTY_INPUT_PRUNING =
+      "Calcite 1.42.0 prunes an aggregate over an empty input whenever its group set is"
+          + " non-empty, so every grouping set with no grouping expressions loses its row;"
+          + " PruneEmptyRules.AGGREGATE guards on Aggregate.isNotGrandTotal (group count >"
+          + " 0) rather than hasEmptyGroup(). Plain ROLLUP and CUBE shapes such as [(a), ()]"
+          + " return no rows at all.";
+
   @Test
-  @Disabled("Calcite 1.42.0 drops an empty group on empty input with mixed grouping sets")
+  @Disabled(EMPTY_INPUT_PRUNING)
   void mixedGroupingSetsOnEmptyInputKeepEveryEmptySet() throws SQLException {
     Rel input = virtualTable(NamedStruct.of(List.of("a", "b"), R.struct(R.I32, R.I32)));
     assertRowsAndRoundTrip(
         aggregate(List.of(List.of(), List.of(0), List.of()), input),
         List.of(row(null, 0L, 0), row(null, 0L, 2)));
+  }
+
+  @Test
+  @Disabled(EMPTY_INPUT_PRUNING)
+  void rollupOnEmptyInputKeepsTheGrandTotal() throws SQLException {
+    Rel input = virtualTable(NamedStruct.of(List.of("a", "b"), R.struct(R.I32, R.I32)));
+    assertRowsAndRoundTrip(
+        aggregate(List.of(List.of(0), List.of()), input), List.of(row(null, 0L, 1)));
+  }
+
+  @Test
+  void repeatedEmptySetsWithoutMeasuresKeepTheirIndices() throws SQLException {
+    Rel aggregate =
+        sb.aggregate(
+            rel -> List.of(sb.grouping(rel), sb.grouping(rel), sb.grouping(rel, 0)),
+            rel -> List.of(),
+            Optional.empty(),
+            input());
+    List<List<Object>> expected = List.of(row(null, 0), row(null, 1), row(1, 2), row(2, 2));
+    // In Calcite 1.42.0, RelRunners fails on this plan ("belongs to a different planner"), so the
+    // rows are read through the SQL it unparses to, which Calcite plans afresh.
+    RelNode calcite = substraitToCalcite.convert(aggregate);
+    assertEquals(
+        multiset(expected), multiset(executeAsSql(calcite)), () -> RelOptUtil.toString(calcite));
+    assertRowMatch(calcite.getRowType(), aggregate.getRecordType().fields());
+    Rel exported =
+        SubstraitRelVisitor.convert(RelRoot.of(calcite, SqlKind.SELECT), converterProvider)
+            .getInput();
+    assertEquals(aggregate.getRecordType(), exported.getRecordType());
+    assertEquals(multiset(expected), multiset(executeAsSql(substraitToCalcite.convert(exported))));
   }
 
   @Test
@@ -191,6 +234,37 @@ class GroupingSetIndexTest extends PlanTestBase {
             row(null, null, 3L, 2L, 3L)));
   }
 
+  @Test
+  void rejectsAGroupingMaskWiderThanAnI64() {
+    int width = Long.SIZE;
+    Rel input =
+        virtualTable(
+            NamedStruct.of(
+                IntStream.range(0, width).mapToObj(i -> "c" + i).collect(Collectors.toList()),
+                R.struct(
+                    IntStream.range(0, width).mapToObj(i -> R.I32).collect(Collectors.toList()))),
+            IntStream.range(0, width).mapToObj(sb::i32).collect(Collectors.toList()));
+    builder.push(substraitToCalcite.convert(input));
+    RelNode calcite =
+        builder
+            .aggregate(
+                builder.groupKey(
+                    ImmutableBitSet.range(width),
+                    List.of(ImmutableBitSet.range(width), ImmutableBitSet.of())),
+                builder.aggregateCall(SqlStdOperatorTable.GROUPING, builder.fields()))
+            .build();
+    UnsupportedOperationException e =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                SubstraitRelVisitor.convert(
+                    RelRoot.of(calcite, SqlKind.SELECT), converterProvider));
+    assertEquals(
+        "GROUPING over 64 arguments: the mask does not fit the i64 it is returned in, which holds"
+            + " at most 63 arguments",
+        e.getMessage());
+  }
+
   private Rel input() {
     return virtualTable(
         NamedStruct.of(List.of("a", "b"), R.struct(R.I32, R.I32)),
@@ -232,15 +306,33 @@ class GroupingSetIndexTest extends PlanTestBase {
   private static List<List<Object>> execute(RelNode rel) throws SQLException {
     try (PreparedStatement statement = RelRunners.run(rel);
         ResultSet result = statement.executeQuery()) {
-      List<List<Object>> rows = new ArrayList<>();
-      while (result.next()) {
-        List<Object> row = new ArrayList<>();
-        for (int column = 1; column <= result.getMetaData().getColumnCount(); column++) {
-          row.add(result.getObject(column));
-        }
-        rows.add(row);
-      }
-      return rows;
+      return rows(result);
     }
+  }
+
+  private static List<List<Object>> executeAsSql(RelNode rel) throws SQLException {
+    String sql =
+        new RelToSqlConverter(CalciteSqlDialect.DEFAULT)
+            .visitRoot(rel)
+            .asStatement()
+            .toSqlString(CalciteSqlDialect.DEFAULT)
+            .getSql();
+    try (Connection connection = DriverManager.getConnection("jdbc:calcite:");
+        Statement statement = connection.createStatement();
+        ResultSet result = statement.executeQuery(sql)) {
+      return rows(result);
+    }
+  }
+
+  private static List<List<Object>> rows(ResultSet result) throws SQLException {
+    List<List<Object>> rows = new ArrayList<>();
+    while (result.next()) {
+      List<Object> row = new ArrayList<>();
+      for (int column = 1; column <= result.getMetaData().getColumnCount(); column++) {
+        row.add(result.getObject(column));
+      }
+      rows.add(row);
+    }
+    return rows;
   }
 }

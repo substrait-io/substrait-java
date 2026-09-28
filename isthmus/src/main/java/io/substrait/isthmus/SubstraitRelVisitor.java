@@ -394,6 +394,10 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     ImmutableAggregate.Builder builder =
         Aggregate.builder().input(input).addAllGroupings(groupings).addAllMeasures(measures);
     List<Integer> mapping = new ArrayList<>(calciteGroupingOrder(groupings));
+    // The distinct grouping expressions across the sets. Calcite emits one column per bit of
+    // getGroupSet() instead, so a Calcite group set wider than the union of its grouping sets
+    // shifts every measure. Substrait has no such aggregate: each grouping expression must occur
+    // in at least one grouping set. https://github.com/substrait-io/substrait-java/issues/1211
     int groupingFieldCount = mapping.size();
     int groupingSetIndex = groupingFieldCount + measures.size();
     for (int call = 0; call < measures.size(); call++) {
@@ -423,8 +427,14 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           output.add(groupingValue(call, aggregate.getGroupSets(), aggRel, groupingSetIndex));
           break;
         case GROUP_ID:
-          // A Calcite Aggregate holds distinct, sorted grouping sets. RelBuilder expands any
-          // repetitions into UNION ALL branches before they reach this visitor.
+          // RelBuilder expands repeated grouping sets into UNION ALL branches, and a Calcite
+          // Aggregate only asserts that its sets are distinct -- so a directly built one can
+          // still carry repetitions, which GROUP_ID is the value that distinguishes.
+          if (aggregate.getGroupSets().stream().distinct().count()
+              < aggregate.getGroupSets().size()) {
+            throw new UnsupportedOperationException(
+                "GROUP_ID over repeated grouping sets is not supported");
+          }
           output.add(ExpressionCreator.i64(false, 0));
           break;
         case LITERAL_AGG:
@@ -449,6 +459,13 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   /** Computes SQL's membership bit mask from Substrait's declared grouping-set ordinal. */
   private static Expression groupingValue(
       AggregateCall call, List<ImmutableBitSet> sets, Rel aggregate, int groupingSetIndex) {
+    if (call.getArgList().size() >= Long.SIZE) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "%s over %d arguments: the mask does not fit the i64 it is returned in, which holds"
+                  + " at most %d arguments",
+              call.getAggregation().getName(), call.getArgList().size(), Long.SIZE - 1));
+    }
     List<Expression.SwitchClause> clauses = new ArrayList<>();
     Expression value = ExpressionCreator.i64(false, 0);
     for (int index = 0; index < sets.size(); index++) {
