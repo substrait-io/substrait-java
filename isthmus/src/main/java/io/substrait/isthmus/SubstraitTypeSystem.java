@@ -95,6 +95,12 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
    * VARBINARY(65536)} -- narrower than one of its own inputs, and the cap this method removes
    * reimposed.
    *
+   * <p>{@link SqlTypeName#TIME}, {@link SqlTypeName#TIMESTAMP} and {@link
+   * SqlTypeName#TIMESTAMP_WITH_LOCAL_TIME_ZONE} stop at 9, nanoseconds: that is the finest unit a
+   * Calcite {@code TimeString} or {@code TimestampString} carries. Substrait's precisions 10 to 12
+   * stay out because the type factory clamps a finer precision to the ceiling rather than reporting
+   * it.
+   *
    * @param typeName The {@link SqlTypeName} for which precision is requested.
    * @return Maximum precision for the type.
    */

@@ -185,6 +185,7 @@ public class LiteralConverter {
    * @param literal the Calcite literal to convert
    * @return the corresponding Substrait literal
    * @throws UnsupportedOperationException if the literal type/value cannot be handled
+   * @throws IllegalArgumentException if the literal's value cannot be expressed at its type
    */
   public Expression.Literal convert(RexLiteral literal) {
     return convert(literal, literal.getType());

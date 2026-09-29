@@ -264,6 +264,36 @@ class CalciteLiteralTest extends CalciteObjs {
     assertEquals(new TimeString("00:00:00"), timeStringOf(0L, 0));
   }
 
+  @Test
+  void tPrecisionTimestampRejectsAnOutOfRangeValue() {
+    // A TimestampString spans 0000-01-01 to 9999-12-31, and past it Calcite renders the year
+    // modulo 10000: year 11476 at precision 7 would convert to 1476-08-15 05:20:00 with nothing
+    // said. Rejected by value instead, at every precision.
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value 3000000000000000000.",
+        timestampRejectionOf(3_000_000_000_000_000_000L, 7));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value -9223372036854775808.",
+        timestampRejectionOf(Long.MIN_VALUE, 8));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value 253402300800.",
+        timestampRejectionOf(253_402_300_800L, 0));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value -62167219201.",
+        timestampRejectionOf(-62_167_219_201L, 0));
+
+    // The last second a TimestampString holds, and the first, still convert.
+    assertEquals(
+        new TimestampString("9999-12-31 23:59:59"), timestampStringOf(253_402_300_799L, 0));
+    assertEquals(
+        new TimestampString("0000-01-01 00:00:00"), timestampStringOf(-62_167_219_200L, 0));
+  }
+
+  private String timestampRejectionOf(long value, int precision) {
+    return assertThrows(IllegalArgumentException.class, () -> timestampStringOf(value, precision))
+        .getMessage();
+  }
+
   private TimestampString timestampStringOf(long value, int precision) {
     RexNode converted =
         ExpressionCreator.precisionTimestamp(false, value, precision)
