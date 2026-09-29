@@ -945,12 +945,12 @@ public class SubstraitRelNodeConverter
    *
    * <p>Names are what a row, list or map value is rebuilt for: a row's field types are checked
    * against the schema when the {@link VirtualTableScan} is built, so a value that is one of those
-   * agrees with its declared type on everything a Substrait type says. It can still be stamped
-   * nullable where it was not -- Calcite makes a struct's fields nullable along with the struct,
-   * and a value that cannot be null stands in a column that can. A value that cannot take the
-   * declared type at all -- a call returning a struct, say, whose names are not the declared ones
-   * -- is reported here: {@link LogicalProject} and {@link LogicalValues} check the row type they
-   * are handed with an {@code assert}, which says nothing at all unless assertions are on.
+   * agrees with its declared type on everything a Substrait type says. Its nullability can still
+   * differ, since Calcite derives that from the expression: a value that cannot be null stands in a
+   * column that can. A value that cannot take the declared type at all -- a call returning a
+   * struct, say, whose names are not the declared ones -- is reported here: {@link LogicalProject}
+   * and {@link LogicalValues} check the row type they are handed with an {@code assert}, which says
+   * nothing at all unless assertions are on.
    *
    * @param value the converted row value
    * @param declaredType the type its column is declared at
@@ -971,10 +971,11 @@ public class SubstraitRelNodeConverter
   /**
    * Whether a converted value can stand at the type it is declared at.
    *
-   * <p>A value that cannot be null stands in a column that can: Calcite makes a struct's fields
-   * nullable along with the struct, so the fields of a nullable struct are declared that way
-   * whatever the values in them are. The other direction is a mismatch, and so is any difference
-   * beyond nullability -- a field name included, which is the one this rename is about.
+   * <p>A value that cannot be null stands in a column that can: Calcite derives a value's
+   * nullability from its expression, and a value that is never null is valid wherever null is
+   * allowed. The other direction is a mismatch -- a scalar subquery, say, which Calcite types
+   * nullable whatever its Substrait type says -- and so is any difference beyond nullability, a
+   * field name included, which is the one this rename is about.
    */
   private boolean fitsDeclared(RelDataType valueType, RelDataType declaredType) {
     return SqlTypeUtil.equalSansNullability(typeFactory, valueType, declaredType)
@@ -1286,13 +1287,48 @@ public class SubstraitRelNodeConverter
    */
   private boolean describesColumnsOf(List<Type> fields, RelDataType rowType) {
     for (int field = 0; field < fields.size(); field++) {
-      RelDataType declared = typeConverter.toCalcite(typeFactory, fields.get(field));
-      if (!SqlTypeUtil.equalSansNullability(
-          declared, rowType.getFieldList().get(field).getType())) {
+      if (!sameSansNamesAndNullability(
+          typeConverter.toCalcite(typeFactory, fields.get(field)),
+          rowType.getFieldList().get(field).getType())) {
         return false;
       }
     }
     return true;
+  }
+
+  /**
+   * Returns whether two types are the same, ignoring nullability and field names at every depth.
+   *
+   * <p>A column's nullability, and that of anything inside it, is Calcite's to derive from the
+   * expression producing it. The names inside a column are not what a hint restates, and a declared
+   * type converts without a name list, so the names inside it are placeholders. Calcite's own
+   * {@link SqlTypeUtil#equalAsStructSansNullability} ignores both only on the outermost struct.
+   */
+  private static boolean sameSansNamesAndNullability(RelDataType declared, RelDataType actual) {
+    if (declared.isStruct() || actual.isStruct()) {
+      if (!declared.isStruct()
+          || !actual.isStruct()
+          || declared.getFieldCount() != actual.getFieldCount()) {
+        return false;
+      }
+      for (int field = 0; field < declared.getFieldCount(); field++) {
+        if (!sameSansNamesAndNullability(
+            declared.getFieldList().get(field).getType(),
+            actual.getFieldList().get(field).getType())) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (declared.getKeyType() != null && actual.getKeyType() != null) {
+      return sameSansNamesAndNullability(declared.getKeyType(), actual.getKeyType())
+          && sameSansNamesAndNullability(declared.getValueType(), actual.getValueType());
+    }
+    if (declared.getComponentType() != null && actual.getComponentType() != null) {
+      return declared.getSqlTypeName() == actual.getSqlTypeName()
+          && sameSansNamesAndNullability(declared.getComponentType(), actual.getComponentType());
+    }
+    return SqlTypeUtil.equalSansNullability(declared, actual);
   }
 
   /**

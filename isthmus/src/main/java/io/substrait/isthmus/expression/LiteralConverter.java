@@ -196,8 +196,9 @@ public class LiteralConverter {
    * <p>This overload is useful when the target type comes from a containing schema rather than the
    * literal itself. Calcite may infer a narrower type for a value in a LogicalValues tuple than for
    * the corresponding row field. Nullability is taken from {@code resultType}, so callers that need
-   * a nullability other than the literal's own should widen the Calcite type with {@link
-   * org.apache.calcite.rel.type.RelDataTypeFactory#createTypeWithNullability} before calling.
+   * a nullability other than the literal's own should set it on the Calcite type with {@link
+   * org.apache.calcite.rel.type.RelDataTypeFactory#enforceTypeWithNullability} before calling:
+   * {@code createTypeWithNullability} would make a struct's fields nullable along with it.
    *
    * @param literal the RexLiteral to convert
    * @param resultType the Calcite type required by the containing schema

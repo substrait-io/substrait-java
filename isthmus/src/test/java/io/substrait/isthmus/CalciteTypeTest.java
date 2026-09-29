@@ -339,6 +339,26 @@ class CalciteTypeTest extends CalciteObjs {
     assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
   }
 
+  /**
+   * The widening this replaces was recursive, so a struct below the outermost one is pinned too: a
+   * nullable struct holding a required struct keeps the inner struct's own nullability as well as
+   * its fields'.
+   */
+  @Test
+  void aNestedStructKeepsWhatItsFieldsDeclare() {
+    Type.Struct substrait =
+        TypeCreator.NULLABLE.struct(
+            TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I32, TypeCreator.NULLABLE.FP64));
+
+    RelDataType calcite =
+        TypeConverter.DEFAULT.toCalcite(type, substrait, List.of("inner", "a", "b"));
+
+    assertEquals(
+        "RecordType(RecordType(INTEGER NOT NULL a, DOUBLE b) NOT NULL inner)",
+        calcite.getFullTypeString());
+    assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void userDefinedType(boolean nullable) {

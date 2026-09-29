@@ -14,6 +14,7 @@ import io.substrait.hint.Hint;
 import io.substrait.relation.Rel;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.Type;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigDecimal;
@@ -273,9 +274,8 @@ class VirtualTableScanTest extends PlanTestBase {
 
   /**
    * Calcite has no nullable literal of a row, so a struct value in a nullable column cannot be a
-   * Values tuple whatever it holds, and the row takes the projection encoding. Pinned as a
-   * conversion rather than a round trip because a nullable struct does not survive one: Calcite
-   * pushes a row's nullability down into its fields, so the schema comes back with nullable fields.
+   * Values tuple whatever it holds, and the row takes the projection encoding. The fields keep the
+   * nullability the schema declares, so the table comes back as it was.
    */
   @Test
   void nullableStructColumnConverts() {
@@ -288,6 +288,8 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType(RecordType(INTEGER a, DOUBLE b) outer)], rows=[[{ ROW(1, 2.0E0:DOUBLE) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /** A null struct has no fields to rename, but the tuple still needs it at the column's type. */
@@ -418,13 +420,13 @@ class VirtualTableScanTest extends PlanTestBase {
 
     assertEquals(
         schema.struct(), SubstraitRelVisitor.convert(relNode, converterProvider).getRecordType());
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
    * A nullable struct nested in a column: renaming it gives back a ROW call rather than a literal,
-   * so the struct around it cannot be rebuilt as a literal either. Pinned as a conversion rather
-   * than a round trip for the same reason as its sibling above: Calcite pushes a struct's
-   * nullability down into its fields, so the schema comes back with nullable fields.
+   * so the struct around it cannot be rebuilt as a literal either. As for its sibling above, the
+   * fields keep their declared nullability and the table comes back as it was.
    */
   @Test
   void nullableStructInsideStructColumnConverts() {
@@ -439,6 +441,8 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(
         "VirtualTable(type=[RecordType(RecordType(RecordType(INTEGER a) inner) outer)], rows=[[{ ROW(ROW(1)) }]])\n",
         explain(relNode));
+
+    assertFullRoundTrip(virtualTableScan);
   }
 
   /**
@@ -582,6 +586,50 @@ class VirtualTableScanTest extends PlanTestBase {
     assertEquals(List.of("label"), relNode.getRowType().getFieldNames());
     assertEquals(
         List.of(R.FP64), SubstraitRelVisitor.convert(relNode, extensions).getRecordType().fields());
+  }
+
+  /**
+   * The same for a column holding a struct, at any depth. Only the column's own name is restated,
+   * so the names inside it are not compared: the declared type converts without them.
+   */
+  @Test
+  void outputNamesReachAColumnHoldingAStruct() {
+    Expression.Literal struct = ExpressionCreator.struct(false, sb.i32(2), sb.fp64(3.0));
+    assertOutputNameReaches(R.struct(R.I32, R.FP64), struct, "a", "b");
+    assertOutputNameReaches(
+        R.struct(N.struct(R.I32), R.FP64),
+        ExpressionCreator.struct(false, ExpressionCreator.struct(true, sb.i32(2)), sb.fp64(3.0)),
+        "inner",
+        "a",
+        "b");
+    assertOutputNameReaches(
+        R.list(R.struct(R.I32, R.FP64)), ExpressionCreator.list(false, struct), "a", "b");
+    assertOutputNameReaches(
+        R.map(R.STRING, R.struct(R.I32, R.FP64)),
+        ExpressionCreator.map(false, Map.of(sb.str("k"), struct)),
+        "a",
+        "b");
+  }
+
+  private void assertOutputNameReaches(
+      Type column, Expression.Literal value, String... namesInside) {
+    List<String> names = new ArrayList<>(List.of("plain", "column"));
+    names.addAll(List.of(namesInside));
+    List<String> outputNames = new ArrayList<>(List.of("label"));
+    outputNames.addAll(List.of(namesInside));
+    VirtualTableScan table =
+        VirtualTableScan.builder()
+            .from(
+                virtualTable(
+                    NamedStruct.of(names, R.struct(R.I32, column)), List.of(sb.i32(1), value)))
+            .remap(Rel.Remap.of(List.of(1)))
+            .hint(Hint.builder().addAllOutputNames(outputNames).build())
+            .build();
+
+    assertEquals(
+        List.of("label"),
+        substraitToCalcite.convert(table).getRowType().getFieldNames(),
+        column.toString());
   }
 
   private String explain(RelNode relNode) {
