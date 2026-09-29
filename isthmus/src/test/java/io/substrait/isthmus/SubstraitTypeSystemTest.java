@@ -45,12 +45,16 @@ class SubstraitTypeSystemTest {
 
   @Test
   void timestampMaxPrecision() {
-    assertEquals(6, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP));
+    // Nanoseconds: the finest unit a Calcite TimestampString carries, and what the type factory
+    // builds a TIMESTAMP at once the ceiling allows it. Picoseconds clamp rather than throw, so
+    // Substrait's 10 to 12 stay out.
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP));
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE));
   }
 
   @Test
   void timeMaxPrecision() {
-    assertEquals(6, typeSystem.getMaxPrecision(SqlTypeName.TIME));
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIME));
   }
 
   @Test
