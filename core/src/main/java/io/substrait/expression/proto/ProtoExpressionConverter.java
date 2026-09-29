@@ -745,9 +745,16 @@ public class ProtoExpressionConverter {
    * @return the converted sort field
    */
   public Expression.SortField fromSortField(SortField s) {
+    if (s.getSortKindCase() == SortField.SortKindCase.COMPARISON_FUNCTION_REFERENCE) {
+      return Expression.SortField.builder()
+          .expr(from(s.getExpr()))
+          .comparisonFunction(
+              lookup.getScalarFunction(s.getComparisonFunctionReference(), extensions))
+          .build();
+    }
     return Expression.SortField.builder()
-        .direction(Expression.SortDirection.fromProto(s.getDirection()))
         .expr(from(s.getExpr()))
+        .direction(Expression.SortDirection.fromProto(s.getDirection()))
         .build();
   }
 

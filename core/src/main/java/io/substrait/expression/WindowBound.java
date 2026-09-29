@@ -66,7 +66,7 @@ public interface WindowBound {
   /**
    * Validates a RANGE window's ordering against its bounds, per the spec's rule that a RANGE frame
    * with a {@link Preceding} or {@link Following} bound must have exactly one ordering expression,
-   * which must not use {@code SORT_DIRECTION_CLUSTERED}.
+   * which must not use {@code SORT_DIRECTION_CLUSTERED} or a custom comparison function.
    *
    * @param boundsType the window's bounds type
    * @param lowerBound the window's lower bound
@@ -75,7 +75,8 @@ public interface WindowBound {
    * @param function identifies the window function being validated, for the exception message
    * @throws IllegalArgumentException if {@code boundsType} is {@code RANGE} and either bound is
    *     {@link Preceding} or {@link Following}, and {@code sorts} does not hold exactly one
-   *     ordering expression whose direction is not {@code SORT_DIRECTION_CLUSTERED}
+   *     ordering expression whose direction is not {@code SORT_DIRECTION_CLUSTERED} and which does
+   *     not use a custom comparison function
    */
   static void checkRangeOrdering(
       Expression.WindowBoundsType boundsType,
@@ -99,11 +100,20 @@ public interface WindowBound {
               + " expression, but found "
               + sorts.size());
     }
-    if (sorts.get(0).direction() == Expression.SortDirection.CLUSTERED) {
+    Expression.SortField sort = sorts.get(0);
+    if (sort.direction()
+        .filter(direction -> direction == Expression.SortDirection.CLUSTERED)
+        .isPresent()) {
       throw new IllegalArgumentException(
           function
               + ": a RANGE bound with a Preceding or Following side cannot use"
               + " SORT_DIRECTION_CLUSTERED for its ordering expression");
+    }
+    if (sort.comparisonFunction().isPresent()) {
+      throw new IllegalArgumentException(
+          function
+              + ": a RANGE bound with a Preceding or Following side cannot use a custom"
+              + " comparison function for its ordering expression");
     }
   }
 

@@ -814,7 +814,7 @@ public class SubstraitRelNodeConverter
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
     Expression expression = sortField.expr();
     RexNode rexNode = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = sortField.direction();
+    SortDirection sortDirection = requireDirection(sortField);
 
     if (sortDirection == Expression.SortDirection.ASC_NULLS_FIRST) {
       return relBuilder.nullsFirst(rexNode);
@@ -836,6 +836,15 @@ public class SubstraitRelNodeConverter
     throw new IllegalArgumentException("Unsupported sort direction: " + sortDirection);
   }
 
+  private static SortDirection requireDirection(Expression.SortField sortField) {
+    return sortField
+        .direction()
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "A sort field using a custom comparison function is not supported"));
+  }
+
   @Override
   public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
     RelNode child = fetch.getInput().accept(this, context);
@@ -855,7 +864,7 @@ public class SubstraitRelNodeConverter
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
     Expression expression = sortField.expr();
     RexNode rex = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = sortField.direction();
+    SortDirection sortDirection = requireDirection(sortField);
     RexSlot rexSlot = (RexSlot) rex;
     int fieldIndex = rexSlot.getIndex();
 

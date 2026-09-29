@@ -1402,5 +1402,26 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       RelNode relNode = substraitToCalcite.convert(root.getInput());
       assertRowMatch(relNode.getRowType(), R.I32, N.STRING);
     }
+
+    @Test
+    void rejectsCustomComparisonFunction() {
+      // Calcite's RelFieldCollation has no representation for a custom comparator, so a sort field
+      // using one cannot be converted.
+      SimpleExtension.ScalarFunctionVariant comparisonFunction =
+          extensions.getScalarFunction(
+              SimpleExtension.FunctionAnchor.of(
+                  DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"));
+      io.substrait.relation.Sort sort =
+          io.substrait.relation.Sort.builder()
+              .input(commonTable)
+              .addSortFields(
+                  Expression.SortField.builder()
+                      .expr(sb.fieldReference(commonTable, 0))
+                      .comparisonFunction(comparisonFunction)
+                      .build())
+              .build();
+
+      assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(sort));
+    }
   }
 }

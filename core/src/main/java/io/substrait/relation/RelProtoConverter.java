@@ -40,7 +40,6 @@ import io.substrait.proto.RelCommon.Hint.SavedComputation;
 import io.substrait.proto.RelCommon.Hint.Stats;
 import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
-import io.substrait.proto.SortField;
 import io.substrait.proto.SortRel;
 import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
@@ -188,15 +187,7 @@ public class RelProtoConverter
   }
 
   private List<io.substrait.proto.SortField> toProtoS(List<Expression.SortField> sorts) {
-    return sorts.stream()
-        .map(
-            s -> {
-              return SortField.newBuilder()
-                  .setDirection(s.direction().toProto())
-                  .setExpr(toProto(s.expr()))
-                  .build();
-            })
-        .collect(Collectors.toList());
+    return sorts.stream().map(exprProtoConverter::toProto).collect(Collectors.toList());
   }
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
