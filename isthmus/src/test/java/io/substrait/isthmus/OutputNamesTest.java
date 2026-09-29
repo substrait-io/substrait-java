@@ -97,6 +97,31 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
+  void namesAStructColumnComputedByAnIfThen() {
+    // Calcite types a CASE over a nullable struct with nullable fields, where the relation declares
+    // the struct's first field required. That field's nullability is the expression's to derive,
+    // like the column's own, so it does not keep the names off the column.
+    Type.Struct inner = TypeCreator.NULLABLE.struct(R.I64, N.STRING);
+    Rel structScan = sb.namedScan(List.of("t"), List.of("s", "x", "y", "k"), List.of(inner, R.I64));
+    Rel project =
+        Project.builder()
+            .input(structScan)
+            .remap(Rel.Remap.offset(2, 1))
+            .addExpressions(
+                sb.ifThen(
+                    List.of(
+                        sb.ifClause(
+                            sb.equal(sb.fieldReference(structScan, 1), sb.i64(1)),
+                            sb.fieldReference(structScan, 0))),
+                    sb.fieldReference(structScan, 0)))
+            .hint(Hint.builder().addOutputNames("renamed", "first", "second").build())
+            .build();
+
+    assertEquals(
+        List.of("renamed"), substraitToCalcite.convert(project).getRowType().getFieldNames());
+  }
+
+  @Test
   void keepsCalciteNamesWithoutAHint() {
     RelNode node = substraitToCalcite.convert(projectWithHint(Optional.empty()));
 

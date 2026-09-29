@@ -71,8 +71,13 @@ public class SchemaCollector {
       // Create the table if it is not present
       CalciteSchema.TableEntry table = schema.getTable(tableName, CASE_SENSITIVE);
       if (table == null) {
+        // A relation's row type says what its columns are, not whether a value is there, and
+        // Calcite builds one NOT NULL wherever it derives one -- so a schema struct contributes
+        // its fields and not its own nullability.
         RelDataType rowType =
-            typeConverter.toCalcite(typeFactory, namedStruct.struct(), namedStruct.names());
+            typeFactory.createTypeWithNullability(
+                typeConverter.toCalcite(typeFactory, namedStruct.struct(), namedStruct.names()),
+                false);
         schema.add(tableName, new SubstraitTable(tableName, rowType));
       }
     }

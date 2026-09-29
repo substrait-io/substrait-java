@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -318,6 +319,44 @@ class CalciteTypeTest extends CalciteObjs {
             Arrays.asList("topStruct1", "topStruct2", "topVarChar")),
         Arrays.asList(
             "topStruct1", "inner1", "inner2", "topStruct2", "inner3", "inner4", "topVarChar"));
+  }
+
+  /**
+   * A struct declares its own nullability and its fields' separately, and a trip through Calcite
+   * keeps both: {@code createTypeWithNullability} widens a record's fields along with the record,
+   * which dropped what the schema said about them.
+   */
+  @Test
+  void aNullableStructKeepsWhatItsFieldsDeclare() {
+    Type.Struct substrait =
+        TypeCreator.NULLABLE.struct(TypeCreator.REQUIRED.I32, TypeCreator.NULLABLE.FP64);
+
+    RelDataType calcite = TypeConverter.DEFAULT.toCalcite(type, substrait, List.of("a", "b"));
+
+    assertTrue(calcite.isNullable());
+    assertFalse(calcite.getFieldList().get(0).getType().isNullable());
+    assertTrue(calcite.getFieldList().get(1).getType().isNullable());
+    assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
+  }
+
+  /**
+   * The widening this replaces was recursive, so a struct below the outermost one is pinned too: a
+   * nullable struct holding a required struct keeps the inner struct's own nullability as well as
+   * its fields'.
+   */
+  @Test
+  void aNestedStructKeepsWhatItsFieldsDeclare() {
+    Type.Struct substrait =
+        TypeCreator.NULLABLE.struct(
+            TypeCreator.REQUIRED.struct(TypeCreator.REQUIRED.I32, TypeCreator.NULLABLE.FP64));
+
+    RelDataType calcite =
+        TypeConverter.DEFAULT.toCalcite(type, substrait, List.of("inner", "a", "b"));
+
+    assertEquals(
+        "RecordType(RecordType(INTEGER NOT NULL a, DOUBLE b) NOT NULL inner)",
+        calcite.getFullTypeString());
+    assertEquals(substrait, TypeConverter.DEFAULT.toSubstrait(calcite));
   }
 
   @ParameterizedTest

@@ -10,12 +10,16 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.relation.AbstractWriteRel;
+import io.substrait.relation.Join;
+import io.substrait.relation.NamedScan;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Rel;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.TypeCreator;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.RelNode;
 import org.junit.jupiter.api.Test;
 
 class SchemaCollectorTest extends PlanTestBase {
@@ -122,9 +126,9 @@ class SchemaCollectorTest extends PlanTestBase {
 
     CalciteSchema calciteSchema = schemaCollector.toSchema(rel);
     CalciteSchema schema1 = calciteSchema.getSubSchema("schema1", false);
-    hasTable(schema1, "table1", "RecordType(BOOLEAN col1)");
+    hasTable(schema1, "table1", "RecordType(BOOLEAN NOT NULL col1) NOT NULL");
 
-    hasTable(schema1, "table2", "RecordType(BOOLEAN col1)");
+    hasTable(schema1, "table2", "RecordType(BOOLEAN NOT NULL col1) NOT NULL");
   }
 
   @Test
@@ -144,6 +148,26 @@ class SchemaCollectorTest extends PlanTestBase {
 
     CalciteSchema level2b = level1.getSubSchema("level2b", false);
     hasTable(level2b, "t2", "RecordType(INTEGER col2) NOT NULL");
+  }
+
+  /**
+   * A nullable schema struct still gives a NOT NULL row type, so Calcite widens the columns on the
+   * null-generating side of a LEFT join as it would for any other table.
+   */
+  @Test
+  void aNullableSchemaStructStillWidensUnderAnOuterJoin() {
+    Rel left = sb.namedScan(List.of("l"), List.of("a"), List.of(R.I32));
+    Rel right =
+        NamedScan.builder()
+            .names(List.of("r"))
+            .initialSchema(NamedStruct.of(List.of("b"), N.struct(R.I32)))
+            .build();
+    Rel join = sb.join(input -> sb.bool(true), Join.JoinType.LEFT, left, right);
+
+    RelNode relNode = substraitToCalcite.convert(join);
+    assertEquals(
+        "RecordType(INTEGER NOT NULL a, INTEGER b) NOT NULL",
+        relNode.getRowType().getFullTypeString());
   }
 
   @Test
