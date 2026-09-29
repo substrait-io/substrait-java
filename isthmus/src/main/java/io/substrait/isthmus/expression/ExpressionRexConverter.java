@@ -301,7 +301,7 @@ public class ExpressionRexConverter
       // A precision_time is a time of day. Without this an out-of-range value reaches
       // TimeString.fromMillisOfDay, which reports a corrupt time string rather than the value.
       throw new IllegalArgumentException(
-          String.format("Cannot handle PrecisionTime with out-of-range value %d.", value));
+          String.format("Cannot handle PrecisionTime with out-of-range value %s.", value));
     }
     return TimeString.fromMillisOfDay(
             (int) TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
@@ -361,7 +361,7 @@ public class ExpressionRexConverter
     // names a different instant rather than reporting the value.
     if (seconds < -62_167_219_200L || seconds > 253_402_300_799L) {
       throw new IllegalArgumentException(
-          String.format("Cannot handle PrecisionTimestamp with out-of-range value %d.", value));
+          String.format("Cannot handle PrecisionTimestamp with out-of-range value %s.", value));
     }
     return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
         .withNanos(nanosOf(value, unitsPerSecond));
