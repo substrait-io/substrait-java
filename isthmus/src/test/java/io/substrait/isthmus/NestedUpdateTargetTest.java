@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
@@ -103,5 +104,35 @@ class NestedUpdateTargetTest {
             TableModify.class,
             new SubstraitToCalcite(ConverterProvider.DEFAULT, catalog).convert(foreignUpdate));
     assertEquals(List.of("N"), converted.getUpdateColumnList());
+  }
+
+  @Test
+  void rejectsOutOfRangeColumnTarget() throws Exception {
+    Prepare.CatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE src (u INTEGER, n INTEGER)");
+    Plan plan = new SqlToSubstrait().convert("UPDATE src SET n = 11", catalog);
+    NamedUpdate update = assertInstanceOf(NamedUpdate.class, plan.getRoots().get(0).getInput());
+
+    for (int outOfRange : new int[] {-1, 2}) {
+      AbstractUpdate.TransformExpression transform =
+          AbstractUpdate.TransformExpression.builder()
+              .from(update.getTransformations().get(0))
+              .columnTarget(outOfRange)
+              .build();
+      NamedUpdate foreignUpdate =
+          ImmutableNamedUpdate.copyOf(update).withTransformations(List.of(transform));
+      IllegalArgumentException error =
+          assertThrows(
+              IllegalArgumentException.class,
+              () ->
+                  new SubstraitToCalcite(ConverterProvider.DEFAULT, catalog)
+                      .convert(foreignUpdate));
+      assertEquals(
+          "Update column target "
+              + outOfRange
+              + " is outside the table schema's 2 top-level columns",
+          error.getMessage());
+    }
   }
 }
