@@ -3,6 +3,7 @@ package io.substrait.relation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.TestBase;
@@ -389,6 +390,36 @@ class RelCopyOnWriteVisitorTest extends TestBase {
             plan.accept(visitor, EmptyVisitationContext.INSTANCE)
                 .orElseThrow(() -> new AssertionError("expected the field to be rewritten")));
     assertEquals(replacement, rewritten.getFields().get(0));
+  }
+
+  @Test
+  void aReferencePositionRewrittenToSomethingElseIsRejected() {
+    // A reference position has to be handed back a FieldReference. A hook that returns another kind
+    // of expression is reported against that hook, rather than as a ClassCastException at the
+    // caller's assignment.
+    Rel input = scan("t", R.I64, R.STRING);
+    Rel plan =
+        ScatterExchange.builder()
+            .input(input)
+            .partitionCount(2)
+            .addFields(sb.fieldReference(input, 0))
+            .build();
+    RelCopyOnWriteVisitor<RuntimeException> visitor =
+        new RelCopyOnWriteVisitor<RuntimeException>(
+            relVisitor ->
+                new ExpressionCopyOnWriteVisitor<RuntimeException>(relVisitor) {
+                  @Override
+                  public Optional<Expression> visit(
+                      FieldReference reference, EmptyVisitationContext context) {
+                    return Optional.of(sb.i64(1));
+                  }
+                });
+
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class,
+            () -> plan.accept(visitor, EmptyVisitationContext.INSTANCE));
+    assertTrue(e.getMessage().contains("field reference"), e.getMessage());
   }
 
   @Test
