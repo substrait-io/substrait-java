@@ -71,7 +71,7 @@ public class AggregateFunctions {
   /** Substrait-specific SUM aggregate function (nullable return type). */
   public static final SqlAggFunction SUM = new SubstraitSumAggFunction();
 
-  /** Substrait-specific SUM0 aggregate function (non-null BIGINT return type). */
+  /** Substrait-specific SUM0 aggregate function (non-null sum type, named sum0). */
   public static final SqlAggFunction SUM0 = new SubstraitSumEmptyIsZeroAggFunction();
 
   /**
@@ -270,10 +270,7 @@ public class AggregateFunctions {
     }
   }
 
-  /**
-   * Substrait variant of {@link SqlSumEmptyIsZeroAggFunction} that returns the sum's type, never
-   * null, and uses a user-friendly name.
-   */
+  /** Substrait variant of {@link SqlSumEmptyIsZeroAggFunction} that uses a user-friendly name. */
   private static class SubstraitSumEmptyIsZeroAggFunction
       extends org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction {
     public SubstraitSumEmptyIsZeroAggFunction() {
@@ -284,14 +281,6 @@ public class AggregateFunctions {
     public String getName() {
       // Override default `$sum0` with `sum0` for readability
       return "sum0";
-    }
-
-    @Override
-    public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-      RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
-      return typeFactory.createTypeWithNullability(
-          typeFactory.getTypeSystem().deriveSumType(typeFactory, opBinding.getOperandType(0)),
-          false);
     }
   }
 

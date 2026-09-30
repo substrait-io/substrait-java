@@ -30,9 +30,9 @@ class SubstraitTypeSystemTest {
   private final RelDataTypeSystem typeSystem = SubstraitTypeSystem.TYPE_SYSTEM;
 
   /**
-   * Decimal addition, subtraction, multiplication and division derive what the decimal extension
-   * declares, checked against the catalog's own derivation over precisions and scales on both sides
-   * of the 38 cap, where the result gives up scale.
+   * Decimal addition, subtraction, multiplication, division and modulus derive what the decimal
+   * extension declares, checked against the catalog's own derivation over precisions and scales on
+   * both sides of the 38 cap, where the result gives up scale.
    */
   @Test
   void decimalArithmeticDerivesWhatTheExtensionDeclares() {
@@ -56,9 +56,36 @@ class SubstraitTypeSystemTest {
             assertEquals(
                 declared("divide:dec_dec", operands),
                 substrait(typeSystem.deriveDecimalDivideType(TYPE_FACTORY, left, right)));
+            assertEquals(
+                declared("modulus:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalModType(TYPE_FACTORY, left, right)));
           }
         }
       }
+    }
+  }
+
+  /**
+   * An integer operand counts as the decimal that holds its type, the one isthmus casts it to:
+   * {@code decimal(10,0)} for an INTEGER and {@code decimal(19,0)} for a BIGINT, whatever the type
+   * system's own decimal precision.
+   */
+  @Test
+  void decimalArithmeticWithAnIntegerOperandDerivesWhatTheExtensionDeclares() {
+    RelDataType decimal = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, 7, 2);
+    for (SqlTypeName integer : List.of(SqlTypeName.INTEGER, SqlTypeName.BIGINT)) {
+      RelDataType other = TYPE_FACTORY.createSqlType(integer);
+      List<Type> operands =
+          List.of(R.decimal(7, 2), R.decimal(integer == SqlTypeName.INTEGER ? 10 : 19, 0));
+      assertEquals(
+          declared("add:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalPlusType(TYPE_FACTORY, decimal, other)));
+      assertEquals(
+          declared("multiply:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalMultiplyType(TYPE_FACTORY, decimal, other)));
+      assertEquals(
+          declared("divide:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalDivideType(TYPE_FACTORY, decimal, other)));
     }
   }
 
@@ -92,10 +119,11 @@ class SubstraitTypeSystemTest {
 
   /**
    * The same in a query: isthmus's own SUM and AVG take their types from the type system, where
-   * they used to repeat the argument's.
+   * they used to repeat the argument's. The average stays nullable, the right answer for an empty
+   * group, although avg:dec declares a required result.
    */
   @Test
-  void sumAndAvgInAQueryTakeTheDeclaredTypes() throws Exception {
+  void sumAndAvgInAQueryTakeTheTypeSystemsTypes() throws Exception {
     CalciteCatalogReader catalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(
             "CREATE TABLE t (d DECIMAL(7, 2), i INT)");

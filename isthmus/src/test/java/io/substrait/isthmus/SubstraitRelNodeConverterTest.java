@@ -129,8 +129,8 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
     void declaredDecimalWidthIsPreserved() {
       Rel input =
           sb.namedScan(List.of("example"), List.of("d", "g"), List.of(R.decimal(10, 2), R.STRING));
-      // The standard extension declarations for decimal sum and avg return DECIMAL<38,S>, while
-      // Calcite's inference keeps the argument's precision. The declared width must survive.
+      // Calcite now infers DECIMAL(38,2) for both, as the extensions declare, so the plan declares
+      // another width here: the declared width must survive the conversion.
       Rel aggregate =
           sb.aggregate(
               i -> sb.grouping(i, 1),
@@ -140,18 +140,18 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
                           sb.aggregateFn(
                               DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                               "sum:dec",
-                              N.decimal(38, 2),
+                              N.decimal(30, 2),
                               sb.fieldReference(i, 0))),
                       sb.measure(
                           sb.aggregateFn(
                               DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                               "avg:dec",
-                              N.decimal(38, 2),
+                              N.decimal(30, 2),
                               sb.fieldReference(i, 0)))),
               input);
 
       RelNode relNode = substraitToCalcite.convert(aggregate);
-      assertRowMatch(relNode.getRowType(), R.STRING, N.decimal(38, 2), N.decimal(38, 2));
+      assertRowMatch(relNode.getRowType(), R.STRING, N.decimal(30, 2), N.decimal(30, 2));
       assertFullRoundTrip(aggregate);
     }
 

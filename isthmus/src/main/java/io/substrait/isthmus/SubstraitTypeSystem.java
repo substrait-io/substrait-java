@@ -4,6 +4,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -176,10 +177,10 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
 
   /**
    * Returns the type of a {@code SUM} (and {@code $SUM0}) as the Substrait extensions declare it:
-   * an integer sum is an {@code i64}, a floating-point one an {@code fp64}, and a decimal one keeps
-   * its scale at precision 38 ({@code functions_arithmetic.yaml} and {@code
-   * functions_arithmetic_decimal.yaml}). Calcite's default keeps the argument's own type, which the
-   * sum overflows on real data.
+   * an integer sum is an {@code i64} and a floating-point one an {@code fp64} ({@code
+   * functions_arithmetic.yaml}), where Calcite's default keeps the argument's own type, which the
+   * sum overflows on real data. A decimal sum is Calcite's default, {@code DECIMAL(38, s)}, which
+   * is what {@code sum:dec} declares.
    *
    * @param typeFactory the type factory
    * @param argumentType the type of the summed values
@@ -200,11 +201,6 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
       case DOUBLE:
         sum = typeFactory.createSqlType(SqlTypeName.DOUBLE);
         break;
-      case DECIMAL:
-        sum =
-            typeFactory.createSqlType(
-                SqlTypeName.DECIMAL, MAX_DECIMAL_PRECISION, argumentType.getScale());
-        break;
       default:
         return super.deriveSumType(typeFactory, argumentType);
     }
@@ -214,6 +210,11 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   /**
    * Returns the type of an {@code AVG} as the Substrait extensions declare it: a decimal average
    * keeps its scale at precision 38, and every other type averages to itself.
+   *
+   * <p>Calcite routes {@code STDDEV_POP}, {@code STDDEV_SAMP}, {@code VAR_POP} and {@code VAR_SAMP}
+   * through this hook as well, and it cannot tell which function called it, so over a decimal they
+   * become {@code DECIMAL(38, s)} too. No extension declares a decimal {@code std_dev} or {@code
+   * variance}: the argument is cast to {@code fp64} and the result cast back.
    *
    * @param typeFactory the type factory
    * @param argumentType the type of the averaged values
@@ -269,6 +270,20 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
         });
   }
 
+  /** Returns the type of a decimal modulus as {@code modulus:dec_dec} declares it. */
+  @Override
+  public RelDataType deriveDecimalModType(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2) {
+    return decimalResult(
+        typeFactory,
+        type1,
+        type2,
+        (p1, s1, p2, s2) -> {
+          int scale = Math.max(s1, s2);
+          return new int[] {Math.min(p1 - s1, p2 - s2) + scale, scale};
+        });
+  }
+
   /** The unbounded precision and scale a decimal operation's declaration starts from. */
   @FunctionalInterface
   private interface DecimalRule {
@@ -288,8 +303,10 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
         || !(SqlTypeUtil.isDecimal(type1) || SqlTypeUtil.isDecimal(type2))) {
       return null;
     }
-    RelDataType decimal1 = typeFactory.decimalOf(type1);
-    RelDataType decimal2 = typeFactory.decimalOf(type2);
+    RelDataType decimal1 =
+        RelDataTypeFactoryImpl.isJavaType(type1) ? typeFactory.decimalOf(type1) : type1;
+    RelDataType decimal2 =
+        RelDataTypeFactoryImpl.isJavaType(type2) ? typeFactory.decimalOf(type2) : type2;
     int[] initial =
         rule.apply(
             decimal1.getPrecision(),
