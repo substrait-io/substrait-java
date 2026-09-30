@@ -76,6 +76,41 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
   }
 
   @Test
+  void windowFunctionInvocationWithCustomComparisonFunctionRoundtrips() {
+    // Expression.WindowFunctionInvocation goes through ExpressionProtoConverter, a separate
+    // POJO->proto implementation from ConsistentPartitionWindow's RelProtoConverter path.
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    SimpleExtension.ScalarFunctionVariant comparisonFunction =
+        extensions.getScalarFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"));
+    Expression.SortField sortField =
+        Expression.SortField.builder()
+            .expr(sb.i64(1))
+            .comparisonFunction(comparisonFunction)
+            .build();
+
+    Expression.WindowFunctionInvocation windowFunction =
+        Expression.WindowFunctionInvocation.builder()
+            .declaration(windowFunctionDeclaration)
+            .arguments(Arrays.asList(sb.i64(1)))
+            .partitionBy(Collections.emptyList())
+            .sort(Arrays.asList(sortField))
+            .outputType(R.I64)
+            .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .lowerBound(WindowBound.UNBOUNDED)
+            .upperBound(WindowBound.CURRENT_ROW)
+            .boundsType(Expression.WindowBoundsType.RANGE)
+            .build();
+
+    verifyRoundTrip(windowFunction);
+  }
+
+  @Test
   void consistentPartitionWindowRoundtripMulti() {
     SimpleExtension.WindowFunctionVariant windowFunctionLeadDeclaration =
         extensions.getWindowFunction(
@@ -349,6 +384,44 @@ class ConsistentPartitionWindowRelRoundtripTest extends TestBase {
                     Expression.SortField.builder()
                         .expr(sb.fieldReference(input, 0))
                         .direction(Expression.SortDirection.CLUSTERED)
+                        .build()));
+
+    assertThrows(IllegalArgumentException.class, relBuilder::build);
+  }
+
+  @Test
+  void rangePrecedingWithCustomComparisonFunctionOrderingIsRejected() {
+    SimpleExtension.WindowFunctionVariant windowFunctionDeclaration =
+        extensions.getWindowFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "lead:any"));
+    SimpleExtension.ScalarFunctionVariant comparisonFunction =
+        extensions.getScalarFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"));
+    Rel input = sb.namedScan(Arrays.asList("test"), Arrays.asList("a"), Arrays.asList(R.I64));
+    // A RANGE bound with a Preceding side cannot use a custom comparison function for its
+    // ordering expression.
+    ImmutableConsistentPartitionWindow.Builder relBuilder =
+        ConsistentPartitionWindow.builder()
+            .input(input)
+            .windowFunctions(
+                Arrays.asList(
+                    ConsistentPartitionWindow.WindowRelFunctionInvocation.builder()
+                        .declaration(windowFunctionDeclaration)
+                        .arguments(Arrays.asList(sb.fieldReference(input, 0)))
+                        .outputType(R.I64)
+                        .aggregationPhase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+                        .invocation(Expression.AggregationInvocation.ALL)
+                        .lowerBound(WindowBound.Preceding.of(5))
+                        .upperBound(WindowBound.CURRENT_ROW)
+                        .boundsType(Expression.WindowBoundsType.RANGE)
+                        .build()))
+            .sorts(
+                Arrays.asList(
+                    Expression.SortField.builder()
+                        .expr(sb.fieldReference(input, 0))
+                        .comparisonFunction(comparisonFunction)
                         .build()));
 
     assertThrows(IllegalArgumentException.class, relBuilder::build);

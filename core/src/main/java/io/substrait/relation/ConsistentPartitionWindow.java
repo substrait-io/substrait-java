@@ -44,8 +44,9 @@ public abstract class ConsistentPartitionWindow extends SingleInputRel implement
   public abstract List<SortField> getSorts();
 
   /**
-   * Validates that a RANGE bound with a Preceding or Following side has exactly one, non-CLUSTERED
-   * ordering expression, for every window function invocation.
+   * Validates that a RANGE bound with a Preceding or Following side has exactly one ordering
+   * expression, which must not use SORT_DIRECTION_CLUSTERED or a custom comparison function, for
+   * every window function invocation.
    */
   @Value.Check
   protected void check() {

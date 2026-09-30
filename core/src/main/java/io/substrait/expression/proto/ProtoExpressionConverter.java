@@ -745,10 +745,22 @@ public class ProtoExpressionConverter {
    * @return the converted sort field
    */
   public Expression.SortField fromSortField(SortField s) {
-    return Expression.SortField.builder()
-        .direction(Expression.SortDirection.fromProto(s.getDirection()))
-        .expr(from(s.getExpr()))
-        .build();
+    Expression expr = from(s.getExpr());
+    switch (s.getSortKindCase()) {
+      case DIRECTION:
+        return Expression.SortField.builder()
+            .expr(expr)
+            .direction(Expression.SortDirection.fromProto(s.getDirection()))
+            .build();
+      case COMPARISON_FUNCTION_REFERENCE:
+        return Expression.SortField.builder()
+            .expr(expr)
+            .comparisonFunction(
+                lookup.getScalarFunction(s.getComparisonFunctionReference(), extensions))
+            .build();
+      default:
+        throw new IllegalArgumentException("SortField has no sort_kind set");
+    }
   }
 
   /**

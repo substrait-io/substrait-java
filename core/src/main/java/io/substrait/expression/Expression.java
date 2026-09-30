@@ -12,6 +12,7 @@ import io.substrait.util.VisitationContext;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.immutables.value.Value;
@@ -1631,7 +1632,8 @@ public interface Expression extends FunctionArg {
     /**
      * Validates that variadic arguments satisfy the parameter consistency requirement, that {@code
      * bounds_type} is set whenever a window bound requires it, and that a RANGE bound with a
-     * Preceding or Following side has exactly one, non-CLUSTERED ordering expression.
+     * Preceding or Following side has exactly one ordering expression, which must not use
+     * SORT_DIRECTION_CLUSTERED or a custom comparison function.
      *
      * <p>When CONSISTENT, all variadic arguments must have the same type (ignoring nullability).
      * When INCONSISTENT, arguments can have different types.
@@ -1962,7 +1964,10 @@ public interface Expression extends FunctionArg {
     }
   }
 
-  /** Represents a sort field with an expression and sort direction. */
+  /**
+   * Represents a sort field with an expression and a sort kind, which is either a direction or a
+   * reference to a custom comparison function.
+   */
   @Value.Immutable
   abstract class SortField {
     /**
@@ -1973,11 +1978,31 @@ public interface Expression extends FunctionArg {
     public abstract Expression expr();
 
     /**
-     * Returns the sort direction.
+     * Returns the sort direction, if this sort field uses one rather than a custom comparison
+     * function.
      *
      * @return the sort direction
      */
-    public abstract SortDirection direction();
+    public abstract Optional<SortDirection> direction();
+
+    /**
+     * Returns the custom comparison function, if this sort field uses one rather than a direction.
+     *
+     * @return the comparison function declaration
+     */
+    public abstract Optional<SimpleExtension.ScalarFunctionVariant> comparisonFunction();
+
+    /**
+     * Validates that exactly one of {@link #direction()} and {@link #comparisonFunction()} is set.
+     */
+    @Value.Check
+    protected void check() {
+      if (this.direction().isPresent() == this.comparisonFunction().isPresent()) {
+        throw new IllegalArgumentException(
+            "SortField must set exactly one of direction or comparisonFunction, but "
+                + (this.direction().isPresent() ? "both were set" : "neither was set"));
+      }
+    }
 
     /**
      * Creates a new builder for constructing a SortField.

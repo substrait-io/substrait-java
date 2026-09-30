@@ -14,6 +14,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.LambdaBuilder;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.SubstraitRelNodeConverter.AnchoredInput;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
@@ -647,6 +648,35 @@ class SubstraitExpressionConverterTest extends PlanTestBase {
         assertInstanceOf(
             IllegalStateException.class, observed.get().inferenceFailure().orElseThrow());
     assertEquals("controlled window inference failure", failure.getMessage());
+  }
+
+  @Test
+  void rejectsWindowFunctionSortedByCustomComparisonFunction() {
+    // RexFieldCollation's Set<SqlKind> flags have no representation for a custom comparator, so a
+    // sort field using one cannot be converted.
+    Expression.SortField sortField =
+        Expression.SortField.builder()
+            .expr(sb.i32(1))
+            .comparisonFunction(
+                extensions.getScalarFunction(
+                    SimpleExtension.FunctionAnchor.of(
+                        DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any")))
+            .build();
+    Expression.WindowFunctionInvocation expr =
+        sb.windowFn(
+            DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC,
+            "row_number:",
+            R.I64,
+            Expression.AggregationPhase.INITIAL_TO_RESULT,
+            Expression.AggregationInvocation.ALL,
+            List.of(sortField),
+            Expression.WindowBoundsType.RANGE,
+            WindowBound.UNBOUNDED,
+            WindowBound.UNBOUNDED);
+
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> expr.accept(expressionRexConverter, Context.newContext()));
   }
 
   @Test

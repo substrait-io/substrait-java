@@ -670,7 +670,14 @@ public class ExpressionRexConverter
         expr.sort().stream()
             .map(
                 sf -> {
-                  Set<SqlKind> direction = asSqlKind(sf.direction());
+                  Expression.SortDirection sortDirection =
+                      sf.direction()
+                          .orElseThrow(
+                              () ->
+                                  new UnsupportedOperationException(
+                                      "A sort field using a custom comparison function is not"
+                                          + " supported"));
+                  Set<SqlKind> direction = asSqlKind(sortDirection);
                   return new RexFieldCollation(sf.expr().accept(this, context), direction);
                 })
             .collect(ImmutableList.toImmutableList());
