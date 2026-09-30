@@ -58,6 +58,29 @@ class OperandCoercionTest extends PlanTestBase {
     assertBinds(call);
   }
 
+  /**
+   * TPC-H declares l_discount as a bare DECIMAL, which is decimal(38,0). No decimal holds both it
+   * and 0.02 exactly, so the operands are left as they are rather than cast to a type that drops
+   * the fraction and turns the bound into 0.
+   */
+  @Test
+  void noOperandIsCastToADecimalThatLosesItsScale() throws Exception {
+    Plan plan =
+        new SqlToSubstrait()
+            .convert(
+                "SELECT l_discount BETWEEN 0.03 - 0.01 AND 0.03 + 0.01 FROM lineitem",
+                TPCH_CATALOG);
+    Expression.ScalarFunctionInvocation between =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class,
+            ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0));
+    Expression.ScalarFunctionInvocation gte =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, between.arguments().get(0));
+
+    Type.Decimal bound = assertInstanceOf(Type.Decimal.class, argumentTypes(gte).get(1));
+    assertEquals(2, bound.scale());
+  }
+
   private static Expression.ScalarFunctionInvocation call(String query) throws Exception {
     Plan plan =
         new SqlToSubstrait()

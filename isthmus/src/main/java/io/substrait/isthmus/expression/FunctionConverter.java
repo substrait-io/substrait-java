@@ -824,12 +824,13 @@ public abstract class FunctionConverter<
                 operands.stream()
                     .map(operand -> coerceToward(operand, type))
                     .collect(Collectors.toList());
-            if (!binds(declaration, coercedArgs)) {
+            Optional<Type> common = losslessCommonType(operands, type);
+            if (!binds(declaration, coercedArgs) && common.isPresent()) {
               // A parameter the operands share, like the any1 of gte(any1, any1), only binds once
-              // they have one type, so they all take the least restrictive one exactly.
+              // they have one type, so they all take a type that holds each of them exactly.
               List<Expression> exact =
                   operands.stream()
-                      .map(operand -> castUnlessEqual(operand, type))
+                      .map(operand -> castUnlessEqual(operand, common.get()))
                       .collect(Collectors.toList());
               if (binds(declaration, exact)) {
                 coercedArgs = exact;
@@ -967,6 +968,41 @@ public abstract class FunctionConverter<
       return Optional.of(19);
     }
     return Optional.empty();
+  }
+
+  /**
+   * Returns a type every operand converts to without losing a value. Calcite's least restrictive
+   * type is that, except for decimals: past precision 38 it gives up scale, so a {@code
+   * decimal(38,0)} and a {@code decimal(3,2)} meet at {@code decimal(38,0)} and the second becomes
+   * 0. For decimals the type is built from the most integer digits and the largest scale instead,
+   * and there is none when that needs more than 38 digits.
+   */
+  private static Optional<Type> losslessCommonType(
+      List<Expression> operands, Type leastRestrictive) {
+    if (!(leastRestrictive instanceof Type.Decimal)) {
+      return Optional.of(leastRestrictive);
+    }
+    int integerDigits = 0;
+    int scale = 0;
+    for (Expression operand : operands) {
+      Type type = operand.getType();
+      if (type instanceof Type.Decimal) {
+        Type.Decimal decimal = (Type.Decimal) type;
+        integerDigits = Math.max(integerDigits, decimal.precision() - decimal.scale());
+        scale = Math.max(scale, decimal.scale());
+      } else {
+        Optional<Integer> digits = integerDigits(type);
+        if (digits.isEmpty()) {
+          return Optional.empty();
+        }
+        integerDigits = Math.max(integerDigits, digits.get());
+      }
+    }
+    if (integerDigits + scale > 38) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        TypeCreator.of(leastRestrictive.nullable()).decimal(integerDigits + scale, scale));
   }
 
   private static Expression castUnlessEqual(Expression operand, Type target) {
