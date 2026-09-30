@@ -1,15 +1,19 @@
 package io.substrait.type;
 
 import io.substrait.extension.SimpleExtension;
+import io.substrait.function.NullableType;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.TypeExpression;
 import io.substrait.function.TypeExpressionVisitor;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Evaluates a {@link TypeExpression} to a concrete {@link Type} given a set of actual arguments.
@@ -41,12 +45,13 @@ import java.util.OptionalInt;
  * return -- those two are supported for symmetry, and pinned against hand-written declarations
  * rather than the catalog.
  *
- * <p>A {@code list} return still fails whatever its element, because the evaluator does not descend
- * into a container -- so an element parameter it would otherwise substitute, as in {@code
- * list<varchar<L1>>}, is out of reach just as an element type to evaluate is. A program referring
- * to an argument's value rather than a parameter of its type still fails: this API receives only
- * argument types. A plain {@code any} cannot be derived at all: unlike {@code any1} it names
- * nothing, so there is no identity to bind.
+ * <p>List, map, struct and function declarations bind their element, field, parameter and return
+ * types recursively. Container returns also evaluate their children, including integer parameters
+ * such as {@code List<varchar<L1>>} and type parameters such as {@code list<any1>}. Nested
+ * nullability is preserved; only the outermost argument nullability is excluded from wildcard
+ * identity. A program referring to an argument's value rather than a parameter of its type still
+ * fails: this API receives only argument types. A plain {@code any} has no identity to bind, so it
+ * cannot be derived as a return type.
  *
  * <p>Which shipped variants those cover is pinned by {@code ParameterizedReturnTypeTest} against
  * the declarations the catalog ships, and deliberately not repeated here -- the catalog is owned
@@ -102,6 +107,24 @@ public class TypeExpressionEvaluator {
       throw new UnsupportedOperationException(
           "Cannot evaluate return-type arithmetic: " + e.getMessage(), e);
     }
+  }
+
+  /**
+   * Binds the declaration's type parameters from the actual argument types, as {@link
+   * #evaluateExpression} does before it evaluates a return expression, and reports the first
+   * argument that does not fit: a shape that does not match, a parameter bound to two different
+   * values, or a literal parameter the actual type does not carry.
+   *
+   * @param declaredArguments the declared arguments of the function
+   * @param variadic the declaration's variadic behavior, if it is variadic
+   * @param actualTypes the actual argument types supplied at the call site
+   * @throws UnsupportedOperationException if the actual types do not bind the declaration
+   */
+  public static void checkBindings(
+      List<SimpleExtension.Argument> declaredArguments,
+      Optional<SimpleExtension.VariadicBehavior> variadic,
+      List<Type> actualTypes) {
+    bindParameters(declaredArguments, variadic, actualTypes);
   }
 
   /**
@@ -162,7 +185,7 @@ public class TypeExpressionEvaluator {
       }
       // An INCONSISTENT variadic repetition binds no named parameters — each repetition is
       // independent — but a literal constraint (the 0 of DECIMAL<P,0>) still applies to it.
-      bindings.bind(declared, actualTypes.get(index), !repeated || bindRepeats);
+      bindings.bind(declared, actualTypes.get(index), !repeated || bindRepeats, false);
     }
     return bindings;
   }
@@ -171,6 +194,7 @@ public class TypeExpressionEvaluator {
   private static final class ParameterBindings {
 
     private final Map<String, Type> types = new HashMap<>();
+    private final Set<String> exactTypeNullabilities = new HashSet<>();
     private final Map<String, Integer> integers = new HashMap<>();
 
     private Type boundType(String name) {
@@ -186,13 +210,36 @@ public class TypeExpressionEvaluator {
      * an INCONSISTENT variadic repetition — named parameters are left unbound (each repetition is
      * independent) while literal constraints are still enforced.
      */
-    private void bind(ParameterizedType declared, Type actual, boolean bindNames) {
+    private void bind(ParameterizedType declared, Type actual, boolean bindNames, boolean nested) {
+      if (actual instanceof Type.Unbound) {
+        // The unbound type does not unify with any declared shape, and it has no nullability for
+        // the checks below to read.
+        throw cannotBind(declared, actual);
+      }
+      if (nested && !(declared instanceof ParameterizedType.StringLiteral)) {
+        if ((declared instanceof NullableType
+                && ((NullableType) declared).nullable() != actual.nullable())
+            || (declared instanceof Type && !declared.equals(actual))) {
+          throw cannotBind(declared, actual);
+        }
+      }
       if (declared instanceof ParameterizedType.StringLiteral) {
         ParameterizedType.StringLiteral literal = (ParameterizedType.StringLiteral) declared;
         // Only a numbered wildcard names a parameter that a return expression can refer to and that
         // has to stay consistent across the call; a plain "any" binds independently each time.
+        if (nested && literal.nullable() && !actual.nullable()) {
+          throw cannotBind(declared, actual);
+        }
         if (bindNames && literal.isNumberedWildcard()) {
-          bindType(literal.value(), actual);
+          // An unmarked wildcard binds exactly. Nested, it binds the complete type, including
+          // nullability. In an outermost argument that argument's own nullability is stripped
+          // first, as the spec does under MIRROR and DECLARED_OUTPUT, so i32? there binds i32;
+          // signature validation checks it against DISCRETE separately. A '?' marker requires a
+          // nullable actual, but does not constrain the variable's own nullability: both i32 and
+          // i32? become i32? after substitution.
+          boolean exactNullability = !literal.nullable();
+          Type binding = nested && !literal.nullable() ? actual : actual.withNullable(false);
+          bindType(literal.value(), binding, exactNullability);
         }
       } else if (declared instanceof ParameterizedType.Decimal && actual instanceof Type.Decimal) {
         ParameterizedType.Decimal declaredDecimal = (ParameterizedType.Decimal) declared;
@@ -246,42 +293,70 @@ public class TypeExpressionEvaluator {
             ((ParameterizedType.IntervalCompound) declared).precision().value(),
             ((Type.IntervalCompound) actual).precision(),
             bindNames);
-      } else if (!(declared instanceof Type) && !isContainer(declared)) {
-        // A shape one of the arms above should have taken: the declaration carries a parameter and
-        // the actual type is not the class that would bind it. Binding nothing here would enforce
-        // the shared-parameter rule for some calls and skip it for others.
-        throw new UnsupportedOperationException(
-            String.format(
-                "Cannot bind parameters from declared argument type %s to actual type %s",
-                declared, actual));
+      } else if (declared instanceof ParameterizedType.ListType
+          && actual instanceof Type.ListType) {
+        bind(
+            ((ParameterizedType.ListType) declared).name(),
+            ((Type.ListType) actual).elementType(),
+            bindNames,
+            true);
+      } else if (declared instanceof ParameterizedType.Map && actual instanceof Type.Map) {
+        ParameterizedType.Map pattern = (ParameterizedType.Map) declared;
+        Type.Map map = (Type.Map) actual;
+        bind(pattern.key(), map.key(), bindNames, true);
+        bind(pattern.value(), map.value(), bindNames, true);
+      } else if (declared instanceof ParameterizedType.Struct && actual instanceof Type.Struct) {
+        bindFields(
+            ((ParameterizedType.Struct) declared).fields(),
+            ((Type.Struct) actual).fields(),
+            bindNames);
+      } else if (declared instanceof ParameterizedType.Func && actual instanceof Type.Func) {
+        ParameterizedType.Func pattern = (ParameterizedType.Func) declared;
+        Type.Func function = (Type.Func) actual;
+        bindFields(pattern.parameterTypes(), function.parameterTypes(), bindNames);
+        bind(pattern.returnType(), function.returnType(), bindNames, true);
+      } else if (!(declared instanceof Type)) {
+        throw cannotBind(declared, actual);
       }
     }
 
-    /**
-     * Whether the declared type holds other types rather than an integer parameter. Binding does
-     * not descend into these, so their parameters bind nothing and a mismatch cannot be told from a
-     * shape this method simply does not reach yet -- unlike the classes above, refusing here would
-     * reject declarations that resolve today without binding anything, such as a {@code list<any1>}
-     * argument to a function returning a concrete type.
-     *
-     * @param declared the declared argument type
-     * @return {@code true} if the type is a list, map, struct or function declaration
-     */
-    private boolean isContainer(ParameterizedType declared) {
-      return declared instanceof ParameterizedType.ListType
-          || declared instanceof ParameterizedType.Map
-          || declared instanceof ParameterizedType.Struct
-          || declared instanceof ParameterizedType.Func;
+    private void bindFields(
+        List<ParameterizedType> declared, List<Type> actual, boolean bindNames) {
+      if (declared.size() != actual.size()) {
+        throw new UnsupportedOperationException(
+            "Cannot bind container fields: expected "
+                + declared.size()
+                + " types but got "
+                + actual.size());
+      }
+      for (int index = 0; index < declared.size(); index++) {
+        bind(declared.get(index), actual.get(index), bindNames, true);
+      }
     }
 
-    private void bindType(String name, Type actual) {
-      // Nullability is not part of a wildcard's identity: any1 binds to i32 and i32? alike, and the
-      // return expression's own nullability (or the MIRROR policy) decides the result's.
+    private static UnsupportedOperationException cannotBind(
+        ParameterizedType declared, Type actual) {
+      return new UnsupportedOperationException(
+          String.format(
+              "Cannot bind parameters from declared argument type %s to actual type %s",
+              declared, actual));
+    }
+
+    private void bindType(String name, Type actual, boolean exactNullability) {
       Type existing = types.putIfAbsent(name, actual);
-      if (existing != null && !existing.equalsIgnoringNullability(actual)) {
+      boolean existingExact = exactTypeNullabilities.contains(name);
+      if (existing != null
+          && (!existing.equalsIgnoringNullability(actual)
+              || (existingExact && exactNullability && !existing.equals(actual)))) {
         throw new UnsupportedOperationException(
             String.format(
                 "Inconsistent binding for type parameter '%s': %s vs %s", name, existing, actual));
+      }
+      if (exactNullability) {
+        exactTypeNullabilities.add(name);
+        if (!existingExact) {
+          types.put(name, actual);
+        }
       }
     }
 
@@ -334,6 +409,10 @@ public class TypeExpressionEvaluator {
     // can hold any of them; each operation checks the kind it consumes.
     private final Map<String, Object> locals = new HashMap<>();
     private boolean inProgram;
+    // Whether the expression being evaluated is the result itself rather than a container child or
+    // an assignment. Only there may a wildcard whose nullability the arguments leave open stand
+    // unmarked: the function's nullability handling decides the result's own nullability.
+    private boolean resultPosition = true;
 
     private ReturnTypeEvaluator(TypeExpression returnExpression, ParameterBindings bindings) {
       // Rendered only on failure: the expression can be a whole return program, and most
@@ -389,26 +468,125 @@ public class TypeExpressionEvaluator {
     }
 
     @Override
+    public Type visit(ParameterizedType.ListType list) {
+      return list(list.nullable(), list.name());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.Map map) {
+      return map(map.nullable(), map.key(), map.value());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.Struct struct) {
+      return struct(struct.nullable(), struct.fields());
+    }
+
+    @Override
+    public Type visit(ParameterizedType.Func function) {
+      return func(function.nullable(), function.parameterTypes(), function.returnType());
+    }
+
+    @Override
+    public Type visit(TypeExpression.ListType list) {
+      return list(list.nullable(), list.elementType());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Map map) {
+      return map(map.nullable(), map.key(), map.value());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Struct struct) {
+      return struct(struct.nullable(), struct.fields());
+    }
+
+    @Override
+    public Type visit(TypeExpression.Func function) {
+      return func(function.nullable(), function.parameterTypes(), function.returnType());
+    }
+
+    private Type list(boolean nullable, TypeExpression element) {
+      return TypeCreator.of(nullable).list(evaluateNested(element));
+    }
+
+    private Type map(boolean nullable, TypeExpression key, TypeExpression value) {
+      return TypeCreator.of(nullable).map(evaluateNested(key), evaluateNested(value));
+    }
+
+    private Type struct(boolean nullable, List<? extends TypeExpression> fields) {
+      return TypeCreator.of(nullable)
+          .struct(fields.stream().map(this::evaluateNested).collect(Collectors.toList()));
+    }
+
+    private Type func(
+        boolean nullable, List<? extends TypeExpression> parameters, TypeExpression returnType) {
+      return TypeCreator.of(nullable)
+          .func(
+              parameters.stream().map(this::evaluateNested).collect(Collectors.toList()),
+              evaluateNested(returnType));
+    }
+
+    /**
+     * Evaluates a type nested in a container. Unlike a top-level name, a nested name keeps the
+     * nullability it was bound with, and a {@code ?} marker only widens it.
+     */
+    private Type evaluateNested(TypeExpression expression) {
+      boolean enclosing = resultPosition;
+      resultPosition = false;
+      try {
+        return evaluateChild(expression);
+      } finally {
+        resultPosition = enclosing;
+      }
+    }
+
+    private Type evaluateChild(TypeExpression expression) {
+      if (expression instanceof ParameterizedType.StringLiteral) {
+        ParameterizedType.StringLiteral variable = (ParameterizedType.StringLiteral) expression;
+        Object local = locals.get(variable.value());
+        Type bound = local instanceof Type ? (Type) local : bindings.boundType(variable.value());
+        if (bound != null) {
+          if (!(local instanceof Type)
+              && !variable.nullable()
+              && !bindings.exactTypeNullabilities.contains(variable.value())) {
+            throw new UnsupportedOperationException(
+                "Cannot derive nullability of type parameter '" + variable.value() + "'");
+          }
+          return bound.withNullable(bound.nullable() || variable.nullable());
+        }
+      }
+      return evaluate(expression, Type.class);
+    }
+
+    @Override
     public Object visit(ParameterizedType.StringLiteral stringLiteral) {
       Object local = locals.get(stringLiteral.value());
       if (local != null) {
-        return local instanceof Type
-            ? ((Type) local).withNullable(stringLiteral.nullable())
+        return local instanceof Type && stringLiteral.nullable()
+            ? ((Type) local).withNullable(true)
             : local;
       }
       Integer integer = bindings.boundInteger(stringLiteral.value());
       if (integer != null) {
         return integer.longValue();
       }
-      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, taking the
-      // nullability declared on the return expression in both directions (a required return forces
-      // the type non-null, a nullable one forces it nullable). MIRROR policy, if any, is applied
-      // afterwards by the caller. This is checked before parsing the token as an integer literal
-      // because parseIntegerLiteral reports "not a number" by throwing, and a bound type name is
-      // never a numeral.
+      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, and a
+      // nullable return expression makes it nullable. A type bound from a nested element keeps its
+      // own nullability. MIRROR policy, if any, is applied afterwards by the caller. This is
+      // checked before parsing the token as an integer literal because parseIntegerLiteral reports
+      // "not a number" by throwing, and a bound type name is never a numeral.
       Type bound = bindings.boundType(stringLiteral.value());
       if (bound != null) {
-        return bound.withNullable(stringLiteral.nullable());
+        if (!resultPosition
+            && !stringLiteral.nullable()
+            && !bindings.exactTypeNullabilities.contains(stringLiteral.value())) {
+          // Reached through an assignment or a conditional, on its way into a container.
+          throw new UnsupportedOperationException(
+              "Cannot derive nullability of type parameter '" + stringLiteral.value() + "'");
+        }
+        return stringLiteral.nullable() ? bound.withNullable(true) : bound;
       }
       OptionalInt literal = parseIntegerLiteral(stringLiteral.value());
       if (literal.isPresent()) {
@@ -474,8 +652,14 @@ public class TypeExpressionEvaluator {
             "Cannot evaluate a return program nested in another: " + program);
       }
       inProgram = true;
-      for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
-        locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
+      boolean enclosing = resultPosition;
+      resultPosition = false;
+      try {
+        for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
+          locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
+        }
+      } finally {
+        resultPosition = enclosing;
       }
       return evaluate(program.finalExpression(), Type.class);
     }
