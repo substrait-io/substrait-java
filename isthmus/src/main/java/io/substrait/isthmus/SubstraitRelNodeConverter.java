@@ -1204,11 +1204,15 @@ public class SubstraitRelNodeConverter
    * this conversion does not do. Such a mask is reported rather than applied to the columns it
    * selects whole, which would drop the rest of what it says.
    *
+   * <p>{@link MaskExpression#getMaintainSingularStruct()} is not read. A relation's record type is
+   * always a struct, so a mask over its columns has nothing to unwrap, and the only masks that
+   * could unwrap a nested struct select inside a column, which is refused above.
+   *
    * @param relNode the node the read was converted into
    * @param projection the projection the read carries, if any
    * @return the node, with the masked columns projected out of it
    */
-  private RelNode applyProjection(RelNode relNode, Optional<MaskExpression> projection) {
+  protected RelNode applyProjection(RelNode relNode, Optional<MaskExpression> projection) {
     if (projection.isEmpty()) {
       return relNode;
     }
@@ -1251,13 +1255,14 @@ public class SubstraitRelNodeConverter
    * converted into.
    *
    * <p>The names are applied to the projection this relation's own conversion produced: the one a
-   * {@link Project} becomes, or the one {@link #applyRemap(RelNode, Optional)} adds for a relation
-   * with an emit mapping. Anywhere else they are dropped, rather than renaming a node that stands
-   * for another relation or adding a projection the plan never asked for. A relation converted into
-   * a bare Calcite operator therefore keeps the names Calcite derives, and so does one Calcite
-   * builds no operator for at all -- a filter that cannot filter, a sort with no sort fields, an
-   * identity emit mapping -- where the node handed back is the input's, which is what the given
-   * inputs are compared against.
+   * {@link Project} becomes, the one {@link #applyRemap(RelNode, Optional)} adds for a relation
+   * with an emit mapping, or the one {@link #applyProjection(RelNode, Optional)} adds for a read's
+   * projection. Anywhere else they are dropped, rather than renaming a node that stands for another
+   * relation or adding a projection the plan never asked for. A relation converted into a bare
+   * Calcite operator therefore keeps the names Calcite derives, and so does one Calcite builds no
+   * operator for at all -- a filter that cannot filter, a sort with no sort fields, an identity
+   * emit mapping -- where the node handed back is the input's, which is what the given inputs are
+   * compared against.
    *
    * <p>They are dropped as well where the columns of that projection are not the columns of the
    * relation's record type, type by type. An aggregate over several grouping sets types its

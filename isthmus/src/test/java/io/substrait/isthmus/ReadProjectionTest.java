@@ -136,10 +136,11 @@ class ReadProjectionTest extends PlanTestBase {
     NamedScan sharedNames =
         (NamedScan)
             sb.namedScan(List.of("t"), List.of("c", "c", "d"), List.of(R.I64, R.STRING, R.FP64));
-    NamedScan masked = NamedScan.builder().from(sharedNames).projection(columns(1, 2)).build();
+    NamedScan masked = NamedScan.builder().from(sharedNames).projection(columns(0, 1)).build();
 
     RelNode relNode = substraitToCalcite.convert(masked);
 
+    assertEquals(List.of("c", "c0"), relNode.getRowType().getFieldNames());
     assertEquals(
         masked.getRecordType(),
         SubstraitRelVisitor.convert(relNode, converterProvider).getRecordType());
