@@ -187,7 +187,9 @@ public class RelProtoConverter
   }
 
   private List<io.substrait.proto.SortField> toProtoS(List<Expression.SortField> sorts) {
-    return sorts.stream().map(exprProtoConverter::toProto).collect(Collectors.toList());
+    return sorts.stream()
+        .map(s -> exprProtoConverter.toProto(s, toProto(s.expr())))
+        .collect(Collectors.toList());
   }
 
   private io.substrait.proto.Expression.FieldReference toProto(FieldReference fieldReference) {
