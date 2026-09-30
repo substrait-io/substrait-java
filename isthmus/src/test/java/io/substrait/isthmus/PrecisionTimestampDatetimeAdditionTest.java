@@ -1,5 +1,12 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+import io.substrait.expression.Expression;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.plan.Plan;
+import io.substrait.relation.Project;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -33,6 +40,23 @@ class PrecisionTimestampDatetimeAdditionTest extends PlanTestBase {
   void dateAddIntervalYearToMonth() throws Exception {
     String query = "SELECT event_date + INTERVAL '1-6' YEAR TO MONTH FROM events";
     assertFullRoundTrip(query, CREATES);
+  }
+
+  /**
+   * The spec declares add(date, interval_day&lt;P&gt;) -&gt; precision_timestamp&lt;P&gt;, where
+   * Calcite types the sum a DATE. The call carries the declared type and is cast back.
+   */
+  @Test
+  void dateAddIntervalDayCarriesTheDeclaredType() throws Exception {
+    Expression.Cast cast =
+        assertInstanceOf(
+            Expression.Cast.class,
+            firstExpression("SELECT event_date + INTERVAL '5' DAY FROM events"));
+    assertEquals(N.DATE, cast.getType());
+    Expression.ScalarFunctionInvocation addition =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
+    assertEquals("add:date_iday", addition.declaration().key());
+    assertEquals(N.precisionTimestamp(6), addition.outputType());
   }
 
   @Test
@@ -197,5 +221,13 @@ class PrecisionTimestampDatetimeAdditionTest extends PlanTestBase {
             + "event_date + INTERVAL '2' MONTH "
             + "FROM events";
     assertFullRoundTrip(query, CREATES);
+  }
+
+  private static Expression firstExpression(String query) throws Exception {
+    Plan plan =
+        new SqlToSubstrait()
+            .convert(
+                query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
+    return ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
   }
 }

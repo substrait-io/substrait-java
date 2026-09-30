@@ -2,16 +2,20 @@ package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -168,11 +172,106 @@ public class ScalarFunctionConverter
       SimpleExtension.ScalarFunctionVariant function,
       List<? extends FunctionArg> arguments,
       Type outputType) {
+    if (!DefaultExtensionCatalog.FUNCTIONS_DATETIME.equals(function.getAnchor().urn())) {
+      return invocation(function, arguments, outputType);
+    }
+    // The datetime extension declares its results by parameter, where Calcite keeps an operand's
+    // own type: add(date, interval_day<P>) is a precision_timestamp<P> there and a DATE here. The
+    // call carries the declared type, and a cast back to Calcite's keeps the column the type the
+    // query gives it.
+    List<? extends FunctionArg> bound = arguments;
+    Optional<Type> declared = declaredType(function, bound);
+    if (declared.isEmpty()) {
+      // One parameter bound to two precisions, precision_timestamp<0> and interval_day<6> say.
+      // Widening either operand is lossless, so both take the wider one.
+      bound = widenedToOnePrecision(arguments);
+      declared = declaredType(function, bound);
+    }
+    if (declared.isEmpty()) {
+      return invocation(function, arguments, outputType);
+    }
+    Expression invocation = invocation(function, bound, declared.get());
+    return declared.get().equals(outputType)
+        ? invocation
+        : ExpressionCreator.cast(
+            outputType, invocation, Expression.FailureBehavior.THROW_EXCEPTION);
+  }
+
+  private static Expression invocation(
+      SimpleExtension.ScalarFunctionVariant function,
+      List<? extends FunctionArg> arguments,
+      Type outputType) {
     return Expression.ScalarFunctionInvocation.builder()
         .outputType(outputType)
         .declaration(function)
         .addAllArguments(arguments)
         .build();
+  }
+
+  private static Optional<Type> declaredType(
+      SimpleExtension.ScalarFunctionVariant function, List<? extends FunctionArg> arguments) {
+    List<Type> types =
+        arguments.stream()
+            .filter(Expression.class::isInstance)
+            .map(argument -> ((Expression) argument).getType())
+            .collect(Collectors.toList());
+    try {
+      return Optional.of(function.resolveType(types));
+    } catch (UnsupportedOperationException e) {
+      return Optional.empty();
+    }
+  }
+
+  private static List<FunctionArg> widenedToOnePrecision(List<? extends FunctionArg> arguments) {
+    int precision =
+        arguments.stream()
+            .filter(Expression.class::isInstance)
+            .map(argument -> precisionOf(((Expression) argument).getType()))
+            .flatMap(Optional::stream)
+            .max(Integer::compare)
+            .orElse(0);
+    return arguments.stream()
+        .map(
+            argument -> {
+              if (!(argument instanceof Expression)) {
+                return argument;
+              }
+              Expression expression = (Expression) argument;
+              Type type = expression.getType();
+              Optional<Integer> own = precisionOf(type);
+              if (own.isEmpty() || own.get() == precision) {
+                return argument;
+              }
+              return ExpressionCreator.cast(
+                  withPrecision(type, precision),
+                  expression,
+                  Expression.FailureBehavior.THROW_EXCEPTION);
+            })
+        .collect(Collectors.toList());
+  }
+
+  private static Optional<Integer> precisionOf(Type type) {
+    if (type instanceof Type.PrecisionTimestamp) {
+      return Optional.of(((Type.PrecisionTimestamp) type).precision());
+    }
+    if (type instanceof Type.PrecisionTimestampTZ) {
+      return Optional.of(((Type.PrecisionTimestampTZ) type).precision());
+    }
+    if (type instanceof Type.IntervalDay) {
+      return Optional.of(((Type.IntervalDay) type).precision());
+    }
+    return Optional.empty();
+  }
+
+  private static Type withPrecision(Type type, int precision) {
+    TypeCreator creator = TypeCreator.of(type.nullable());
+    if (type instanceof Type.PrecisionTimestamp) {
+      return creator.precisionTimestamp(precision);
+    }
+    if (type instanceof Type.PrecisionTimestampTZ) {
+      return creator.precisionTimestampTZ(precision);
+    }
+    return creator.intervalDay(precision);
   }
 
   /**

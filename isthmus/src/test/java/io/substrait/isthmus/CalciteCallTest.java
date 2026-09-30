@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -34,14 +35,21 @@ class CalciteCallTest extends CalciteObjs {
 
   @Test
   void extract() {
-    test(
-        "extract:req_pts",
+    // extract declares i64. A call Calcite types INTEGER carries the declared type and is cast back
+    // to the one Calcite gave it.
+    Expression expression =
         rex.makeCall(
-            t(SqlTypeName.INTEGER),
-            SqlStdOperatorTable.EXTRACT,
-            ImmutableList.of(rex.makeFlag(TimeUnitRange.HOUR), c(10L, SqlTypeName.TIMESTAMP, 10))),
-        func -> {},
-        false);
+                t(SqlTypeName.INTEGER),
+                SqlStdOperatorTable.EXTRACT,
+                ImmutableList.of(
+                    rex.makeFlag(TimeUnitRange.HOUR), c(10L, SqlTypeName.TIMESTAMP, 10)))
+            .accept(rexExpressionConverter);
+    Expression.Cast cast = assertInstanceOf(Expression.Cast.class, expression);
+    assertEquals(TypeCreator.REQUIRED.I32, cast.getType());
+    Expression.ScalarFunctionInvocation func =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
+    assertEquals("extract:req_pts", func.declaration().key());
+    assertEquals(TypeCreator.REQUIRED.I64, func.outputType());
   }
 
   @Test

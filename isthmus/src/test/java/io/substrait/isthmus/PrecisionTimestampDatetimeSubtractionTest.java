@@ -1,11 +1,14 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Project;
 import java.util.List;
@@ -49,6 +52,44 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
   void dateSubtractIntervalDay() throws Exception {
     String query = "SELECT event_date - INTERVAL '5' DAY FROM events";
     assertFullRoundTrip(query, CREATES);
+  }
+
+  /**
+   * The spec declares subtract(date, interval_day&lt;P&gt;) -&gt; precision_timestamp&lt;P&gt;,
+   * where Calcite types the difference a DATE. The call carries the declared type and is cast back.
+   */
+  @Test
+  void dateSubtractIntervalDayCarriesTheDeclaredType() throws Exception {
+    Expression.Cast cast =
+        assertInstanceOf(
+            Expression.Cast.class,
+            firstExpression("SELECT event_date - INTERVAL '5' DAY FROM events"));
+    assertEquals(N.DATE, cast.getType());
+    Expression.ScalarFunctionInvocation subtraction =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
+    assertEquals("subtract:date_iday", subtraction.declaration().key());
+    assertEquals(N.precisionTimestamp(6), subtraction.outputType());
+  }
+
+  /**
+   * A TIMESTAMP(3) and an interval_day&lt;6&gt; would bind P to two values. Widening either operand
+   * is lossless, so the timestamp takes the interval's precision, and the result is cast back to
+   * Calcite's TIMESTAMP(3).
+   */
+  @Test
+  void precisionTimestampSubtractIntervalDayBindsOnePrecision() throws Exception {
+    Expression.Cast cast =
+        assertInstanceOf(
+            Expression.Cast.class,
+            firstExpression("SELECT event_timestamp - INTERVAL '5' DAY FROM events"));
+    assertEquals(N.precisionTimestamp(3), cast.getType());
+    Expression.ScalarFunctionInvocation subtraction =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
+    assertEquals("subtract:pts_iday", subtraction.declaration().key());
+    assertEquals(N.precisionTimestamp(6), subtraction.outputType());
+    Expression.Cast widened =
+        assertInstanceOf(Expression.Cast.class, subtraction.arguments().get(0));
+    assertEquals(N.precisionTimestamp(6), widened.getType());
   }
 
   @Test
@@ -236,5 +277,13 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
             + "event_date - INTERVAL '2' MONTH "
             + "FROM events";
     assertFullRoundTrip(query, CREATES);
+  }
+
+  private static Expression firstExpression(String query) throws Exception {
+    Plan plan =
+        new SqlToSubstrait()
+            .convert(
+                query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
+    return ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
   }
 }
