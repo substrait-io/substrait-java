@@ -91,38 +91,49 @@ class ContainerReturnTypeTest {
   }
 
   @Test
-  void catalogIndexInAcceptsNullableElements() {
+  void catalogIndexInBindsItsElementExactly() {
+    // index_in(any1, list<any1>): the value's own nullability is stripped before binding, as the
+    // spec does for an outermost argument, while the element keeps its, so a nullable element
+    // binds any1 to a different type than the value does.
     SimpleExtension.Function function =
         DefaultExtensionCatalog.DEFAULT_COLLECTION.scalarFunctions().stream()
             .filter(f -> f.key().equals("index_in:any_list"))
             .findFirst()
             .orElseThrow();
     for (Type value : List.of(R.I32, N.I32)) {
-      for (Type element : List.of(R.I32, N.I32)) {
-        assertDerives(function, N.I64, List.of(value, R.list(element)));
-      }
+      assertDerives(function, N.I64, List.of(value, R.list(R.I32)));
+      assertInvalid(function, value, R.list(N.I32));
     }
     assertInvalid(function, R.FP64, R.list(R.I32));
     assertInvalid(function, R.I32, R.list(N.FP64));
   }
 
   @Test
-  void topLevelWildcardsDoNotConstrainNestedNullabilityInEitherOrder() {
+  void topLevelWildcardsBindExactlyInEitherOrder() {
     ParameterizedType list = P.listE(ANY1);
     SimpleExtension.Function forward = function(list, ANY1, list);
     SimpleExtension.Function reverse = function(list, list, ANY1);
     for (Type value : List.of(R.I32, N.I32)) {
-      for (Type element : List.of(R.I32, N.I32)) {
-        Type expected = TypeCreator.of(value.nullable()).list(element);
-        assertDerives(forward, expected, List.of(value, R.list(element)));
-        assertDerives(reverse, expected, List.of(R.list(element), value));
-      }
+      Type expected = TypeCreator.of(value.nullable()).list(R.I32);
+      assertDerives(forward, expected, List.of(value, R.list(R.I32)));
+      assertDerives(reverse, expected, List.of(R.list(R.I32), value));
+      assertInvalid(forward, value, R.list(N.I32));
+      assertInvalid(reverse, R.list(N.I32), value);
     }
     assertInvalid(forward, R.I32, R.list(N.FP64));
     assertInvalid(reverse, R.list(N.FP64), R.I32);
     assertInvalid(function(list, ANY1, list, list), R.I32, R.list(R.I32), R.list(N.I32));
     assertInvalid(function(list, list, ANY1, list), R.list(R.I32), R.I32, R.list(N.I32));
     assertInvalid(function(list, list, list, ANY1), R.list(R.I32), R.list(N.I32), R.I32);
+  }
+
+  @Test
+  void aWildcardBoundOnlyAtTheTopLevelDerivesANestedReturn() {
+    // f(any1) -> list<any1>: the element takes the argument's type without its own nullability,
+    // which the function's nullability handling applies to the list.
+    SimpleExtension.Function wrap = function(P.listE(ANY1), ANY1);
+    assertDerives(wrap, R.list(R.I32), List.of(R.I32));
+    assertDerives(wrap, N.list(R.I32), List.of(N.I32));
   }
 
   @Test

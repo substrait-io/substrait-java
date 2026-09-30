@@ -208,11 +208,13 @@ public class TypeExpressionEvaluator {
           throw cannotBind(declared, actual);
         }
         if (bindNames && literal.isNumberedWildcard()) {
-          // An unmarked nested wildcard binds the complete type, including nullability. A '?'
+          // An unmarked wildcard binds exactly. Nested, it binds the complete type, including
+          // nullability. In an outermost argument that argument's own nullability is stripped
+          // first, as the spec does under MIRROR and DECLARED_OUTPUT (spec v0.102.0), so i32?
+          // there binds i32; signature validation checks it against DISCRETE separately. A '?'
           // marker requires a nullable actual, but does not constrain the variable's own
-          // nullability: both i32 and i32? become i32? after substitution. Outermost argument
-          // nullability is excluded from binding and also leaves the variable's nullability open.
-          boolean exactNullability = nested && !literal.nullable();
+          // nullability: both i32 and i32? become i32? after substitution.
+          boolean exactNullability = !literal.nullable();
           Type binding = nested && !literal.nullable() ? actual : actual.withNullable(false);
           bindType(literal.value(), binding, exactNullability);
         }
