@@ -810,7 +810,20 @@ public class ExpressionProtoConverter
    * @return the proto sort field
    */
   public SortField toProto(io.substrait.expression.Expression.SortField s) {
-    SortField.Builder builder = SortField.newBuilder().setExpr(toProto(s.expr()));
+    return toProto(s, toProto(s.expr()));
+  }
+
+  /**
+   * Converts a sort field to its protobuf representation, using an already-converted proto
+   * expression. Lets a caller that overrides {@link #toProto(io.substrait.expression.Expression)}
+   * route the sort field's expression through that override.
+   *
+   * @param s the sort field to convert
+   * @param expr the already-converted proto expression for {@code s.expr()}
+   * @return the proto sort field
+   */
+  public SortField toProto(io.substrait.expression.Expression.SortField s, Expression expr) {
+    SortField.Builder builder = SortField.newBuilder().setExpr(expr);
     if (s.comparisonFunction().isPresent()) {
       builder.setComparisonFunctionReference(
           extensionCollector.getFunctionReference(s.comparisonFunction().get()));

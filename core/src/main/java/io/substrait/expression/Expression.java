@@ -1632,7 +1632,8 @@ public interface Expression extends FunctionArg {
     /**
      * Validates that variadic arguments satisfy the parameter consistency requirement, that {@code
      * bounds_type} is set whenever a window bound requires it, and that a RANGE bound with a
-     * Preceding or Following side has exactly one, non-CLUSTERED ordering expression.
+     * Preceding or Following side has exactly one ordering expression, which must not use
+     * SORT_DIRECTION_CLUSTERED or a custom comparison function.
      *
      * <p>When CONSISTENT, all variadic arguments must have the same type (ignoring nullability).
      * When INCONSISTENT, arguments can have different types.

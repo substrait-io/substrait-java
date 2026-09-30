@@ -812,9 +812,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
+    SortDirection sortDirection = requireDirection(sortField);
     Expression expression = sortField.expr();
     RexNode rexNode = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = requireDirection(sortField);
 
     if (sortDirection == Expression.SortDirection.ASC_NULLS_FIRST) {
       return relBuilder.nullsFirst(rexNode);
@@ -862,9 +862,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
+    SortDirection sortDirection = requireDirection(sortField);
     Expression expression = sortField.expr();
     RexNode rex = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = requireDirection(sortField);
     RexSlot rexSlot = (RexSlot) rex;
     int fieldIndex = rexSlot.getIndex();
 

@@ -248,11 +248,11 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   }
 
   private def toSortOrder(sortField: SExpression.SortField): SortOrder = {
-    val expression = sortField.expr().accept(expressionConverter, EmptyVisitationContext.INSTANCE)
     if (!sortField.direction().isPresent) {
       throw new UnsupportedOperationException(
         "A sort field using a custom comparison function is not supported")
     }
+    val expression = sortField.expr().accept(expressionConverter, EmptyVisitationContext.INSTANCE)
     val (direction, nullOrdering) = sortField.direction().get() match {
       case SExpression.SortDirection.ASC_NULLS_FIRST => (Ascending, NullsFirst)
       case SExpression.SortDirection.DESC_NULLS_FIRST => (Descending, NullsFirst)
