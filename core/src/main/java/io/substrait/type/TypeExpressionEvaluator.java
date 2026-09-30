@@ -110,6 +110,24 @@ public class TypeExpressionEvaluator {
   }
 
   /**
+   * Binds the declaration's type parameters from the actual argument types, as {@link
+   * #evaluateExpression} does before it evaluates a return expression, and reports the first
+   * argument that does not fit: a shape that does not match, a parameter bound to two different
+   * values, or a literal parameter the actual type does not carry.
+   *
+   * @param declaredArguments the declared arguments of the function
+   * @param variadic the declaration's variadic behavior, if it is variadic
+   * @param actualTypes the actual argument types supplied at the call site
+   * @throws UnsupportedOperationException if the actual types do not bind the declaration
+   */
+  public static void checkBindings(
+      List<SimpleExtension.Argument> declaredArguments,
+      Optional<SimpleExtension.VariadicBehavior> variadic,
+      List<Type> actualTypes) {
+    bindParameters(declaredArguments, variadic, actualTypes);
+  }
+
+  /**
    * Binds the declaration's type parameters — both numbered wildcards (e.g. the {@code any1} of
    * {@code min(any1) -> any1}) and integer parameters (e.g. the {@code P} and {@code S} of {@code
    * DECIMAL<P,S>}) — by matching each declared value argument against the corresponding actual
@@ -193,6 +211,11 @@ public class TypeExpressionEvaluator {
      * independent) while literal constraints are still enforced.
      */
     private void bind(ParameterizedType declared, Type actual, boolean bindNames, boolean nested) {
+      if (actual instanceof Type.Unbound) {
+        // The unbound type does not unify with any declared shape, and it has no nullability for
+        // the checks below to read.
+        throw cannotBind(declared, actual);
+      }
       if (nested && !(declared instanceof ParameterizedType.StringLiteral)) {
         if ((declared instanceof NullableType
                 && ((NullableType) declared).nullable() != actual.nullable())
@@ -210,10 +233,10 @@ public class TypeExpressionEvaluator {
         if (bindNames && literal.isNumberedWildcard()) {
           // An unmarked wildcard binds exactly. Nested, it binds the complete type, including
           // nullability. In an outermost argument that argument's own nullability is stripped
-          // first, as the spec does under MIRROR and DECLARED_OUTPUT (spec v0.102.0), so i32?
-          // there binds i32; signature validation checks it against DISCRETE separately. A '?'
-          // marker requires a nullable actual, but does not constrain the variable's own
-          // nullability: both i32 and i32? become i32? after substitution.
+          // first, as the spec does under MIRROR and DECLARED_OUTPUT, so i32? there binds i32;
+          // signature validation checks it against DISCRETE separately. A '?' marker requires a
+          // nullable actual, but does not constrain the variable's own nullability: both i32 and
+          // i32? become i32? after substitution.
           boolean exactNullability = !literal.nullable();
           Type binding = nested && !literal.nullable() ? actual : actual.withNullable(false);
           bindType(literal.value(), binding, exactNullability);
@@ -511,7 +534,7 @@ public class TypeExpressionEvaluator {
         Object local = locals.get(variable.value());
         Type bound = local instanceof Type ? (Type) local : bindings.boundType(variable.value());
         if (bound != null) {
-          if (local == null
+          if (!(local instanceof Type)
               && !variable.nullable()
               && !bindings.exactTypeNullabilities.contains(variable.value())) {
             throw new UnsupportedOperationException(
@@ -535,15 +558,15 @@ public class TypeExpressionEvaluator {
       if (integer != null) {
         return integer.longValue();
       }
-      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, taking the
-      // nullability declared on the return expression in both directions (a required return forces
-      // the type non-null, a nullable one forces it nullable). MIRROR policy, if any, is applied
-      // afterwards by the caller. This is checked before parsing the token as an integer literal
+      // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, and a
+      // nullable return expression makes it nullable. A type bound from a nested element keeps its
+      // own nullability. MIRROR policy, if any, is applied afterwards by the caller. This is
+      // checked before parsing the token as an integer literal
       // because parseIntegerLiteral reports "not a number" by throwing, and a bound type name is
       // never a numeral.
       Type bound = bindings.boundType(stringLiteral.value());
       if (bound != null) {
-        return bound.withNullable(stringLiteral.nullable());
+        return stringLiteral.nullable() ? bound.withNullable(true) : bound;
       }
       OptionalInt literal = parseIntegerLiteral(stringLiteral.value());
       if (literal.isPresent()) {

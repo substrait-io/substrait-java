@@ -1,18 +1,22 @@
 package io.substrait.type;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.expression.Expression;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.InvalidFunctionBindingException;
+import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ParameterizedType;
 import io.substrait.function.ParameterizedTypeCreator;
 import io.substrait.function.TypeExpression;
+import io.substrait.type.parser.TypeStringParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -329,6 +333,74 @@ class ContainerReturnTypeTest {
       }
       assertInvalid(function, actual.get(0), R.list(R.decimal(15, 1)));
     }
+  }
+
+  @Test
+  void aWildcardBoundFromAnElementKeepsItsNullabilityWhereverTheReturnNamesIt() {
+    // Under DECLARED_OUTPUT the return's nullability is the declaration's, so a nullable element
+    // bound into any1 has to survive a bare any1, a local assigned from it, and a conditional.
+    for (String program : List.of("any1", "t = any1\nlist<t>", "list<1 > 0 ? any1 : any1>")) {
+      SimpleExtension.Function function =
+          ImmutableSimpleExtension.ScalarFunctionVariant.builder()
+              .from(
+                  function(
+                      TypeStringParser.parseExpression(program, "extension:test"), P.listE(ANY1)))
+              .nullability(SimpleExtension.Nullability.DECLARED_OUTPUT)
+              .build();
+      for (Type element : List.of(R.I32, N.I32)) {
+        Type expected = program.endsWith(">") ? R.list(element) : element;
+        assertDerives(function, expected, List.of(R.list(element)));
+      }
+    }
+  }
+
+  @Test
+  void signatureValidationChecksWhatTheArgumentsShare() {
+    // matchesDeclaration validates the signature without deriving a type, so it has to bind the
+    // parameters the way derivation does: a shared nested wildcard, an integer parameter's literal.
+    ParameterizedType list = P.listE(ANY1);
+    assertFalse(matches(aggregate(list, list), R.list(R.I32), R.list(R.I64)));
+    assertTrue(matches(aggregate(list, list), R.list(R.I32), R.list(R.I32)));
+    ParameterizedType decimals = P.listE(P.decimalE("P", "0"));
+    assertFalse(matches(aggregate(decimals), R.list(R.decimal(12, 1))));
+    assertTrue(matches(aggregate(decimals), R.list(R.decimal(12, 0))));
+  }
+
+  @Test
+  void theUnboundTypeMatchesNoDeclaredShape() {
+    Type unbound = Type.Unbound.builder().build();
+    assertInvalid(function(ANY1, P.listE(ANY1)), R.list(unbound));
+    assertInvalid(function(R.I64, ANY1, P.listE(ANY1)), R.I32, unbound);
+    // Reported as a binding that does not match rather than escaping from a nullability check.
+    assertFalse(matches(aggregate(P.listE(Q.parameter("any1"))), R.list(unbound)));
+    assertFalse(matches(aggregate(ANY1), unbound));
+  }
+
+  private static SimpleExtension.AggregateFunctionVariant aggregate(
+      ParameterizedType... parameters) {
+    return ImmutableSimpleExtension.AggregateFunctionVariant.builder()
+        .urn("extension:io.substrait:container_test")
+        .name("container_aggregate")
+        .returnType(R.I64)
+        .args(
+            Arrays.stream(parameters)
+                .map(p -> SimpleExtension.ValueArgument.builder().value(p).build())
+                .collect(Collectors.toList()))
+        .build();
+  }
+
+  private static boolean matches(
+      SimpleExtension.AggregateFunctionVariant declaration, Type... actual) {
+    return FunctionBindingResolver.matchesDeclaration(
+        ResolvedAggregateBinding.builder()
+            .function(
+                FunctionBindingResolver.resolve(
+                    declaration,
+                    Arrays.stream(actual).map(ResolvedArgument::value).collect(Collectors.toList()),
+                    List.of()))
+            .phase(Expression.AggregationPhase.INITIAL_TO_RESULT)
+            .invocation(Expression.AggregationInvocation.ALL)
+            .build());
   }
 
   private static SimpleExtension.ScalarFunctionVariant function(

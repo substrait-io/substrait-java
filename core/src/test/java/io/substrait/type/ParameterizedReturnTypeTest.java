@@ -172,6 +172,16 @@ class ParameterizedReturnTypeTest {
             "string_split:vchar_vchar",
             "transform:list_func"),
         variantsReturning(ParameterizedType.ListType.class));
+    // A container element carrying arithmetic or a program local parses to the TypeExpression
+    // flavour, a sibling class the assertion above cannot see, so census both. The pinned catalog
+    // declares neither, and no map, struct or func return in any flavour.
+    assertEquals(List.of(), variantsReturning(TypeExpression.ListType.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Map.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Map.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Struct.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Struct.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Func.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Func.class));
 
     assertEquals(
         R.list(R.varChar(20)), resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
