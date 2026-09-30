@@ -23,6 +23,7 @@ import io.substrait.isthmus.TypeConverter;
 import io.substrait.isthmus.Utils;
 import io.substrait.isthmus.expression.FunctionMappings.Sig;
 import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import io.substrait.util.Util;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -819,7 +820,21 @@ public abstract class FunctionConverter<
 
       return out.map(
           declaration -> {
-            List<Expression> coercedArgs = coerceArguments(operands, type);
+            List<Expression> coercedArgs =
+                operands.stream()
+                    .map(operand -> coerceToward(operand, type))
+                    .collect(Collectors.toList());
+            if (!binds(declaration, coercedArgs)) {
+              // A parameter the operands share, like the any1 of gte(any1, any1), only binds once
+              // they have one type, so they all take the least restrictive one exactly.
+              List<Expression> exact =
+                  operands.stream()
+                      .map(operand -> castUnlessEqual(operand, type))
+                      .collect(Collectors.toList());
+              if (binds(declaration, exact)) {
+                coercedArgs = exact;
+              }
+            }
             declaration.validateOutputType(coercedArgs, outputType);
             return generateBinding(call, out.get(), coercedArgs, outputType);
           });
@@ -851,6 +866,17 @@ public abstract class FunctionConverter<
           Streams.zip(
                   expressions.stream(), operandTypes.stream(), FunctionConverter::coerceArgument)
               .collect(Collectors.toList());
+      if (!binds(matchFunction.get(), coercedArgs)) {
+        // The signature match takes a fixed-length string for a varchar one, and the declaration
+        // then does not bind it: a char(n) operand of a varchar declaration becomes a varchar(n).
+        List<Expression> varchars =
+            coercedArgs.stream()
+                .map(FunctionConverter::fixedCharAsVarChar)
+                .collect(Collectors.toList());
+        if (binds(matchFunction.get(), varchars)) {
+          coercedArgs = varchars;
+        }
+      }
       return Optional.of(generateBinding(call, matchFunction.get(), coercedArgs, outputType));
     }
 
@@ -895,14 +921,72 @@ public abstract class FunctionConverter<
   }
 
   /**
-   * Coerces arguments to the target type when mismatched (ignores nullability/parameters).
-   *
-   * @param arguments input expressions
-   * @param targetType target Substrait type
-   * @return list of coerced expressions (casts applied as needed)
+   * Returns whether the declaration binds the given arguments, that is, whether its parameters take
+   * one value each from the argument types.
    */
-  private static List<Expression> coerceArguments(List<Expression> arguments, Type targetType) {
-    return arguments.stream().map(a -> coerceArgument(a, targetType)).collect(Collectors.toList());
+  private static boolean binds(SimpleExtension.Function declaration, List<Expression> arguments) {
+    try {
+      declaration.resolveType(
+          arguments.stream().map(Expression::getType).collect(Collectors.toList()));
+      return true;
+    } catch (UnsupportedOperationException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Coerces an operand toward the least restrictive type of a call's operands. An integer operand
+   * of a decimal call becomes the decimal that holds every value of its type, as Calcite types it
+   * for decimal arithmetic, rather than the least restrictive decimal, whose scale it does not
+   * have: {@code decimal(7,2) * INTEGER} multiplies by a {@code decimal(10,0)}.
+   */
+  private static Expression coerceToward(Expression operand, Type target) {
+    if (target instanceof Type.Decimal) {
+      Optional<Integer> digits = integerDigits(operand.getType());
+      if (digits.isPresent()) {
+        return ExpressionCreator.cast(
+            TypeCreator.of(operand.getType().nullable()).decimal(digits.get(), 0),
+            operand,
+            Expression.FailureBehavior.THROW_EXCEPTION);
+      }
+    }
+    return coerceArgument(operand, target);
+  }
+
+  private static Optional<Integer> integerDigits(Type type) {
+    if (type instanceof Type.I8) {
+      return Optional.of(3);
+    }
+    if (type instanceof Type.I16) {
+      return Optional.of(5);
+    }
+    if (type instanceof Type.I32) {
+      return Optional.of(10);
+    }
+    if (type instanceof Type.I64) {
+      return Optional.of(19);
+    }
+    return Optional.empty();
+  }
+
+  private static Expression castUnlessEqual(Expression operand, Type target) {
+    Type type = operand.getType();
+    if (type.withNullable(target.nullable()).equals(target)) {
+      return operand;
+    }
+    return ExpressionCreator.cast(
+        target.withNullable(type.nullable()), operand, Expression.FailureBehavior.THROW_EXCEPTION);
+  }
+
+  private static Expression fixedCharAsVarChar(Expression operand) {
+    if (!(operand.getType() instanceof Type.FixedChar)) {
+      return operand;
+    }
+    Type.FixedChar fixedChar = (Type.FixedChar) operand.getType();
+    return ExpressionCreator.cast(
+        TypeCreator.of(fixedChar.nullable()).varChar(fixedChar.length()),
+        operand,
+        Expression.FailureBehavior.THROW_EXCEPTION);
   }
 
   /**
