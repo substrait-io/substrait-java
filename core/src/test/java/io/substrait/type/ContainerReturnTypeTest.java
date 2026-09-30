@@ -339,7 +339,12 @@ class ContainerReturnTypeTest {
   void aWildcardBoundFromAnElementKeepsItsNullabilityWhereverTheReturnNamesIt() {
     // Under DECLARED_OUTPUT the return's nullability is the declaration's, so a nullable element
     // bound into any1 has to survive a bare any1, a local assigned from it, and a conditional.
-    for (String program : List.of("any1", "t = any1\nlist<t>", "list<1 > 0 ? any1 : any1>")) {
+    for (String program :
+        List.of(
+            "any1",
+            "t = any1\nlist<t>",
+            "list<1 > 0 ? any1 : any1>",
+            "t = any1\nlist<1 > 0 ? t : t>")) {
       SimpleExtension.Function function =
           ImmutableSimpleExtension.ScalarFunctionVariant.builder()
               .from(
@@ -351,6 +356,19 @@ class ContainerReturnTypeTest {
         Type expected = program.endsWith(">") ? R.list(element) : element;
         assertDerives(function, expected, List.of(R.list(element)));
       }
+    }
+  }
+
+  @Test
+  void anOpenNullabilityCannotReachAContainerThroughALocalOrAConditional() {
+    // list<any1?> over list<i32?> leaves open whether any1 is i32 or i32?, so a required element
+    // named through a local or a conditional is as undetermined as a direct list<any1>.
+    for (String program : List.of("list<any1>", "t = any1\nlist<t>", "list<1 > 0 ? any1 : any1>")) {
+      assertInvalid(
+          function(
+              TypeStringParser.parseExpression(program, "extension:test"),
+              P.listE(Q.parameter("any1"))),
+          R.list(N.I32));
     }
   }
 

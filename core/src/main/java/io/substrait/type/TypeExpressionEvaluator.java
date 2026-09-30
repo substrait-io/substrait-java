@@ -409,6 +409,10 @@ public class TypeExpressionEvaluator {
     // can hold any of them; each operation checks the kind it consumes.
     private final Map<String, Object> locals = new HashMap<>();
     private boolean inProgram;
+    // Whether the expression being evaluated is the result itself rather than a container child or
+    // an assignment. Only there may a wildcard whose nullability the arguments leave open stand
+    // unmarked: the function's nullability handling decides the result's own nullability.
+    private boolean resultPosition = true;
 
     private ReturnTypeEvaluator(TypeExpression returnExpression, ParameterBindings bindings) {
       // Rendered only on failure: the expression can be a whole return program, and most
@@ -529,6 +533,16 @@ public class TypeExpressionEvaluator {
      * nullability it was bound with, and a {@code ?} marker only widens it.
      */
     private Type evaluateNested(TypeExpression expression) {
+      boolean enclosing = resultPosition;
+      resultPosition = false;
+      try {
+        return evaluateChild(expression);
+      } finally {
+        resultPosition = enclosing;
+      }
+    }
+
+    private Type evaluateChild(TypeExpression expression) {
       if (expression instanceof ParameterizedType.StringLiteral) {
         ParameterizedType.StringLiteral variable = (ParameterizedType.StringLiteral) expression;
         Object local = locals.get(variable.value());
@@ -550,8 +564,8 @@ public class TypeExpressionEvaluator {
     public Object visit(ParameterizedType.StringLiteral stringLiteral) {
       Object local = locals.get(stringLiteral.value());
       if (local != null) {
-        return local instanceof Type
-            ? ((Type) local).withNullable(stringLiteral.nullable())
+        return local instanceof Type && stringLiteral.nullable()
+            ? ((Type) local).withNullable(true)
             : local;
       }
       Integer integer = bindings.boundInteger(stringLiteral.value());
@@ -561,11 +575,17 @@ public class TypeExpressionEvaluator {
       // A wildcard return (e.g. min(any1) -> any1) resolves to the bound argument type, and a
       // nullable return expression makes it nullable. A type bound from a nested element keeps its
       // own nullability. MIRROR policy, if any, is applied afterwards by the caller. This is
-      // checked before parsing the token as an integer literal
-      // because parseIntegerLiteral reports "not a number" by throwing, and a bound type name is
-      // never a numeral.
+      // checked before parsing the token as an integer literal because parseIntegerLiteral reports
+      // "not a number" by throwing, and a bound type name is never a numeral.
       Type bound = bindings.boundType(stringLiteral.value());
       if (bound != null) {
+        if (!resultPosition
+            && !stringLiteral.nullable()
+            && !bindings.exactTypeNullabilities.contains(stringLiteral.value())) {
+          // Reached through an assignment or a conditional, on its way into a container.
+          throw new UnsupportedOperationException(
+              "Cannot derive nullability of type parameter '" + stringLiteral.value() + "'");
+        }
         return stringLiteral.nullable() ? bound.withNullable(true) : bound;
       }
       OptionalInt literal = parseIntegerLiteral(stringLiteral.value());
@@ -632,8 +652,14 @@ public class TypeExpressionEvaluator {
             "Cannot evaluate a return program nested in another: " + program);
       }
       inProgram = true;
-      for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
-        locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
+      boolean enclosing = resultPosition;
+      resultPosition = false;
+      try {
+        for (TypeExpression.ReturnProgram.Assignment assignment : program.assignments()) {
+          locals.put(assignment.name(), evaluate(assignment.expr(), Object.class));
+        }
+      } finally {
+        resultPosition = enclosing;
       }
       return evaluate(program.finalExpression(), Type.class);
     }
