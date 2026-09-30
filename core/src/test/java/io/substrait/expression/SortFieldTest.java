@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.TestBase;
@@ -31,5 +32,19 @@ class SortFieldTest extends TestBase {
                 .direction(Expression.SortDirection.ASC_NULLS_FIRST)
                 .comparisonFunction(comparisonFunction)
                 .build());
+  }
+
+  @Test
+  void protoWithNoSortKindSetIsRejected() {
+    io.substrait.proto.SortField protoSortField =
+        io.substrait.proto.SortField.newBuilder()
+            .setExpr(expressionProtoConverter.toProto(sb.i64(1)))
+            .build();
+
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> protoExpressionConverter.fromSortField(protoSortField));
+    assertEquals("SortField has no sort_kind set", e.getMessage());
   }
 }

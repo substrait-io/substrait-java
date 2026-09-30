@@ -10,10 +10,11 @@ import org.apache.spark.sql.test.SharedSparkSession
 
 import io.substrait.`type`.{NamedStruct, Type, TypeCreator}
 import io.substrait.dsl.SubstraitBuilder
-import io.substrait.expression.{Expression, ExpressionCreator}
-import io.substrait.extension.DefaultExtensionCatalog
+import io.substrait.expression.{AggregateFunctionInvocation, Expression, ExpressionCreator}
+import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 import io.substrait.plan.Plan
 import io.substrait.relation.{Aggregate, Join, Project, Rel, VirtualTableScan}
+import io.substrait.util.EmptyVisitationContext
 
 import java.util
 import java.util.Arrays
@@ -308,6 +309,37 @@ class AggregateWithJoinSuite
     assertRow(rows(0), "Petrol", "GU", 100000)
     assertRow(rows(1), "Diesel", "PO", 20000)
     assertRow(rows(2), "Diesel", "GU", 35000)
+  }
+
+  test("aggregate measure sorted by custom comparison function is rejected") {
+    // Aggregate measure ordering has no representation in Spark's AggregateExpression, so a
+    // measure sorted by a custom comparison function must be rejected rather than silently
+    // converted as unordered.
+    val testsTable = createTestsTable()
+    val comparisonFunction = extensions.getScalarFunction(
+      SimpleExtension.FunctionAnchor
+        .of(DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"))
+    val sortField = Expression.SortField
+      .builder()
+      .expr(sb.fieldReference(testsTable, 0))
+      .comparisonFunction(comparisonFunction)
+      .build()
+    val baseMeasure = sb.sum(testsTable, 6) // sum of test_mileage
+    val sortedFunction = AggregateFunctionInvocation
+      .builder()
+      .from(baseMeasure.getFunction)
+      .addSort(sortField)
+      .build()
+    val aggregate = Aggregate
+      .builder()
+      .input(testsTable)
+      .addGroupings(Aggregate.Grouping.builder().build())
+      .addMeasures(Aggregate.Measure.builder().function(sortedFunction).build())
+      .build()
+
+    intercept[UnsupportedOperationException] {
+      new ToLogicalPlan(spark).visit(aggregate, EmptyVisitationContext.INSTANCE)
+    }
   }
 
   def assertRow(row: Row, fuelType: String, postcodeArea: String, totalTestMileage: Long): Unit = {

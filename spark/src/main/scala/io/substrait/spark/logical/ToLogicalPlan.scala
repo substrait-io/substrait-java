@@ -110,6 +110,11 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         throw new IllegalArgumentException(msg)
       })
 
+    if (function.sort().asScala.exists(!_.direction().isPresent)) {
+      throw new UnsupportedOperationException(
+        "A sort field using a custom comparison function is not supported")
+    }
+
     val filter = Option(measure.getPreMeasureFilter.orElse(null))
       .map(_.accept(expressionConverter, EmptyVisitationContext.INSTANCE))
 
