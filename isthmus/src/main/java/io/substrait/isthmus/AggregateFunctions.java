@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
@@ -247,7 +248,10 @@ public class AggregateFunctions {
 
     @Override
     public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-      return ReturnTypes.ARG0_FORCE_NULLABLE.inferReturnType(opBinding);
+      RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+      return typeFactory.createTypeWithNullability(
+          typeFactory.getTypeSystem().deriveSumType(typeFactory, opBinding.getOperandType(0)),
+          true);
     }
   }
 
@@ -259,13 +263,16 @@ public class AggregateFunctions {
 
     @Override
     public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-      return ReturnTypes.ARG0_FORCE_NULLABLE.inferReturnType(opBinding);
+      RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+      return typeFactory.createTypeWithNullability(
+          typeFactory.getTypeSystem().deriveAvgAggType(typeFactory, opBinding.getOperandType(0)),
+          true);
     }
   }
 
   /**
-   * Substrait variant of {@link SqlSumEmptyIsZeroAggFunction} that forces BIGINT return type and
-   * uses a user-friendly name.
+   * Substrait variant of {@link SqlSumEmptyIsZeroAggFunction} that returns the sum's type, never
+   * null, and uses a user-friendly name.
    */
   private static class SubstraitSumEmptyIsZeroAggFunction
       extends org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction {
@@ -281,7 +288,10 @@ public class AggregateFunctions {
 
     @Override
     public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-      return ReturnTypes.BIGINT.inferReturnType(opBinding);
+      RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+      return typeFactory.createTypeWithNullability(
+          typeFactory.getTypeSystem().deriveSumType(typeFactory, opBinding.getOperandType(0)),
+          false);
     }
   }
 
