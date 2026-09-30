@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 class OperandCoercionTest extends PlanTestBase {
 
   private static final String CREATES =
-      "CREATE TABLE t (d7 DECIMAL(7, 2) NOT NULL, d5 DECIMAL(5, 2) NOT NULL, "
-          + "i INT NOT NULL, c CHAR(10) NOT NULL)";
+      "CREATE TABLE t (d7 DECIMAL(7, 2) NOT NULL, i INT NOT NULL, c CHAR(10) NOT NULL, "
+          + "v VARCHAR NOT NULL, v10 VARCHAR(10) NOT NULL)";
 
   /** gte(any1, any1) binds any1 once, so decimals of two precisions both take the wider one. */
   @Test
@@ -37,7 +37,7 @@ class OperandCoercionTest extends PlanTestBase {
 
   /**
    * multiply(decimal<P1,S1>, decimal<P2,S2>) binds each operand's own precision, so an integer
-   * operand becomes the decimal that holds it, not the other operand's decimal.
+   * operand becomes the decimal that holds it, not the least restrictive decimal(12,2).
    */
   @Test
   void aDecimalTimesAnIntegerCastsTheIntegerToItsOwnDecimal() throws Exception {
@@ -81,11 +81,45 @@ class OperandCoercionTest extends PlanTestBase {
     assertEquals(2, bound.scale());
   }
 
-  private static Expression.ScalarFunctionInvocation call(String query) throws Exception {
+  /**
+   * concat:vchar declares one operand's length as its result, so two char(10) operands would come
+   * out as a varchar(10). The next variant, concat:str, takes them as strings.
+   */
+  @Test
+  void aConcatenationNeverBindsADeclarationThatTruncatesIt() throws Exception {
+    Expression.ScalarFunctionInvocation call = call("SELECT c || c FROM t");
+
+    assertEquals("concat:str", call.declaration().key());
+    assertEquals(List.of(R.STRING, R.STRING), argumentTypes(call));
+    assertBinds(call);
+  }
+
+  /**
+   * like:vchar_vchar does not bind an unbounded varchar, which is a string, so the next variant,
+   * like:str_str, is tried and binds once the pattern is a string too.
+   */
+  @Test
+  void aVariantThatDoesNotBindGivesWayToTheNextOne() throws Exception {
+    Expression.ScalarFunctionInvocation call = call("SELECT v LIKE 'a%' FROM t");
+
+    assertEquals("like:str_str", call.declaration().key());
+    assertEquals(List.of(R.STRING, R.STRING), argumentTypes(call));
+    assertBinds(call);
+  }
+
+  /** A declaration's concrete argument type is bound exactly: replace:str_str_str takes strings. */
+  @Test
+  void aConcretelyDeclaredStringTakesAString() throws Exception {
+    Expression.ScalarFunctionInvocation call = call("SELECT REPLACE(c, v10, v10) FROM t");
+
+    assertEquals("replace:str_str_str", call.declaration().key());
+    assertEquals(List.of(R.STRING, R.STRING, R.STRING), argumentTypes(call));
+  }
+
+  private Expression.ScalarFunctionInvocation call(String query) throws Exception {
     Plan plan =
-        new SqlToSubstrait()
-            .convert(
-                query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
+        toSubstraitPlan(
+            query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
     Expression expression = ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
     return assertInstanceOf(Expression.ScalarFunctionInvocation.class, expression);
   }
