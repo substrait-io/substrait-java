@@ -2,8 +2,10 @@ package io.substrait.isthmus.sql;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.util.SqlString;
 
 /**
@@ -48,6 +50,21 @@ public class SubstraitSqlDialect extends SqlDialect {
    */
   public SubstraitSqlDialect(Context context) {
     super(context);
+  }
+
+  /**
+   * Renders interval casts with their SQL qualifier rather than Calcite's internal type name.
+   *
+   * @param type the target type of the cast
+   * @return the interval qualifier, or the default cast specification for other types
+   */
+  @Override
+  public SqlNode getCastSpec(RelDataType type) {
+    if (type.getSqlTypeName().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME
+        || type.getSqlTypeName().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+      return type.getIntervalQualifier();
+    }
+    return super.getCastSpec(type);
   }
 
   /**

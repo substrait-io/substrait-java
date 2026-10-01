@@ -1,12 +1,15 @@
 package io.substrait.isthmus.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.math.LongMath;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
+import io.substrait.isthmus.SimpleExtensionToSqlOperator;
+import io.substrait.isthmus.SubstraitTypeSystem;
 import io.substrait.isthmus.TypeConverter;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -28,7 +31,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
  * Substrait {@link SimpleExtension.ScalarFunctionVariant} declarations.
  *
  * <p>Supports custom function mappers for special cases (e.g., TRIM, SQRT), and falls back to
- * default signature-based matching. Produces {@link Expression.ScalarFunctionInvocation}.
+ * default signature-based matching. Produces {@link Expression.ScalarFunctionInvocation},
+ * optionally wrapped in a cast to preserve Calcite's inferred result type for datetime calls.
  */
 public class ScalarFunctionConverter
     extends FunctionConverter<
@@ -159,13 +163,18 @@ public class ScalarFunctionConverter
   }
 
   /**
-   * Builds an {@link Expression.ScalarFunctionInvocation} for a matched function.
+   * Binds a matched function. Datetime calls carry the declaration's resolved type, with a cast
+   * back when Calcite inferred a different result type. Dynamically mapped placeholder types do not
+   * require a cast.
    *
    * @param call the wrapped Calcite call providing operands and type
    * @param function the Substrait scalar function declaration to invoke
    * @param arguments converted argument list for the invocation
-   * @param outputType the Substrait output type for the invocation
-   * @return a scalar function invocation expression
+   * @param outputType the Calcite call's result type converted to Substrait
+   * @return a scalar invocation, optionally wrapped in a cast to the inferred result type
+   * @throws UnsupportedOperationException for DATE arithmetic with a non-literal sub-day interval
+   * @throws IllegalArgumentException if the resolved timestamp precision is unsupported or a
+   *     widened datetime literal overflows
    */
   @Override
   protected Expression generateBinding(
@@ -193,8 +202,10 @@ public class ScalarFunctionConverter
     if (declared.isEmpty()) {
       return invocation(function, arguments, outputType);
     }
+    requireSupportedTimestampPrecision(declared.get());
     Expression invocation = invocation(function, bound, declared.get());
     return declared.get().equals(outputType)
+            || SimpleExtensionToSqlOperator.hasPlaceholderReturnType(call.delegate.getOperator())
         ? invocation
         : ExpressionCreator.cast(
             outputType, invocation, Expression.FailureBehavior.THROW_EXCEPTION);
@@ -257,7 +268,7 @@ public class ScalarFunctionConverter
     }
   }
 
-  private static List<FunctionArg> widenedToOnePrecision(List<? extends FunctionArg> arguments) {
+  private List<FunctionArg> widenedToOnePrecision(List<? extends FunctionArg> arguments) {
     int precision =
         arguments.stream()
             .filter(Expression.class::isInstance)
@@ -277,12 +288,62 @@ public class ScalarFunctionConverter
               if (own.isEmpty() || own.get() == precision) {
                 return argument;
               }
+              Type widened = withPrecision(type, precision);
+              requireSupportedTimestampPrecision(widened);
+              if (expression instanceof Expression.NullLiteral) {
+                return ExpressionCreator.typedNull(widened);
+              }
+              try {
+                long factor = LongMath.checkedPow(10, precision - own.get());
+                if (expression instanceof Expression.IntervalDayLiteral) {
+                  Expression.IntervalDayLiteral literal =
+                      (Expression.IntervalDayLiteral) expression;
+                  return ExpressionCreator.intervalDay(
+                      literal.nullable(),
+                      literal.days(),
+                      literal.seconds(),
+                      Math.multiplyExact(literal.subseconds(), factor),
+                      precision);
+                }
+                if (expression instanceof Expression.PrecisionTimestampLiteral) {
+                  Expression.PrecisionTimestampLiteral literal =
+                      (Expression.PrecisionTimestampLiteral) expression;
+                  return ExpressionCreator.precisionTimestamp(
+                      literal.nullable(), Math.multiplyExact(literal.value(), factor), precision);
+                }
+                if (expression instanceof Expression.PrecisionTimestampTZLiteral) {
+                  Expression.PrecisionTimestampTZLiteral literal =
+                      (Expression.PrecisionTimestampTZLiteral) expression;
+                  return ExpressionCreator.precisionTimestampTZ(
+                      literal.nullable(), Math.multiplyExact(literal.value(), factor), precision);
+                }
+              } catch (ArithmeticException e) {
+                throw new IllegalArgumentException(
+                    "Datetime literal cannot be represented at precision "
+                        + precision
+                        + " in a signed 64-bit value",
+                    e);
+              }
               return ExpressionCreator.cast(
-                  withPrecision(type, precision),
-                  expression,
-                  Expression.FailureBehavior.THROW_EXCEPTION);
+                  widened, expression, Expression.FailureBehavior.THROW_EXCEPTION);
             })
         .collect(Collectors.toList());
+  }
+
+  private void requireSupportedTimestampPrecision(Type type) {
+    if (type instanceof Type.PrecisionTimestamp) {
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(),
+          SqlTypeName.TIMESTAMP,
+          "precision_timestamp",
+          ((Type.PrecisionTimestamp) type).precision());
+    } else if (type instanceof Type.PrecisionTimestampTZ) {
+      SubstraitTypeSystem.requireSupportedPrecision(
+          typeFactory.getTypeSystem(),
+          SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+          "precision_timestamp_tz",
+          ((Type.PrecisionTimestampTZ) type).precision());
+    }
   }
 
   private static Optional<Integer> precisionOf(Type type) {

@@ -53,6 +53,19 @@ public final class SimpleExtensionToSqlOperator {
   private SimpleExtensionToSqlOperator() {}
 
   /**
+   * Identifies a dynamically mapped scalar operator whose parameterized result uses the first
+   * operand's type as a placeholder until the Substrait declaration is resolved.
+   *
+   * @param operator the Calcite operator to inspect
+   * @return whether its return type is a placeholder
+   */
+  public static boolean hasPlaceholderReturnType(SqlOperator operator) {
+    SqlReturnTypeInference inference = operator.getReturnTypeInference();
+    return inference instanceof ScalarReturnTypeInference
+        && !(((ScalarReturnTypeInference) inference).function.returnType() instanceof Type);
+  }
+
+  /**
    * Converts all functions in a Substrait {@link SimpleExtension.ExtensionCollection} (scalar,
    * aggregate, and window) into Calcite {@link SqlOperator}s using the default type factory.
    *
