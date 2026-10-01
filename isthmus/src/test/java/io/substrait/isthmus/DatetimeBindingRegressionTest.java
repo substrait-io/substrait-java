@@ -7,11 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Project;
+import io.substrait.type.Type;
+import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -32,6 +35,55 @@ class DatetimeBindingRegressionTest extends PlanTestBase {
 
   private static final String CREATES =
       "CREATE TABLE events (ts9 TIMESTAMP(9), ts3 TIMESTAMP(3), i INTEGER)";
+
+  @ParameterizedTest
+  @ValueSource(strings = {"add", "subtract"})
+  void nullableDatetimeCallOverRequiredLiteralsRoundTrips(String function) {
+    Expression.ScalarFunctionInvocation call =
+        sb.scalarFn(
+            DefaultExtensionCatalog.FUNCTIONS_DATETIME,
+            function + ":pts_iday",
+            N.precisionTimestamp(6),
+            ExpressionCreator.precisionTimestamp(false, 1_704_067_200_000_000L, 6),
+            ExpressionCreator.intervalDay(false, 5, 0, 0, 6));
+    assertFullRoundTrip(sb.project(input -> List.of(call), sb.emptyVirtualTableScan()));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "+, TIMESTAMP, false",
+    "-, TIMESTAMP, false",
+    "+, TIMESTAMP, true",
+    "-, TIMESTAMP, true",
+    "+, TIMESTAMP_WITH_LOCAL_TIME_ZONE, false",
+    "-, TIMESTAMP_WITH_LOCAL_TIME_ZONE, false",
+    "+, TIMESTAMP_WITH_LOCAL_TIME_ZONE, true",
+    "-, TIMESTAMP_WITH_LOCAL_TIME_ZONE, true"
+  })
+  void timestampZeroDayArithmeticWidensBeforeResolving(
+      String operator, SqlTypeName typeName, boolean nullable) throws Exception {
+    String inputType =
+        typeName == SqlTypeName.TIMESTAMP ? "TIMESTAMP(0)" : "TIMESTAMP(0) WITH LOCAL TIME ZONE";
+    String creates = "CREATE TABLE events (ts0 " + inputType + (nullable ? "" : " NOT NULL") + ")";
+    String query = "SELECT ts0 " + operator + " INTERVAL '5' DAY FROM events";
+    Expression.Cast result =
+        assertInstanceOf(Expression.Cast.class, firstExpression(query, creates));
+    Expression.ScalarFunctionInvocation call =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, result.input());
+    TypeCreator types = TypeCreator.of(nullable);
+    Type resultType =
+        typeName == SqlTypeName.TIMESTAMP
+            ? types.precisionTimestamp(0)
+            : types.precisionTimestampTZ(0);
+    Type widenedType =
+        typeName == SqlTypeName.TIMESTAMP
+            ? types.precisionTimestamp(6)
+            : types.precisionTimestampTZ(6);
+    assertEquals(resultType, result.getType());
+    assertEquals(widenedType, call.outputType());
+    assertEquals(widenedType, ((Expression) call.arguments().get(0)).getType());
+    assertFullRoundTrip(query, creates);
+  }
 
   @ParameterizedTest
   @ValueSource(strings = {"+", "-"})

@@ -4,9 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.substrait.expression.Expression;
-import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
-import io.substrait.plan.Plan;
-import io.substrait.relation.Project;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -51,7 +48,7 @@ class PrecisionTimestampDatetimeAdditionTest extends PlanTestBase {
     Expression.Cast cast =
         assertInstanceOf(
             Expression.Cast.class,
-            firstExpression("SELECT event_date + INTERVAL '5' DAY FROM events"));
+            firstExpression("SELECT event_date + INTERVAL '5' DAY FROM events", CREATES));
     assertEquals(N.DATE, cast.getType());
     Expression.ScalarFunctionInvocation addition =
         assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
@@ -221,13 +218,5 @@ class PrecisionTimestampDatetimeAdditionTest extends PlanTestBase {
             + "event_date + INTERVAL '2' MONTH "
             + "FROM events";
     assertFullRoundTrip(query, CREATES);
-  }
-
-  private static Expression firstExpression(String query) throws Exception {
-    Plan plan =
-        new SqlToSubstrait()
-            .convert(
-                query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
-    return ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
   }
 }

@@ -183,7 +183,7 @@ public class ScalarFunctionConverter
       List<? extends FunctionArg> arguments,
       Type outputType) {
     if (!DefaultExtensionCatalog.FUNCTIONS_DATETIME.equals(function.getAnchor().urn())) {
-      return invocation(function, arguments, outputType);
+      return ExpressionCreator.scalarFunction(function, outputType, arguments);
     }
     // The datetime extension declares its results by parameter, where Calcite keeps an operand's
     // own type: add(date, interval_day<P>) is a precision_timestamp<P> there and a DATE here. The
@@ -191,20 +191,21 @@ public class ScalarFunctionConverter
     // query gives it.
     List<? extends FunctionArg> bound =
         dateArithmeticArguments(call, function, arguments, outputType);
-    Optional<Type> declared = declaredType(function, bound);
-    if (declared.isEmpty() && !(function.returnType() instanceof Type)) {
-      // One parameter bound to two precisions, precision_timestamp<0> and interval_day<6> say.
-      // Only parameterized results need this retry. Comparisons return bool and keep their
-      // operand precisions; widening a timestamp also narrows its representable date range.
-      bound = widenedToOnePrecision(arguments);
-      declared = declaredType(function, bound);
+    if (!(function.returnType() instanceof Type)) {
+      // Precision-carrying arguments share one parameter in datetime declarations. Comparisons
+      // return bool and keep their operand precisions; widening also narrows a timestamp's range.
+      bound = widenedToOnePrecision(bound);
     }
+    Optional<Type> declared = declaredType(function, bound);
     if (declared.isEmpty()) {
-      return invocation(function, arguments, outputType);
+      return ExpressionCreator.scalarFunction(function, outputType, arguments);
     }
     requireSupportedTimestampPrecision(declared.get());
-    Expression invocation = invocation(function, bound, declared.get());
-    return declared.get().equals(outputType)
+    // Keep the call's nullability when its declared type otherwise matches.
+    boolean sameType = declared.get().equalsIgnoringNullability(outputType);
+    Expression invocation =
+        ExpressionCreator.scalarFunction(function, sameType ? outputType : declared.get(), bound);
+    return sameType
             || SimpleExtensionToSqlOperator.hasPlaceholderReturnType(call.delegate.getOperator())
         ? invocation
         : ExpressionCreator.cast(
@@ -241,17 +242,6 @@ public class ScalarFunctionConverter
         arguments.get(0),
         ExpressionCreator.intervalDay(
             literal.nullable(), literal.days(), 0, 0, literal.precision()));
-  }
-
-  private static Expression invocation(
-      SimpleExtension.ScalarFunctionVariant function,
-      List<? extends FunctionArg> arguments,
-      Type outputType) {
-    return Expression.ScalarFunctionInvocation.builder()
-        .outputType(outputType)
-        .declaration(function)
-        .addAllArguments(arguments)
-        .build();
   }
 
   private static Optional<Type> declaredType(
@@ -367,7 +357,10 @@ public class ScalarFunctionConverter
     if (type instanceof Type.PrecisionTimestampTZ) {
       return creator.precisionTimestampTZ(precision);
     }
-    return creator.intervalDay(precision);
+    if (type instanceof Type.IntervalDay) {
+      return creator.intervalDay(precision);
+    }
+    throw new IllegalArgumentException("Unsupported datetime type: " + type);
   }
 
   /**

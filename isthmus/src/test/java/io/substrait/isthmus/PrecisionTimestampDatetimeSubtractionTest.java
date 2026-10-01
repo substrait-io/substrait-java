@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Project;
 import java.util.List;
@@ -63,7 +62,7 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
     Expression.Cast cast =
         assertInstanceOf(
             Expression.Cast.class,
-            firstExpression("SELECT event_date - INTERVAL '5' DAY FROM events"));
+            firstExpression("SELECT event_date - INTERVAL '5' DAY FROM events", CREATES));
     assertEquals(N.DATE, cast.getType());
     Expression.ScalarFunctionInvocation subtraction =
         assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
@@ -81,7 +80,7 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
     Expression.Cast cast =
         assertInstanceOf(
             Expression.Cast.class,
-            firstExpression("SELECT event_timestamp - INTERVAL '5' DAY FROM events"));
+            firstExpression("SELECT event_timestamp - INTERVAL '5' DAY FROM events", CREATES));
     assertEquals(N.precisionTimestamp(3), cast.getType());
     Expression.ScalarFunctionInvocation subtraction =
         assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
@@ -277,13 +276,5 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
             + "event_date - INTERVAL '2' MONTH "
             + "FROM events";
     assertFullRoundTrip(query, CREATES);
-  }
-
-  private static Expression firstExpression(String query) throws Exception {
-    Plan plan =
-        new SqlToSubstrait()
-            .convert(
-                query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES));
-    return ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
   }
 }
