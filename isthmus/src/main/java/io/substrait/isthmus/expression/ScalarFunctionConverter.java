@@ -21,6 +21,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
  * Converts Calcite {@link RexCall} scalar functions to Substrait {@link Expression} using known
@@ -179,7 +180,8 @@ public class ScalarFunctionConverter
     // own type: add(date, interval_day<P>) is a precision_timestamp<P> there and a DATE here. The
     // call carries the declared type, and a cast back to Calcite's keeps the column the type the
     // query gives it.
-    List<? extends FunctionArg> bound = arguments;
+    List<? extends FunctionArg> bound =
+        dateArithmeticArguments(call, function, arguments, outputType);
     Optional<Type> declared = declaredType(function, bound);
     if (declared.isEmpty() && !(function.returnType() instanceof Type)) {
       // One parameter bound to two precisions, precision_timestamp<0> and interval_day<6> say.
@@ -196,6 +198,38 @@ public class ScalarFunctionConverter
         ? invocation
         : ExpressionCreator.cast(
             outputType, invocation, Expression.FailureBehavior.THROW_EXCEPTION);
+  }
+
+  private static List<? extends FunctionArg> dateArithmeticArguments(
+      WrappedScalarCall call,
+      SimpleExtension.ScalarFunctionVariant function,
+      List<? extends FunctionArg> arguments,
+      Type outputType) {
+    // A Substrait-origin call carries a timestamp result and must keep its sub-day interval.
+    if (!(outputType instanceof Type.Date)
+        || !("add:date_iday".equals(function.key())
+            || "subtract:date_iday".equals(function.key()))) {
+      return arguments;
+    }
+    RexNode intervalOperand = call.getOperands().skip(1).findFirst().orElseThrow();
+    if (intervalOperand.getType().getSqlTypeName() == SqlTypeName.INTERVAL_DAY) {
+      return arguments;
+    }
+    FunctionArg interval = arguments.get(1);
+    if (interval instanceof Expression.NullLiteral) {
+      return arguments;
+    }
+    if (!(interval instanceof Expression.IntervalDayLiteral)) {
+      throw new UnsupportedOperationException(
+          "DATE arithmetic with a non-literal sub-day interval is not supported");
+    }
+    // LiteralConverter decomposes the total duration towards zero. Keeping only its days makes
+    // the timestamp call followed by a DATE cast agree with Calcite's DATE arithmetic.
+    Expression.IntervalDayLiteral literal = (Expression.IntervalDayLiteral) interval;
+    return List.of(
+        arguments.get(0),
+        ExpressionCreator.intervalDay(
+            literal.nullable(), literal.days(), 0, 0, literal.precision()));
   }
 
   private static Expression invocation(
