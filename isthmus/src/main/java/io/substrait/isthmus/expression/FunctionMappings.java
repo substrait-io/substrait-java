@@ -71,6 +71,21 @@ public class FunctionMappings {
           OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER));
 
   /**
+   * The {@code REVERSE(string)} function. Calcite's own is {@link SqlLibraryOperators#REVERSE},
+   * whose {@code ARG0_NULLABLE_VARYING} return widens a {@code CHAR} to {@code VARCHAR}, where the
+   * Substrait declaration says {@code fixedchar<L1>}. Its name also collides with the Spark library
+   * operator Calcite likewise calls {@code REVERSE}, which leaves neither candidate reachable once
+   * both libraries are enabled. Isthmus defines its own to keep the declared return and the name.
+   *
+   * <p>Calcite's Enumerable convention cannot execute this operator because it has no {@code
+   * RexImpTable} implementor, unlike the library operator it replaces. It is used to preserve
+   * conversion semantics and operator identity.
+   */
+  public static final SqlFunction REVERSE =
+      SqlBasicFunction.create(
+          "REVERSE", ReturnTypes.ARG0_NULLABLE, OperandTypes.CHARACTER, SqlFunctionCategory.STRING);
+
+  /**
    * The Substrait datetime subtraction function.
    *
    * <p>Calcite's datetime subtraction operators either infer their return type from a third
@@ -132,6 +147,8 @@ public class FunctionMappings {
               s(SqlStdOperatorTable.CHAR_LENGTH, "char_length"),
               s(SqlStdOperatorTable.LOWER, "lower"),
               s(SqlStdOperatorTable.UPPER, "upper"),
+              s(SqlStdOperatorTable.INITCAP, "initcap"),
+              s(REVERSE, "reverse"),
               s(SqlStdOperatorTable.BETWEEN),
               s(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "is_not_distinct_from"),
               s(SqlStdOperatorTable.COALESCE, "coalesce"),
@@ -250,9 +267,8 @@ public class FunctionMappings {
         && intervalType.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
       // The spec declares subtract(date, interval_day<P>) -> precision_timestamp<P> (spec
       // v0.101.0), and the interval operand carries P as its fractional-second scale. The result
-      // is capped at the timestamp maximum, which is lower than the interval one, so an
-      // interval_day<9> still yields precision_timestamp<6> until the Substrait->Calcite
-      // conversion accepts a precision_timestamp above 6.
+      // is capped at the timestamp maximum, which now agrees with the interval one at 9, so an
+      // interval_day<9> yields precision_timestamp<9> as the spec declares.
       int precision =
           Math.max(
               0,

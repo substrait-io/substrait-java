@@ -954,12 +954,7 @@ public class ProtoRelConverter {
             .input(input)
             .sortFields(
                 rel.getSortsList().stream()
-                    .map(
-                        field ->
-                            Expression.SortField.builder()
-                                .direction(Expression.SortDirection.fromProto(field.getDirection()))
-                                .expr(converter.from(field.getExpr()))
-                                .build())
+                    .map(converter::fromSortField)
                     .collect(java.util.stream.Collectors.toList()));
 
     if (rel.hasAdvancedExtension()) {

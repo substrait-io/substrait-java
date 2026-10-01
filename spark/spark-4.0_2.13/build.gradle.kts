@@ -150,6 +150,9 @@ tasks.register<JavaExec>("dialect") {
   classpath = java.sourceSets["main"].runtimeClasspath
   mainClass = "io.substrait.spark.utils.DialectGenerator"
   args = listOf("../spark_dialect.yaml")
+  // Declared so the task gets up-to-date checking, and so Gradle can see that the test tasks
+  // reading this file consume what this task produces.
+  outputs.file("../spark_dialect.yaml")
 }
 
 tasks {
@@ -162,6 +165,19 @@ tasks {
 
   test {
     useJUnitPlatform { includeEngines("scalatest") }
+
+    // DialectSuite reads the published dialect, so a change to it has to invalidate the tests.
+    // Only the content matters, so ignore the path and keep the task cacheable across checkouts.
+    inputs
+      .file("../spark_dialect.yaml")
+      .withPropertyName("publishedDialect")
+      .withPathSensitivity(PathSensitivity.NONE)
+
+    // The dialect task rewrites that same file, and Gradle infers no ordering from the input and
+    // output declarations -- it reports the overlap as a validation failure instead. Without this,
+    // `./gradlew test dialect` validates the pre-regeneration content. The task is registered on
+    // the 4.0 variant only, so every variant has to name it by path.
+    mustRunAfter(":spark:spark-4.0_2.13:dialect")
 
     // Set system properties for variant identification
     systemProperty("spark.version", sparkVersion)

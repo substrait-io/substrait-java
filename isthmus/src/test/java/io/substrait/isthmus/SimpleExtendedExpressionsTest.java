@@ -5,10 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.extendedexpression.ProtoExtendedExpressionConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
+import io.substrait.proto.Expression;
 import io.substrait.proto.Expression.RexTypeCase;
 import io.substrait.proto.ExtendedExpression;
+import io.substrait.type.TypeCreator;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
@@ -19,6 +24,100 @@ import org.junit.jupiter.params.provider.MethodSource;
 class SimpleExtendedExpressionsTest extends ExtendedExpressionTestBase {
 
   private static final String MARKER = "provider hook reached";
+
+  private static final String TABLE_A = "CREATE TABLE A (A1 BIGINT, A2 BIGINT, A3 BIGINT)";
+  private static final String TABLE_B = "CREATE TABLE B (B1 BIGINT, B2 VARCHAR(5))";
+  private static final String TABLE_C = "CREATE TABLE C (C1 BIGINT)";
+
+  private static Stream<Arguments> columnSchemaProvider() {
+    return Stream.of(
+        Arguments.of(List.of(TABLE_A), List.of("A1", "A2", "A3")),
+        Arguments.of(
+            List.of(TABLE_A, TABLE_B, TABLE_C), List.of("A1", "A2", "A3", "B1", "B2", "C1")),
+        Arguments.of(
+            List.of(TABLE_A + ";" + TABLE_B + ";" + TABLE_C),
+            List.of("A1", "A2", "A3", "B1", "B2", "C1")),
+        Arguments.of(
+            List.of(TABLE_B, TABLE_C, TABLE_A), List.of("B1", "B2", "C1", "A1", "A2", "A3")));
+  }
+
+  @ParameterizedTest
+  @MethodSource("columnSchemaProvider")
+  void fieldReferencesIndexTheCombinedSchema(List<String> tables, List<String> columnNames)
+      throws SqlParseException {
+    // Reverse the expression order so a reference's index cannot accidentally be its position
+    // in the output expression list.
+    String[] expressions = new String[columnNames.size()];
+    for (int index = 0; index < expressions.length; index++) {
+      expressions[index] = columnNames.get(columnNames.size() - index - 1);
+    }
+    ExtendedExpression converted = new SqlExpressionToSubstrait().convert(expressions, tables);
+
+    assertEquals(columnNames, converted.getBaseSchema().getNamesList());
+    assertEquals(columnNames.size(), converted.getBaseSchema().getStruct().getTypesCount());
+    assertEquals(expressions.length, converted.getReferredExprCount());
+    for (int index = 0; index < expressions.length; index++) {
+      assertEquals(
+          columnNames.indexOf(expressions[index]),
+          selectedField(converted.getReferredExpr(index).getExpression(), expressions[index]),
+          expressions[index]);
+    }
+  }
+
+  @Test
+  void functionArgumentsIndexTheCombinedSchema() throws SqlParseException {
+    ExtendedExpression converted =
+        new SqlExpressionToSubstrait()
+            .convert(new String[] {"A1 = B1", "B1 + A3"}, List.of(TABLE_A, TABLE_B));
+
+    Expression.ScalarFunction filter =
+        converted.getReferredExpr(0).getExpression().getScalarFunction();
+    assertEquals(0, selectedField(filter.getArguments(0).getValue(), "A1"));
+    assertEquals(3, selectedField(filter.getArguments(1).getValue(), "B1"));
+    Expression.ScalarFunction projection =
+        converted.getReferredExpr(1).getExpression().getScalarFunction();
+    assertEquals(3, selectedField(projection.getArguments(0).getValue(), "B1"));
+    assertEquals(2, selectedField(projection.getArguments(1).getValue(), "A3"));
+  }
+
+  @Test
+  void eachConversionBuildsItsOwnColumnIndices() throws SqlParseException {
+    SqlExpressionToSubstrait converter = new SqlExpressionToSubstrait();
+    ExtendedExpression multipleTables = converter.convert("B2", List.of(TABLE_A, TABLE_B));
+    ExtendedExpression singleTable = converter.convert("B2", List.of(TABLE_B));
+
+    assertEquals(4, selectedField(multipleTables.getReferredExpr(0).getExpression(), "B2"));
+    assertEquals(1, selectedField(singleTable.getReferredExpr(0).getExpression(), "B2"));
+  }
+
+  @Test
+  void referencesReadTheirColumnTypeBackFromTheCombinedSchema() throws SqlParseException {
+    // Reading the proto back re-derives each reference's type from base_schema, so a reference
+    // indexed against its own table would come back as A2's I64 rather than B2's VARCHAR(5).
+    ExtendedExpression converted =
+        new SqlExpressionToSubstrait()
+            .convert(new String[] {"B2", "A3"}, List.of(TABLE_A, TABLE_B));
+    io.substrait.extendedexpression.ExtendedExpression roundTripped =
+        new ProtoExtendedExpressionConverter().from(converted);
+
+    assertEquals(
+        List.of(TypeCreator.NULLABLE.varChar(5), TypeCreator.NULLABLE.I64),
+        roundTripped.getReferredExpressions().stream()
+            .map(
+                reference ->
+                    ((io.substrait.extendedexpression.ExtendedExpression.ExpressionReference)
+                            reference)
+                        .getExpression()
+                        .getType())
+            .collect(Collectors.toList()));
+  }
+
+  private static int selectedField(Expression expression, String column) {
+    assertEquals(RexTypeCase.SELECTION, expression.getRexTypeCase(), column);
+    assertTrue(expression.getSelection().hasRootReference(), column);
+    assertTrue(expression.getSelection().getDirectReference().hasStructField(), column);
+    return expression.getSelection().getDirectReference().getStructField().getField();
+  }
 
   private static Stream<Arguments> expressionTypeProvider() {
     return Stream.of(

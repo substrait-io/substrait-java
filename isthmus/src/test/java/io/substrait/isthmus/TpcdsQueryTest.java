@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import io.substrait.plan.Plan;
 import java.io.IOException;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,8 +11,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** TPC-DS test to convert SQL to Substrait and then convert those plans back to SQL. */
 class TpcdsQueryTest extends PlanTestBase {
-  private static final Set<Integer> alternateForms = Set.of(27, 36, 70, 86);
-
   static IntStream testCases() {
     return IntStream.rangeClosed(1, 99);
   }
@@ -34,10 +31,6 @@ class TpcdsQueryTest extends PlanTestBase {
   }
 
   private String inputSqlFile(int query) {
-    if (alternateForms.contains(query)) {
-      return String.format("tpcds/queries/%02da.sql", query);
-    }
-
     return String.format("tpcds/queries/%02d.sql", query);
   }
 

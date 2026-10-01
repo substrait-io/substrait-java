@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.Resources;
 import io.substrait.expression.FunctionOption;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -65,6 +66,29 @@ class FunctionBindingResolverTest {
             sum, List.of(ResolvedArgument.value(R.I32)), List.of(), N.I64);
     assertEquals(N.I64, binding.outputType());
     assertEquals(sum.getAnchor(), binding.anchor());
+  }
+
+  @Test
+  void decimalDivisionDerivesIndependentlyOfTheDeclaredOutputType() {
+    SimpleExtension.ScalarFunctionVariant divide =
+        scalar(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "divide:dec_dec");
+    List<ResolvedArgument> arguments =
+        List.of(ResolvedArgument.value(R.decimal(10, 2)), ResolvedArgument.value(R.decimal(5, 1)));
+    assertEquals(R.decimal(21, 8), FunctionBindingResolver.deriveOutputType(divide, arguments));
+    assertEquals(
+        R.decimal(21, 8),
+        FunctionBindingResolver.resolveAndValidate(divide, arguments, List.of(), R.decimal(21, 8))
+            .outputType());
+
+    for (Type declared : List.of(R.decimal(20, 2), R.decimal(21, 7), N.decimal(21, 8))) {
+      InvalidFunctionBindingException error =
+          assertThrows(
+              InvalidFunctionBindingException.class,
+              () ->
+                  FunctionBindingResolver.resolveAndValidate(
+                      divide, arguments, List.of(), declared));
+      assertTrue(error.getMessage().contains("output type"), error.getMessage());
+    }
   }
 
   @Test
@@ -405,10 +429,17 @@ class FunctionBindingResolverTest {
   }
 
   @Test
-  void failsClosedOnANestedShapeItCannotCheck() {
+  void checksNestedShapeAndNullability() {
     SimpleExtension.ScalarFunctionVariant listPair = testScalar("list_pair:list_list");
-    // A declared list<any1> against a non-list actual used to be accepted silently; a strict
-    // validator must reject a shape it cannot check rather than pass it.
+    assertDoesNotThrow(
+        () ->
+            FunctionBindingResolver.resolveAndValidate(
+                listPair,
+                List.of(
+                    ResolvedArgument.value(R.list(N.I32)), ResolvedArgument.value(R.list(N.I32))),
+                List.of(),
+                R.BOOLEAN));
+    // The container shape must match before its element can bind.
     assertThrows(
         InvalidFunctionBindingException.class,
         () ->
@@ -417,8 +448,7 @@ class FunctionBindingResolverTest {
                 List.of(ResolvedArgument.value(R.I32), ResolvedArgument.value(R.I32)),
                 List.of(),
                 R.BOOLEAN));
-    // list<i32> vs list<i32?> must not bind either: nested nullability is part of the structural
-    // match, which is exactly the check this validator cannot do yet — so it fails closed here too.
+    // Inner nullability is part of the shared wildcard binding.
     assertThrows(
         InvalidFunctionBindingException.class,
         () ->

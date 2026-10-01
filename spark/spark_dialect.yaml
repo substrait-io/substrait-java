@@ -1,5 +1,18 @@
 ---
 name: "Spark Dialect"
+dependencies:
+  aggregate_approx: "extension:io.substrait:functions_aggregate_approx"
+  aggregate_generic: "extension:io.substrait:functions_aggregate_generic"
+  arithmetic: "extension:io.substrait:functions_arithmetic"
+  arithmetic_decimal: "extension:io.substrait:functions_arithmetic_decimal"
+  boolean: "extension:io.substrait:functions_boolean"
+  comparison: "extension:io.substrait:functions_comparison"
+  datetime: "extension:io.substrait:functions_datetime"
+  logarithmic: "extension:io.substrait:functions_logarithmic"
+  rounding: "extension:io.substrait:functions_rounding"
+  rounding_decimal: "extension:io.substrait:functions_rounding_decimal"
+  spark: "extension:substrait:spark"
+  string: "extension:io.substrait:functions_string"
 supported_types:
 - type: "I8"
   system_metadata:
@@ -54,20 +67,20 @@ supported_types:
     name: "BooleanType"
     supported_as_column: true
 - type: "PRECISION_TIMESTAMP"
+  max_precision: 6
   system_metadata:
     name: "TimestampNTZType"
     supported_as_column: true
-  max_precision: 6
 - type: "PRECISION_TIMESTAMP_TZ"
+  max_precision: 6
   system_metadata:
     name: "TimestampType"
     supported_as_column: true
-  max_precision: 6
 - type: "INTERVAL_DAY"
+  max_precision: 6
   system_metadata:
     name: "DayTimeIntervalType"
     supported_as_column: true
-  max_precision: 6
 - type: "INTERVAL_YEAR"
   system_metadata:
     name: "YearMonthIntervalType"
@@ -84,17 +97,6 @@ supported_types:
   system_metadata:
     name: "StructType"
     supported_as_column: true
-supported_expressions:
-- "LITERAL"
-- "SELECTION"
-- "SCALAR_FUNCTION"
-- "IF_THEN"
-- "SINGULAR_OR_LIST"
-- "CAST"
-- expression: "SUBQUERY"
-  subquery_types:
-  - "SCALAR"
-  - "IN_PREDICATE"
 supported_relations:
 - "FILTER"
 - "FETCH"
@@ -125,19 +127,17 @@ supported_relations:
 - relation: "SET"
   operations:
   - "UNION_ALL"
-dependencies:
-  rounding: "extension:io.substrait:functions_rounding"
-  comparison: "extension:io.substrait:functions_comparison"
-  logarithmic: "extension:io.substrait:functions_logarithmic"
-  datetime: "extension:io.substrait:functions_datetime"
-  arithmetic: "extension:io.substrait:functions_arithmetic"
-  aggregate_generic: "extension:io.substrait:functions_aggregate_generic"
-  boolean: "extension:io.substrait:functions_boolean"
-  aggregate_approx: "extension:io.substrait:functions_aggregate_approx"
-  rounding_decimal: "extension:io.substrait:functions_rounding_decimal"
-  string: "extension:io.substrait:functions_string"
-  spark: "extension:substrait:spark"
-  arithmetic_decimal: "extension:io.substrait:functions_arithmetic_decimal"
+supported_expressions:
+- "LITERAL"
+- "SELECTION"
+- "SCALAR_FUNCTION"
+- "IF_THEN"
+- "SINGULAR_OR_LIST"
+- "CAST"
+- expression: "SUBQUERY"
+  subquery_types:
+  - "SCALAR"
+  - "IN_PREDICATE"
 supported_scalar_functions:
 - source: "arithmetic"
   name: "abs"

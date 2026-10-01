@@ -1,5 +1,7 @@
 package io.substrait.type;
 
+import java.util.function.Supplier;
+
 /**
  * Visitor over the concrete {@link Type} kinds.
  *
@@ -259,7 +261,7 @@ public interface TypeVisitor<R, E extends Throwable> {
    */
   abstract class TypeThrowsVisitor<R, E extends Throwable> implements TypeVisitor<R, E> {
 
-    private final String unsupportedMessage;
+    private final Supplier<String> unsupportedMessage;
 
     /**
      * Creates a visitor that throws with the given message for unsupported types.
@@ -267,6 +269,16 @@ public interface TypeVisitor<R, E extends Throwable> {
      * @param unsupportedMessage the message used for unsupported types
      */
     protected TypeThrowsVisitor(String unsupportedMessage) {
+      this(() -> unsupportedMessage);
+    }
+
+    /**
+     * Creates a visitor that builds its message only when it throws, for a message that is costly
+     * to render and a visitor that usually succeeds.
+     *
+     * @param unsupportedMessage supplies the message used for unsupported types
+     */
+    protected TypeThrowsVisitor(Supplier<String> unsupportedMessage) {
       this.unsupportedMessage = unsupportedMessage;
     }
 
@@ -276,7 +288,7 @@ public interface TypeVisitor<R, E extends Throwable> {
      * @return never returns; always throws
      */
     protected final UnsupportedOperationException t() {
-      throw new UnsupportedOperationException(unsupportedMessage);
+      throw new UnsupportedOperationException(unsupportedMessage.get());
     }
 
     @Override

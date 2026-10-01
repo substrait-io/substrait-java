@@ -32,14 +32,12 @@ public final class AggregateConversion {
      *
      * <p>Type derivation is fail-closed: a function whose return expression the derivation does not
      * yet support is rejected rather than assumed valid, so this mode is not adoptable for plans
-     * that use such functions. On the standard extension catalog the unsupported shapes are the
-     * parameterized type classes other than decimal — {@code varchar<L1>}, {@code fixedchar<L1>},
-     * {@code precision_time<P>}, {@code precision_timestamp<P>}, {@code precision_timestamp_tz<P>},
-     * {@code interval_day<P>}, {@code list<anyN>}, parameterized structs — and multi-line return
-     * programs; for example {@code concat}, {@code concat_ws}, {@code assume_timezone} and the
-     * {@code strptime_*} family are rejected today. {@code quantile}'s output type cannot be
-     * derived at all: its declared return {@code LIST?<any>} uses a plain {@code any}, which
-     * carries no identity to bind (spec v0.99.0).
+     * that use such functions. Among the standard aggregates that means {@code quantile}, whose
+     * declared return {@code LIST?<any>} uses a plain {@code any} carrying no identity to bind.
+     * {@code avg} over a decimal is rejected too, in every phase that consumes the intermediate
+     * state, an unspecified phase among them: its intermediate {@code STRUCT<DECIMAL<38,S>,i64>}
+     * derives from the initial arguments, but such a phase binds it from the state it receives, and
+     * a struct cannot bind the declared {@code DECIMAL<P,S>} argument.
      */
     EXTENSION_DECLARATION
   }

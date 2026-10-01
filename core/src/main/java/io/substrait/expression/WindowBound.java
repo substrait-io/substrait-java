@@ -1,5 +1,6 @@
 package io.substrait.expression;
 
+import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
 
@@ -59,6 +60,60 @@ public interface WindowBound {
       throw new IllegalArgumentException(
           "bounds_type is required when either window bound is CurrentRow, Preceding, or"
               + " Following, but was BOUNDS_TYPE_UNSPECIFIED");
+    }
+  }
+
+  /**
+   * Validates a RANGE window's ordering against its bounds, per the spec's rule that a RANGE frame
+   * with a {@link Preceding} or {@link Following} bound must have exactly one ordering expression,
+   * which must not use {@code SORT_DIRECTION_CLUSTERED} or a custom comparison function.
+   *
+   * @param boundsType the window's bounds type
+   * @param lowerBound the window's lower bound
+   * @param upperBound the window's upper bound
+   * @param sorts the window's ordering expressions
+   * @param function identifies the window function being validated, for the exception message
+   * @throws IllegalArgumentException if {@code boundsType} is {@code RANGE} and either bound is
+   *     {@link Preceding} or {@link Following}, and {@code sorts} does not hold exactly one
+   *     ordering expression whose direction is not {@code SORT_DIRECTION_CLUSTERED} and which does
+   *     not use a custom comparison function
+   */
+  static void checkRangeOrdering(
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      List<Expression.SortField> sorts,
+      String function) {
+    boolean needsSingleOrdering =
+        boundsType == Expression.WindowBoundsType.RANGE
+            && (lowerBound instanceof Preceding
+                || lowerBound instanceof Following
+                || upperBound instanceof Preceding
+                || upperBound instanceof Following);
+    if (!needsSingleOrdering) {
+      return;
+    }
+    if (sorts.size() != 1) {
+      throw new IllegalArgumentException(
+          function
+              + ": a RANGE bound with a Preceding or Following side requires exactly one ordering"
+              + " expression, but found "
+              + sorts.size());
+    }
+    Expression.SortField sort = sorts.get(0);
+    if (sort.direction()
+        .filter(direction -> direction == Expression.SortDirection.CLUSTERED)
+        .isPresent()) {
+      throw new IllegalArgumentException(
+          function
+              + ": a RANGE bound with a Preceding or Following side cannot use"
+              + " SORT_DIRECTION_CLUSTERED for its ordering expression");
+    }
+    if (sort.comparisonFunction().isPresent()) {
+      throw new IllegalArgumentException(
+          function
+              + ": a RANGE bound with a Preceding or Following side cannot use a custom"
+              + " comparison function for its ordering expression");
     }
   }
 
@@ -123,9 +178,8 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Preceding} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
-     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
-     * {@link #of(Expression)} there.
+     * Creates a {@link Preceding} bound from a literal {@code i64} row offset. Valid for ROWS, or
+     * for RANGE over an {@code i64} ordering expression; use {@link #of(Expression)} otherwise.
      *
      * @param offset the row offset preceding the current row
      * @return the preceding bound
@@ -161,9 +215,8 @@ public interface WindowBound {
     public abstract Expression offset();
 
     /**
-     * Creates a {@link Following} bound from a literal row offset. For {@code BOUNDS_TYPE_ROWS}
-     * only: a RANGE bound's offset must be type-compatible with the ordering expression, so use
-     * {@link #of(Expression)} there.
+     * Creates a {@link Following} bound from a literal {@code i64} row offset. Valid for ROWS, or
+     * for RANGE over an {@code i64} ordering expression; use {@link #of(Expression)} otherwise.
      *
      * @param offset the row offset following the current row
      * @return the following bound

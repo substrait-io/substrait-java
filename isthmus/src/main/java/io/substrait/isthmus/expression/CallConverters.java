@@ -154,8 +154,8 @@ public class CallConverters {
    * that: it builds a deliberately non-nullable ROW, keeping the user-defined type's own
    * nullability in the REINTERPRET target type, and so still arrives here as a StructLiteral.
    *
-   * <p>Each literal's nullability is set to match its field type's nullability. Note that Calcite
-   * makes every field of a nullable record type nullable, so a nullable ROW widens its fields.
+   * <p>Each literal's nullability is set to match its field type's nullability, which the ROW's
+   * type records field by field, whatever the ROW's own nullability is.
    */
   public static final SimpleCallConverter ROW =
       (call, visitor) -> {

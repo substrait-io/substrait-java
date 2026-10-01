@@ -1990,7 +1990,9 @@ public class SubstraitBuilder {
   }
 
   /**
-   * Creates a window function invocation with specified arguments and window bounds.
+   * Creates a window function invocation with specified arguments and window bounds. Supplies no
+   * ordering expressions, so a RANGE bound with a Preceding or Following side is rejected outright;
+   * use the {@code sort}-carrying overload for that.
    *
    * @param urn the URN of the extension containing the function
    * @param key the function key (name and signature)
@@ -2013,6 +2015,46 @@ public class SubstraitBuilder {
       WindowBound lowerBound,
       WindowBound upperBound,
       Expression... args) {
+    return windowFn(
+        urn,
+        key,
+        outputType,
+        aggregationPhase,
+        invocation,
+        Collections.emptyList(),
+        boundsType,
+        lowerBound,
+        upperBound,
+        args);
+  }
+
+  /**
+   * Creates a window function invocation with specified arguments, window bounds, and ordering.
+   *
+   * @param urn the URN of the extension containing the function
+   * @param key the function key (name and signature)
+   * @param outputType the output type of the function
+   * @param aggregationPhase the aggregation phase
+   * @param invocation the aggregation invocation mode
+   * @param sort the ordering expressions for the window, required by a RANGE bound with a Preceding
+   *     or Following side
+   * @param boundsType the type of window bounds
+   * @param lowerBound the lower bound of the window
+   * @param upperBound the upper bound of the window
+   * @param args the arguments to pass to the function
+   * @return a new {@link Expression.WindowFunctionInvocation}
+   */
+  public Expression.WindowFunctionInvocation windowFn(
+      String urn,
+      String key,
+      Type outputType,
+      Expression.AggregationPhase aggregationPhase,
+      Expression.AggregationInvocation invocation,
+      List<Expression.SortField> sort,
+      Expression.WindowBoundsType boundsType,
+      WindowBound lowerBound,
+      WindowBound upperBound,
+      Expression... args) {
     SimpleExtension.WindowFunctionVariant declaration =
         extensions.getWindowFunction(SimpleExtension.FunctionAnchor.of(urn, key));
     return Expression.WindowFunctionInvocation.builder()
@@ -2020,6 +2062,7 @@ public class SubstraitBuilder {
         .outputType(outputType)
         .aggregationPhase(aggregationPhase)
         .invocation(invocation)
+        .sort(sort)
         .boundsType(boundsType)
         .lowerBound(lowerBound)
         .upperBound(upperBound)

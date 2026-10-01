@@ -1,5 +1,7 @@
 package io.substrait.function;
 
+import java.util.function.Supplier;
+
 /**
  * Visitor over the concrete {@link TypeExpression} kinds, extending {@link
  * ParameterizedTypeVisitor} with the derivation-expression variants.
@@ -188,6 +190,15 @@ public interface TypeExpressionVisitor<R, E extends Throwable>
      * @param unsupportedMessage the message used for unsupported expressions
      */
     protected TypeExpressionThrowsVisitor(String unsupportedMessage) {
+      super(unsupportedMessage);
+    }
+
+    /**
+     * Creates a visitor that builds its message only when it throws.
+     *
+     * @param unsupportedMessage supplies the message used for unsupported expressions
+     */
+    protected TypeExpressionThrowsVisitor(Supplier<String> unsupportedMessage) {
       super(unsupportedMessage);
     }
 

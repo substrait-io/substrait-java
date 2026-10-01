@@ -308,7 +308,13 @@ class OuterReferenceConverterTest extends TestBase {
                                         .declaration(declaration)
                                         .arguments(List.of(sb.fieldReference(input2, 0)))
                                         .partitionBy(Collections.emptyList())
-                                        .sort(Collections.emptyList())
+                                        .sort(
+                                            List.of(
+                                                Expression.SortField.builder()
+                                                    .expr(sb.fieldReference(input2, 0))
+                                                    .direction(
+                                                        Expression.SortDirection.ASC_NULLS_FIRST)
+                                                    .build()))
                                         .outputType(TypeCreator.NULLABLE.I64)
                                         .aggregationPhase(
                                             Expression.AggregationPhase.INITIAL_TO_RESULT)

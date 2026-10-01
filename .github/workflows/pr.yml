@@ -53,7 +53,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
       - name: Scan
+        id: scan
         run: make scan-${{ matrix.project }}
+        env:
+          OSV_SCANNER_ARGS: --format=markdown --output-file=osv-scanner.md
+      - name: Report failure
+        if: ${{ failure() && steps.scan.conclusion == 'failure' }}
+        run: |
+          cat osv-scanner.md >> ${GITHUB_STEP_SUMMARY}
   java:
     name: Build and Test Java
     runs-on: ubuntu-latest

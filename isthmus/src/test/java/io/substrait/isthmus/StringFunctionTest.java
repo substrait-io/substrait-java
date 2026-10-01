@@ -8,6 +8,7 @@ import io.substrait.expression.Expression.FixedCharLiteral;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
 import io.substrait.relation.Project;
+import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -50,6 +51,59 @@ final class StringFunctionTest extends PlanTestBase {
   void upper(String column) throws Exception {
     String query = String.format("SELECT upper(%s) FROM strings", column);
     assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32", "vc"})
+  void initcap(String column) throws Exception {
+    String query = String.format("SELECT initcap(%s) FROM strings", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"c16", "vc32", "vc"})
+  void reverse(String column) throws Exception {
+    String query = String.format("SELECT reverse(%s) FROM strings", column);
+    assertFullRoundTrip(query, CREATES);
+  }
+
+  /**
+   * Isthmus binds its own {@code REVERSE} rather than Calcite's, whose {@code
+   * ARG0_NULLABLE_VARYING} return widens a {@code CHAR} to {@code VARCHAR}. A round trip cannot see
+   * that: both directions carry the recorded {@code output_type} verbatim, so a call declaring
+   * {@code varchar<16>} for a {@code fixedchar<16>} operand round-trips green.
+   */
+  @Test
+  void reverseKeepsTheDeclaredReturnOfAFixedCharOperand() throws Exception {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES);
+
+    Plan plan = new SqlToSubstrait().convert("SELECT reverse(c16) FROM strings", catalog);
+
+    Project project = (Project) plan.getRoots().get(0).getInput();
+    Expression.ScalarFunctionInvocation reverse =
+        (Expression.ScalarFunctionInvocation) project.getExpressions().get(0);
+    assertEquals("reverse:fchar", reverse.declaration().key());
+    assertEquals(TypeCreator.NULLABLE.fixedChar(16), reverse.outputType());
+  }
+
+  /**
+   * Calcite names the Spark library's operator {@code REVERSE} as well, so with both libraries
+   * enabled a lookup by that name returns two candidates and keeps neither. Isthmus' own operator
+   * is consulted first, which is what makes these reachable.
+   */
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "SELECT c16 FROM strings ORDER BY reverse(c16)",
+        "SELECT reverse(c16) FROM strings ORDER BY 1",
+        "SELECT reverse(c16) AS r FROM strings ORDER BY r"
+      })
+  void reverseIsReachableInAnOrderBy(String query) throws Exception {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES);
+
+    assertDoesNotThrow(() -> new SqlToSubstrait().convert(query, catalog));
   }
 
   @ParameterizedTest

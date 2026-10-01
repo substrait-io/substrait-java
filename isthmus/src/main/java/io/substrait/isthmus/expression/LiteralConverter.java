@@ -185,6 +185,7 @@ public class LiteralConverter {
    * @param literal the Calcite literal to convert
    * @return the corresponding Substrait literal
    * @throws UnsupportedOperationException if the literal type/value cannot be handled
+   * @throws IllegalArgumentException if the literal's value cannot be expressed at its type
    */
   public Expression.Literal convert(RexLiteral literal) {
     return convert(literal, literal.getType());
@@ -196,8 +197,9 @@ public class LiteralConverter {
    * <p>This overload is useful when the target type comes from a containing schema rather than the
    * literal itself. Calcite may infer a narrower type for a value in a LogicalValues tuple than for
    * the corresponding row field. Nullability is taken from {@code resultType}, so callers that need
-   * a nullability other than the literal's own should widen the Calcite type with {@link
-   * org.apache.calcite.rel.type.RelDataTypeFactory#createTypeWithNullability} before calling.
+   * a nullability other than the literal's own should set it on the Calcite type with {@link
+   * org.apache.calcite.rel.type.RelDataTypeFactory#enforceTypeWithNullability} before calling:
+   * {@code createTypeWithNullability} would make a struct's fields nullable along with it.
    *
    * @param literal the RexLiteral to convert
    * @param resultType the Calcite type required by the containing schema
@@ -296,8 +298,11 @@ public class LiteralConverter {
               LocalDateTime.parse(timestamp.toString(), CALCITE_LOCAL_DATETIME_FORMATTER);
           int precision = TypeConverter.precisionOf(resultType);
           long value =
-              localDateTime.toEpochSecond(ZoneOffset.UTC) * LongMath.pow(10, precision)
-                  + rescaleNanos(localDateTime.getNano(), precision);
+              epochUnits(
+                  localDateTime.toEpochSecond(ZoneOffset.UTC),
+                  rescaleNanos(localDateTime.getNano(), precision),
+                  precision,
+                  timestamp);
           // toEpochSecond floors, and the nanosecond part it leaves behind is always positive, so
           // a pre-epoch timestamp narrowed to a coarser precision moves back in time rather than
           // towards the epoch. That is what a timestamp wants — 1969-12-31 23:59:59.5 at second
@@ -398,6 +403,42 @@ public class LiteralConverter {
   public static byte[] padRightIfNeeded(
       org.apache.calcite.avatica.util.ByteString bytes, int length) {
     return padRightIfNeeded(bytes.getBytes(), length);
+  }
+
+  /**
+   * Returns a timestamp as a count of 10^-precision seconds since the epoch.
+   *
+   * <p>A Substrait temporal value is a 64-bit count of its own unit, and the finer the unit the
+   * narrower the range it spans: nanoseconds reach only to the year 2262, where Calcite's own
+   * {@code TimestampString} reaches 9999. A timestamp outside the range is reported rather than
+   * wrapped into a different instant.
+   *
+   * @param epochSeconds whole seconds since the epoch, floored
+   * @param subSecondUnits the sub-second part, already in units of 10^-precision seconds
+   * @param precision the fractional-second precision
+   * @param timestamp the timestamp being converted, for the failure message
+   * @return the value of the Substrait literal
+   * @throws IllegalArgumentException if the value does not fit in 64 bits
+   */
+  private static long epochUnits(
+      long epochSeconds, long subSecondUnits, int precision, TimestampString timestamp) {
+    long unitsPerSecond = LongMath.pow(10, precision);
+    try {
+      // The floored seconds of the range's first second overflow on their own although the value
+      // fits once the sub-second part is added back, so a negative value borrows that second.
+      return epochSeconds < 0 && subSecondUnits > 0
+          ? Math.addExact(
+              Math.multiplyExact(epochSeconds + 1, unitsPerSecond), subSecondUnits - unitsPerSecond)
+          : Math.addExact(Math.multiplyExact(epochSeconds, unitsPerSecond), subSecondUnits);
+    } catch (ArithmeticException e) {
+      throw new IllegalArgumentException(
+          String.format(
+              Locale.ROOT,
+              "timestamp %s does not fit in a 64-bit count of 10^-%d seconds",
+              timestamp,
+              precision),
+          e);
+    }
   }
 
   /**

@@ -27,14 +27,15 @@ import java.util.Optional;
  *
  * <p>Signature type matching is fail-closed. It checks value- and type-argument patterns alike:
  * wildcards, concrete types and the scalar-parameterized classes (decimal, char, binary, precision
- * time/timestamp, intervals); a declared shape carrying nested types (lists, maps, structs,
- * function types) is rejected rather than accepted unchecked. Occurrences of one numbered wildcard
- * ({@code any1}) must agree on a single type, while each plain {@code any} matches independently; a
- * variadic declaration repeats its trailing argument, requiring the repetitions to agree only when
- * its parameters are {@code CONSISTENT} — a literal integer parameter (the {@code 0} of {@code
- * DECIMAL<P,0>}) constrains every repetition regardless. Enum options and option preferences are
- * matched case-insensitively; an unspecified enum option is always rejected, since the extension
- * schema cannot declare an optional one.
+ * time/timestamp, intervals), and nested list, map, struct and function types. Nested structure and
+ * nullability must match; wildcard and integer parameters bind recursively, through the same
+ * binding the derivation uses (see {@link TypeExpressionEvaluator#checkBindings}). Occurrences of
+ * one numbered wildcard ({@code any1}) must agree on a single type, while each plain {@code any}
+ * matches independently; a variadic declaration repeats its trailing argument, requiring the
+ * repetitions to agree only when its parameters are {@code CONSISTENT} — a literal integer
+ * parameter (the {@code 0} of {@code DECIMAL<P,0>}) constrains every repetition regardless. Enum
+ * options and option preferences are matched case-insensitively; an unspecified enum option is
+ * always rejected, since the extension schema cannot declare an optional one.
  */
 public final class FunctionBindingResolver {
 
@@ -334,6 +335,16 @@ public final class FunctionBindingResolver {
           !repeated || bindRepeats,
           wildcardBindings);
     }
+    // The checks above judge each argument's shape on its own. Binding the parameters the way
+    // derivation does also checks what the arguments share: a nested wildcard's identity, integer
+    // parameters and their literal constraints.
+    try {
+      TypeExpressionEvaluator.checkBindings(
+          declared, declaration.variadic(), valueAndTypeArgumentTypes(arguments));
+    } catch (UnsupportedOperationException e) {
+      throw new InvalidFunctionBindingException(
+          String.format("%s: %s", declaration.getAnchor(), e.getMessage()), e);
+    }
   }
 
   private static void checkArgument(
@@ -381,6 +392,14 @@ public final class FunctionBindingResolver {
       boolean bindWildcards,
       Map<String, Type> wildcardBindings) {
     Type actualType = actual.type().orElseThrow(IllegalStateException::new);
+    if (actualType instanceof Type.Unbound) {
+      // The unbound type does not unify with any declared shape, and it carries no nullability for
+      // the checks below to read.
+      throw new InvalidFunctionBindingException(
+          String.format(
+              "%s argument %d: the unbound type does not match declared %s",
+              declaration.getAnchor(), index, declaredType));
+    }
     if (declaredType instanceof ParameterizedType.StringLiteral
         && ((ParameterizedType.StringLiteral) declaredType).isWildcard()) {
       checkWildcardArgument(
@@ -472,10 +491,20 @@ public final class FunctionBindingResolver {
 
   private static boolean typeMatches(
       ParameterizedType declared, Type actual, boolean exactNullability) {
+    if (actual instanceof Type.Unbound) {
+      // The unbound type does not unify with any declared shape, and it carries no nullability for
+      // the checks below to read.
+      throw new InvalidFunctionBindingException(
+          String.format(
+              "Cannot validate declared argument shape %s against the unbound type", declared));
+    }
     if (declared instanceof ParameterizedType.StringLiteral) {
-      // Non-wildcard extension parameter names at the top level are accepted; numbered wildcards
-      // are handled by the caller for cross-argument consistency.
-      return true;
+      // Top-level wildcards are handled by checkWildcardArgument. Nested unmarked wildcards may
+      // bind a nullable type; an explicit '?' requires a nullable actual. Shared identities are
+      // checked when validateSignature binds the parameters.
+      return !exactNullability
+          || !((ParameterizedType.StringLiteral) declared).nullable()
+          || actual.nullable();
     }
     if (declared instanceof Type) {
       // A concrete declared argument type (e.g. i32) matches ignoring nullability, except under a
@@ -520,13 +549,54 @@ public final class FunctionBindingResolver {
       return actual instanceof Type.IntervalCompound
           && nullabilityMatches(declared, actual, exactNullability);
     }
-    // The remaining declared shapes — lists, maps, structs and function types — carry nested types
-    // this validator cannot yet check structurally, and the spec requires nested structure and
-    // nullability to match exactly: h(list<any1>, list<any1>) invoked as h(list<i32>, list<i32?>)
-    // must not bind (spec v0.99.0, scalar binding rules). A validator that advertises strictness
-    // must fail closed on a shape it cannot judge rather than silently accept it.
+    if (declared instanceof ParameterizedType.ListType) {
+      return actual instanceof Type.ListType
+          && nullabilityMatches(declared, actual, exactNullability)
+          && typeMatches(
+              ((ParameterizedType.ListType) declared).name(),
+              ((Type.ListType) actual).elementType(),
+              true);
+    }
+    if (declared instanceof ParameterizedType.Map) {
+      if (!(actual instanceof Type.Map)
+          || !nullabilityMatches(declared, actual, exactNullability)) {
+        return false;
+      }
+      ParameterizedType.Map pattern = (ParameterizedType.Map) declared;
+      Type.Map map = (Type.Map) actual;
+      return typeMatches(pattern.key(), map.key(), true)
+          && typeMatches(pattern.value(), map.value(), true);
+    }
+    if (declared instanceof ParameterizedType.Struct) {
+      return actual instanceof Type.Struct
+          && nullabilityMatches(declared, actual, exactNullability)
+          && typeListMatches(
+              ((ParameterizedType.Struct) declared).fields(), ((Type.Struct) actual).fields());
+    }
+    if (declared instanceof ParameterizedType.Func) {
+      if (!(actual instanceof Type.Func)
+          || !nullabilityMatches(declared, actual, exactNullability)) {
+        return false;
+      }
+      ParameterizedType.Func pattern = (ParameterizedType.Func) declared;
+      Type.Func function = (Type.Func) actual;
+      return typeListMatches(pattern.parameterTypes(), function.parameterTypes())
+          && typeMatches(pattern.returnType(), function.returnType(), true);
+    }
     throw new InvalidFunctionBindingException(
         String.format("Validation of the declared argument shape %s is not supported", declared));
+  }
+
+  private static boolean typeListMatches(List<ParameterizedType> declared, List<Type> actual) {
+    if (declared.size() != actual.size()) {
+      return false;
+    }
+    for (int index = 0; index < declared.size(); index++) {
+      if (!typeMatches(declared.get(index), actual.get(index), true)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

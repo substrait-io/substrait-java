@@ -2,6 +2,8 @@ package io.substrait.type.proto;
 
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Sort;
 import java.util.Arrays;
@@ -218,6 +220,24 @@ class SortRelRoundtripTest extends TestBase {
                     .direction(Expression.SortDirection.CLUSTERED)
                     .build())
             .build();
+
+    verifyRoundTrip(sort);
+  }
+
+  @Test
+  void sortByCustomComparisonFunction() {
+    // A sort field can reference a custom comparison function instead of a direction.
+    SimpleExtension.ScalarFunctionVariant comparisonFunction =
+        extensions.getScalarFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"));
+    Expression.SortField sortField =
+        Expression.SortField.builder()
+            .expr(sb.fieldReference(baseTable, 2))
+            .comparisonFunction(comparisonFunction)
+            .build();
+
+    Rel sort = Sort.builder().input(baseTable).addSortFields(sortField).build();
 
     verifyRoundTrip(sort);
   }
