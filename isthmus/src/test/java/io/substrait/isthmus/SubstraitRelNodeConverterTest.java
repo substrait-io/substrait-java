@@ -129,8 +129,8 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
     void declaredDecimalWidthIsPreserved() {
       Rel input =
           sb.namedScan(List.of("example"), List.of("d", "g"), List.of(R.decimal(10, 2), R.STRING));
-      // The standard extension declarations for decimal sum and avg return DECIMAL<38,S>, while
-      // Calcite's inference keeps the argument's precision. The declared width must survive.
+      // Calcite now infers DECIMAL(38,2) for both, as the extensions declare, so the plan declares
+      // another width here: the declared width must survive the conversion.
       Rel aggregate =
           sb.aggregate(
               i -> sb.grouping(i, 1),
@@ -140,18 +140,18 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
                           sb.aggregateFn(
                               DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                               "sum:dec",
-                              N.decimal(38, 2),
+                              N.decimal(30, 2),
                               sb.fieldReference(i, 0))),
                       sb.measure(
                           sb.aggregateFn(
                               DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL,
                               "avg:dec",
-                              N.decimal(38, 2),
+                              N.decimal(30, 2),
                               sb.fieldReference(i, 0)))),
               input);
 
       RelNode relNode = substraitToCalcite.convert(aggregate);
-      assertRowMatch(relNode.getRowType(), R.STRING, N.decimal(38, 2), N.decimal(38, 2));
+      assertRowMatch(relNode.getRowType(), R.STRING, N.decimal(30, 2), N.decimal(30, 2));
       assertFullRoundTrip(aggregate);
     }
 
@@ -425,7 +425,7 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
                   AggregateConversion.OutputTypeSource.CALCITE_INFERENCE,
                   AggregateConversion.FunctionBindingValidation.NONE));
 
-      assertRowMatch(calciteInference.convert(aggregate).getRowType(), N.STRING, N.I32);
+      assertRowMatch(calciteInference.convert(aggregate).getRowType(), N.STRING, N.I64);
 
       // Preserving it, on the other hand, is impossible — and says so instead of substituting.
       assertThrows(
@@ -454,9 +454,9 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       assertEquals(AggregateFunctions.SUM, unwrappedCall.getAggregation());
       assertEquals(
           Optional.empty(), AggregateFunctions.boundBinding(unwrappedCall.getAggregation()));
-      // sum(i32) re-infers as nullable INTEGER, not the plan's declared i64 — the same loss
+      // sum(i32) re-infers as nullable BIGINT, not the plan's declared required i64 — the same loss
       // CALCITE_INFERENCE chooses up front.
-      assertEquals(SqlTypeName.INTEGER, unwrappedCall.getType().getSqlTypeName());
+      assertEquals(SqlTypeName.BIGINT, unwrappedCall.getType().getSqlTypeName());
       assertTrue(unwrappedCall.getType().isNullable());
       // An aggregate with no bound calls is returned unchanged.
       assertSame(unwrapped, AggregateFunctions.unwrapBound(unwrapped));
@@ -483,14 +483,14 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       Rel aggregate =
           sb.aggregate(
               input -> sb.grouping(input, 2),
-              input -> List.of(withOutputType(sb.sum(input, 0), N.I64)),
+              input -> List.of(withOutputType(sb.sum(input, 0), N.FP64)),
               commonTable);
 
       RelNode relNode = new SubstraitToCalcite(provider).convert(aggregate);
 
       assertEquals(List.of("overridden"), factories);
-      // ...and the configured conversion is applied: Calcite's inference wins over the plan's i64.
-      assertRowMatch(relNode.getRowType(), N.STRING, N.I32);
+      // ...and the configured conversion is applied: Calcite's inference wins over the plan's fp64.
+      assertRowMatch(relNode.getRowType(), N.STRING, N.I64);
     }
 
     private io.substrait.relation.Aggregate.Measure count(Rel input, String overflow) {
@@ -705,13 +705,14 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
                   AggregateConversion.FunctionBindingValidation.EXTENSION_DECLARATION));
 
       // sum(i32) derives i64? from its declaration: a compliant plan converts (to the inferred
-      // type), a non-compliant one is rejected before any type is chosen.
+      // type, which Calcite now derives as the declaration does), a non-compliant one is rejected
+      // before any type is chosen.
       Rel valid =
           sb.aggregate(
               input -> sb.grouping(input, 2),
               input -> List.of(withOutputType(sb.sum(input, 0), N.I64)),
               commonTable);
-      assertRowMatch(strict.convert(valid).getRowType(), N.STRING, N.I32);
+      assertRowMatch(strict.convert(valid).getRowType(), N.STRING, N.I64);
 
       Rel invalid =
           sb.aggregate(
@@ -1059,15 +1060,15 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       Rel aggregate =
           sb.aggregate(
               input -> sb.grouping(input, 2),
-              input -> List.of(withOutputType(sb.sum(input, 0), N.I64)),
+              input -> List.of(withOutputType(sb.sum(input, 0), N.FP64)),
               commonTable);
       RelBuilder relBuilder = provider.getRelBuilder(provider.getSchemaResolver().apply(aggregate));
       SubstraitRelNodeConverter converter = new SubstraitRelNodeConverter(relBuilder, provider);
 
       RelNode relNode = aggregate.accept(converter, SubstraitRelNodeConverter.Context.newContext());
 
-      // Calcite's inference wins over the plan's i64: the provider's policy applied.
-      assertRowMatch(relNode.getRowType(), N.STRING, N.I32);
+      // Calcite's inference wins over the plan's fp64: the provider's policy applied.
+      assertRowMatch(relNode.getRowType(), N.STRING, N.I64);
     }
 
     @Test
@@ -1129,7 +1130,7 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
       Rel aggregate =
           sb.aggregate(
               input -> sb.grouping(input, 2),
-              input -> List.of(withOutputType(sb.sum(input, 0), N.I64)),
+              input -> List.of(withOutputType(sb.sum(input, 0), N.FP64)),
               commonTable);
       SubstraitToCalcite calciteInference =
           withAggregateConversion(
@@ -1139,9 +1140,9 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
 
       RelNode relNode = calciteInference.convert(aggregate);
 
-      // Calcite's SUM infers nullable i32 for sum(i32), not the plan's i64, and no wrapper is
+      // Calcite's SUM infers nullable i64 for sum(i32), not the plan's fp64, and no wrapper is
       // added.
-      assertRowMatch(relNode.getRowType(), N.STRING, N.I32);
+      assertRowMatch(relNode.getRowType(), N.STRING, N.I64);
       org.apache.calcite.rel.core.Aggregate calciteAgg =
           (org.apache.calcite.rel.core.Aggregate) relNode;
       assertEquals(

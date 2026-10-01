@@ -4,11 +4,13 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 
 /**
  * Custom {@link RelDataTypeSystem} implementation for Substrait.
@@ -20,6 +22,8 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
 
   /** Singleton instance of Substrait type system. */
   public static final RelDataTypeSystem TYPE_SYSTEM = new SubstraitTypeSystem();
+
+  private static final int MAX_DECIMAL_PRECISION = 38;
 
   /** Default type factory using the Substrait type system. */
   public static final RelDataTypeFactory TYPE_FACTORY = new JavaTypeFactoryImpl(TYPE_SYSTEM);
@@ -169,5 +173,157 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
   @Override
   public boolean shouldConvertRaggedUnionTypesToVarying() {
     return true;
+  }
+
+  /**
+   * Returns the type of a {@code SUM} (and {@code $SUM0}) as the Substrait extensions declare it:
+   * an integer sum is an {@code i64} and a floating-point one an {@code fp64} ({@code
+   * functions_arithmetic.yaml}), where Calcite's default keeps the argument's own type, which the
+   * sum overflows on real data. A decimal sum is Calcite's default, {@code DECIMAL(38, s)}, which
+   * is what {@code sum:dec} declares.
+   *
+   * @param typeFactory the type factory
+   * @param argumentType the type of the summed values
+   * @return the type of the sum
+   */
+  @Override
+  public RelDataType deriveSumType(RelDataTypeFactory typeFactory, RelDataType argumentType) {
+    RelDataType sum;
+    switch (argumentType.getSqlTypeName()) {
+      case TINYINT:
+      case SMALLINT:
+      case INTEGER:
+      case BIGINT:
+        sum = typeFactory.createSqlType(SqlTypeName.BIGINT);
+        break;
+      case REAL:
+      case FLOAT:
+      case DOUBLE:
+        sum = typeFactory.createSqlType(SqlTypeName.DOUBLE);
+        break;
+      default:
+        return super.deriveSumType(typeFactory, argumentType);
+    }
+    return typeFactory.createTypeWithNullability(sum, argumentType.isNullable());
+  }
+
+  /**
+   * Returns the type of an {@code AVG} as the Substrait extensions declare it: a decimal average
+   * keeps its scale at precision 38, and every other type averages to itself.
+   *
+   * <p>Calcite routes {@code STDDEV_POP}, {@code STDDEV_SAMP}, {@code VAR_POP} and {@code VAR_SAMP}
+   * through this hook as well, and it cannot tell which function called it, so over a decimal they
+   * become {@code DECIMAL(38, s)} too. No extension declares a decimal {@code std_dev} or {@code
+   * variance}: the argument is cast to {@code fp64} and the result cast back.
+   *
+   * @param typeFactory the type factory
+   * @param argumentType the type of the averaged values
+   * @return the type of the average
+   */
+  @Override
+  public RelDataType deriveAvgAggType(RelDataTypeFactory typeFactory, RelDataType argumentType) {
+    if (argumentType.getSqlTypeName() != SqlTypeName.DECIMAL) {
+      return super.deriveAvgAggType(typeFactory, argumentType);
+    }
+    return typeFactory.createTypeWithNullability(
+        typeFactory.createSqlType(
+            SqlTypeName.DECIMAL, MAX_DECIMAL_PRECISION, argumentType.getScale()),
+        argumentType.isNullable());
+  }
+
+  /**
+   * Returns the type of a decimal addition or subtraction as {@code add:dec_dec} and {@code
+   * subtract:dec_dec} declare it.
+   */
+  @Override
+  public RelDataType deriveDecimalPlusType(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2) {
+    return decimalResult(
+        typeFactory,
+        type1,
+        type2,
+        (p1, s1, p2, s2) -> {
+          int scale = Math.max(s1, s2);
+          return new int[] {scale + Math.max(p1 - s1, p2 - s2) + 1, scale};
+        });
+  }
+
+  /** Returns the type of a decimal multiplication as {@code multiply:dec_dec} declares it. */
+  @Override
+  public RelDataType deriveDecimalMultiplyType(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2) {
+    return decimalResult(
+        typeFactory, type1, type2, (p1, s1, p2, s2) -> new int[] {p1 + p2 + 1, s1 + s2});
+  }
+
+  /** Returns the type of a decimal division as {@code divide:dec_dec} declares it. */
+  @Override
+  public RelDataType deriveDecimalDivideType(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2) {
+    return decimalResult(
+        typeFactory,
+        type1,
+        type2,
+        (p1, s1, p2, s2) -> {
+          int scale = Math.max(6, s1 + p2 + 1);
+          return new int[] {p1 - s1 + p2 + scale, scale};
+        });
+  }
+
+  /** Returns the type of a decimal modulus as {@code modulus:dec_dec} declares it. */
+  @Override
+  public RelDataType deriveDecimalModType(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2) {
+    return decimalResult(
+        typeFactory,
+        type1,
+        type2,
+        (p1, s1, p2, s2) -> {
+          int scale = Math.max(s1, s2);
+          return new int[] {Math.min(p1 - s1, p2 - s2) + scale, scale};
+        });
+  }
+
+  /** The unbounded precision and scale a decimal operation's declaration starts from. */
+  @FunctionalInterface
+  private interface DecimalRule {
+    int[] apply(int p1, int s1, int p2, int s2);
+  }
+
+  /**
+   * Applies a decimal operation's rule the way the decimal extension does: a result above precision
+   * 38 is capped there and gives up scale for it, down to a scale of 6 or its own scale if that is
+   * smaller. Returns {@code null}, as Calcite's default does, unless both operands are exact
+   * numerics and one of them is a decimal.
+   */
+  private static RelDataType decimalResult(
+      RelDataTypeFactory typeFactory, RelDataType type1, RelDataType type2, DecimalRule rule) {
+    if (!SqlTypeUtil.isExactNumeric(type1)
+        || !SqlTypeUtil.isExactNumeric(type2)
+        || !(SqlTypeUtil.isDecimal(type1) || SqlTypeUtil.isDecimal(type2))) {
+      return null;
+    }
+    RelDataType decimal1 =
+        RelDataTypeFactoryImpl.isJavaType(type1) ? typeFactory.decimalOf(type1) : type1;
+    RelDataType decimal2 =
+        RelDataTypeFactoryImpl.isJavaType(type2) ? typeFactory.decimalOf(type2) : type2;
+    int[] initial =
+        rule.apply(
+            decimal1.getPrecision(),
+            decimal1.getScale(),
+            decimal2.getPrecision(),
+            decimal2.getScale());
+    int initialPrecision = initial[0];
+    int initialScale = initial[1];
+    int precision = Math.min(initialPrecision, MAX_DECIMAL_PRECISION);
+    int scale =
+        initialPrecision > MAX_DECIMAL_PRECISION
+            ? Math.max(
+                initialScale - (initialPrecision - MAX_DECIMAL_PRECISION),
+                Math.min(initialScale, 6))
+            : initialScale;
+    return typeFactory.createTypeWithNullability(
+        typeFactory.createSqlType(SqlTypeName.DECIMAL, precision, scale),
+        type1.isNullable() || type2.isNullable());
   }
 }

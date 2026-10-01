@@ -337,13 +337,13 @@ class OutputNamesTest extends PlanTestBase {
   @Test
   void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
     // Under CALCITE_INFERENCE a measure takes the type Calcite infers rather than the one the plan
-    // declares: SUM(i32) declared i64 becomes an INTEGER column, so the names would land on a
+    // declares: a plan typing SUM(i32) as fp64 gets a BIGINT column, so the names would land on a
     // column the plan does not describe. With the declared types they apply.
     Rel scan32 = sb.namedScan(List.of("t32"), List.of("a", "b"), List.of(R.I32, N.STRING));
     Rel aggregate =
         sb.aggregate(
                 input -> List.of(sb.grouping(input, 1)),
-                input -> List.of(declaring(sb.sum(input, 0), N.I64)),
+                input -> List.of(declaring(sb.sum(input, 0), N.FP64)),
                 Optional.of(Rel.Remap.of(List.of(1, 0))),
                 scan32)
             .withHint(Optional.of(Hint.builder().addOutputNames("total", "label").build()));
