@@ -17,9 +17,13 @@ import io.substrait.type.TypeCreator;
 import java.util.function.Consumer;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.TimestampString;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class CalciteCallTest extends CalciteObjs {
 
@@ -50,6 +54,41 @@ class CalciteCallTest extends CalciteObjs {
         assertInstanceOf(Expression.ScalarFunctionInvocation.class, cast.input());
     assertEquals("extract:req_pts", func.declaration().key());
     assertEquals(TypeCreator.REQUIRED.I64, func.outputType());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"lt,8", "lt,9", "lte,8", "lte,9", "gt,8", "gt,9", "gte,8", "gte,9"})
+  void datetimeComparisonKeepsOperandPrecisions(String function, int precision) {
+    SqlOperator operator;
+    switch (function) {
+      case "lt":
+        operator = SqlStdOperatorTable.LESS_THAN;
+        break;
+      case "lte":
+        operator = SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
+        break;
+      case "gt":
+        operator = SqlStdOperatorTable.GREATER_THAN;
+        break;
+      default:
+        operator = SqlStdOperatorTable.GREATER_THAN_OR_EQUAL;
+    }
+    RexNode timestamp = rex.makeInputRef(t(SqlTypeName.TIMESTAMP, precision), 0);
+    // This bound is valid at millisecond precision but overflows an i64 at precision 8 or 9.
+    RexNode bound = rex.makeTimestampLiteral(new TimestampString("9999-12-31 00:00:00"), 3);
+    Expression.ScalarFunctionInvocation comparison =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class,
+            rex.makeCall(operator, timestamp, bound).accept(rexExpressionConverter));
+    assertEquals(function + ":pts_pts", comparison.declaration().key());
+    assertEquals(TypeCreator.REQUIRED.BOOLEAN, comparison.outputType());
+    assertEquals(
+        TypeCreator.REQUIRED.precisionTimestamp(precision),
+        ((Expression) comparison.arguments().get(0)).getType());
+    assertInstanceOf(Expression.PrecisionTimestampLiteral.class, comparison.arguments().get(1));
+    assertEquals(
+        TypeCreator.REQUIRED.precisionTimestamp(3),
+        ((Expression) comparison.arguments().get(1)).getType());
   }
 
   @Test

@@ -181,9 +181,10 @@ public class ScalarFunctionConverter
     // query gives it.
     List<? extends FunctionArg> bound = arguments;
     Optional<Type> declared = declaredType(function, bound);
-    if (declared.isEmpty()) {
+    if (declared.isEmpty() && !(function.returnType() instanceof Type)) {
       // One parameter bound to two precisions, precision_timestamp<0> and interval_day<6> say.
-      // Widening either operand is lossless, so both take the wider one.
+      // Only parameterized results need this retry. Comparisons return bool and keep their
+      // operand precisions; widening a timestamp also narrows its representable date range.
       bound = widenedToOnePrecision(arguments);
       declared = declaredType(function, bound);
     }
