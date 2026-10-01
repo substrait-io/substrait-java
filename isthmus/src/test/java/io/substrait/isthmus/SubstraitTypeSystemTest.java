@@ -66,8 +66,8 @@ class SubstraitTypeSystemTest {
   }
 
   /**
-   * An integer operand counts as the decimal that holds its type, the one isthmus casts it to:
-   * {@code decimal(10,0)} for an INTEGER and {@code decimal(19,0)} for a BIGINT, whatever the type
+   * For type derivation, an integer operand counts as the decimal that holds its type: {@code
+   * decimal(10,0)} for an INTEGER and {@code decimal(19,0)} for a BIGINT, whatever the type
    * system's own decimal precision.
    */
   @Test
