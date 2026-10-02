@@ -42,6 +42,8 @@ public enum RelationKind {
   EXCHANGE,
   /** The expand relation. */
   EXPAND,
+  /** The top-N relation. */
+  TOP_N,
   /** The single-input extension relation. */
   EXTENSION_SINGLE,
   /** The multi-input extension relation. */

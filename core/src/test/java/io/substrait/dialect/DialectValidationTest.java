@@ -30,4 +30,17 @@ class DialectValidationTest {
                 .addDdlWriteTypes(DdlWriteType.NAMED_OBJECT)
                 .build());
   }
+
+  @Test
+  void extensionRelationsRequireMessageTypes() {
+    for (RelationKind kind :
+        new RelationKind[] {
+          RelationKind.EXTENSION_SINGLE, RelationKind.EXTENSION_MULTI, RelationKind.EXTENSION_LEAF
+        }) {
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> SupportedRelation.builder().relation(kind).build(),
+          kind.name());
+    }
+  }
 }
