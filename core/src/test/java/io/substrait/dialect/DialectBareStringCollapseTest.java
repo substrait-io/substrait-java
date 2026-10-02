@@ -48,7 +48,10 @@ class DialectBareStringCollapseTest {
   @Test
   void extensionRelationIsNeverBare() {
     SupportedRelation extension =
-        SupportedRelation.builder().relation(RelationKind.EXTENSION_LEAF).build();
+        SupportedRelation.builder()
+            .relation(RelationKind.EXTENSION_LEAF)
+            .addMessageTypes("type.googleapis.com/google.profile.Person")
+            .build();
     assertFalse(extension.isBare());
 
     String yaml = Dialect.toYaml(Dialect.builder().addSupportedRelations(extension).build());

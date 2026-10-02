@@ -20,6 +20,7 @@ class DialectRoundTripTest {
         .putDependencies("spark", "extension:substrait:spark")
         // Types: bare, precision (max_precision), system_metadata, and user-defined.
         .addSupportedTypes(SupportedType.of(TypeKind.BOOL))
+        .addSupportedTypes(SupportedType.of(TypeKind.FUNC))
         .addSupportedTypes(
             SupportedType.builder()
                 .type(TypeKind.PRECISION_TIMESTAMP)
@@ -38,6 +39,7 @@ class DialectRoundTripTest {
                 .build())
         // Relations: bare, join, read, set, write, ddl, exchange, expand, extension.
         .addSupportedRelations(SupportedRelation.of(RelationKind.FILTER))
+        .addSupportedRelations(SupportedRelation.of(RelationKind.TOP_N))
         .addSupportedRelations(
             SupportedRelation.builder()
                 .relation(RelationKind.JOIN)
@@ -71,15 +73,17 @@ class DialectRoundTripTest {
         .addSupportedRelations(
             SupportedRelation.builder()
                 .relation(RelationKind.EXPAND)
-                .addFieldTypes(ExpandFieldType.SWITCHING_FIELD)
+                .addFieldTypes(ExpandFieldType.SWITCHING_FIELD, ExpandFieldType.CONSISTENT_FIELD)
                 .build())
         .addSupportedRelations(
             SupportedRelation.builder()
                 .relation(RelationKind.EXTENSION_SINGLE)
                 .addMessageTypes("type.googleapis.com/google.profile.Person")
                 .build())
-        // Expressions: bare, cast, subquery, nested, execution-context-variable.
+        // Expressions: bare, lambda, cast, subquery, nested, execution-context-variable.
         .addSupportedExpressions(SupportedExpression.of(ExpressionKind.LITERAL))
+        .addSupportedExpressions(SupportedExpression.of(ExpressionKind.LAMBDA))
+        .addSupportedExpressions(SupportedExpression.of(ExpressionKind.LAMBDA_INVOCATION))
         .addSupportedExpressions(
             SupportedExpression.builder()
                 .expression(ExpressionKind.CAST)
