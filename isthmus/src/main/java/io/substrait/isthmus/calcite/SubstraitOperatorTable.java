@@ -1,6 +1,7 @@
 package io.substrait.isthmus.calcite;
 
 import io.substrait.isthmus.AggregateFunctions;
+import io.substrait.isthmus.ListFunctions;
 import io.substrait.isthmus.expression.CurrentTimezoneFunction;
 import io.substrait.isthmus.expression.FunctionMappings;
 import java.util.EnumSet;
@@ -60,7 +61,11 @@ public class SubstraitOperatorTable implements SqlOperatorTable {
           List.of(
               CurrentTimezoneFunction.INSTANCE,
               FunctionMappings.RIGHTSHIFT,
-              FunctionMappings.REVERSE));
+              FunctionMappings.REVERSE,
+              ListFunctions.TRANSFORM,
+              ListFunctions.FILTER,
+              ListFunctions.ANY_MATCH,
+              ListFunctions.ALL_MATCH));
 
   // Utilisation of extended library operators available from calcite 1.35+, i.e hyperbolic
   // functions

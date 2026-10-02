@@ -5,6 +5,8 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.ProtoPlanConverter;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class LambdaRoundtripTest extends PlanTestBase {
 
@@ -13,6 +15,20 @@ class LambdaRoundtripTest extends PlanTestBase {
     io.substrait.proto.Plan.Builder builder = io.substrait.proto.Plan.newBuilder();
     JsonFormat.parser().merge(json, builder);
     return builder.build();
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "SELECT transform(ARRAY[1, 2, 3], x -> x + 1)",
+        "SELECT transform(ARRAY[1, 2, 3], x -> CAST(x AS BIGINT))",
+        "SELECT transform(CAST(NULL AS INTEGER ARRAY), x -> x + 1)",
+        "SELECT \"filter\"(ARRAY[1, 2, 3], x -> x > 1)",
+        "SELECT any_match(ARRAY[1, 2, 3], x -> x = 2)",
+        "SELECT all_match(ARRAY[1, 2, 3], x -> x > 0)"
+      })
+  void testSqlLambdaRoundtrip(String query) throws Exception {
+    assertFullRoundTrip(query);
   }
 
   @Test
