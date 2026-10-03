@@ -28,6 +28,14 @@ public class CreateTable extends SingleRel {
     this.tableName = tableName;
     this.tableSchema = DdlSchemas.requireFilledBy(tableSchema, input, "table");
     this.createMode = Objects.requireNonNull(createMode, "createMode");
+    switch (createMode) {
+      case ERROR_IF_EXISTS:
+      case IGNORE_IF_EXISTS:
+      case REPLACE_IF_EXISTS:
+        break;
+      default:
+        throw new IllegalArgumentException("Unsupported CTAS creation mode: " + createMode);
+    }
   }
 
   /**
@@ -37,20 +45,12 @@ public class CreateTable extends SingleRel {
    *
    * @param tableName tablename components
    * @param input RelNode input
+   * @deprecated Use {@link #CreateTable(List, RelDataType, RelNode, CreateMode)} to choose the
+   *     creation policy explicitly.
    */
+  @Deprecated
   public CreateTable(List<String> tableName, RelNode input) {
-    this(tableName, input, CreateMode.REPLACE_IF_EXISTS);
-  }
-
-  /**
-   * Creates a table with the input's schema and an explicit policy for an existing table.
-   *
-   * @param tableName table name components
-   * @param input the query filling the table
-   * @param createMode the policy when the target table already exists
-   */
-  public CreateTable(List<String> tableName, RelNode input, CreateMode createMode) {
-    this(input.getCluster(), input.getTraitSet(), tableName, input.getRowType(), input, createMode);
+    this(tableName, input.getRowType(), input, CreateMode.REPLACE_IF_EXISTS);
   }
 
   /**
@@ -61,7 +61,10 @@ public class CreateTable extends SingleRel {
    * @param tableSchema the schema of the table to create, which the input fills but need not name
    *     the same way
    * @param input RelNode input
+   * @deprecated Use {@link #CreateTable(List, RelDataType, RelNode, CreateMode)} to choose the
+   *     creation policy explicitly.
    */
+  @Deprecated
   public CreateTable(List<String> tableName, RelDataType tableSchema, RelNode input) {
     this(tableName, tableSchema, input, CreateMode.REPLACE_IF_EXISTS);
   }
@@ -72,7 +75,8 @@ public class CreateTable extends SingleRel {
    * @param tableName table name components
    * @param tableSchema the declared schema of the table
    * @param input the query filling the table
-   * @param createMode the policy when the target table already exists
+   * @param createMode ERROR_IF_EXISTS, IGNORE_IF_EXISTS, or REPLACE_IF_EXISTS
+   * @throws IllegalArgumentException if the creation mode is unsupported by Isthmus
    */
   public CreateTable(
       List<String> tableName, RelDataType tableSchema, RelNode input, CreateMode createMode) {
@@ -101,7 +105,7 @@ public class CreateTable extends SingleRel {
     return super.explainTerms(pw)
         .item("tableName", getTableName())
         .item("tableSchema", getTableSchema().getFullTypeString())
-        .item("createMode", getCreateMode());
+        .item("createMode", getCreateMode().name());
   }
 
   /**

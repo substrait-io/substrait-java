@@ -164,6 +164,24 @@ class IsthmusEntryPointTest {
   }
 
   @Test
+  void conflictingCreationPoliciesAreReportedWithoutAStackTrace() {
+    Run run = run("CREATE OR REPLACE TABLE IF NOT EXISTS dst AS SELECT 99 AS v");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("CREATE TABLE cannot combine OR REPLACE and IF NOT EXISTS");
+    run.assertNoStackTrace();
+  }
+
+  @Test
+  void conflictingCreationPoliciesRetainTheRequestedStackTrace() {
+    Run run = run("CREATE OR REPLACE TABLE IF NOT EXISTS dst AS SELECT 99 AS v", "--stacktrace");
+
+    assertEquals(CommandLine.ExitCode.SOFTWARE, run.statusCode);
+    run.assertErrContains("CREATE TABLE cannot combine OR REPLACE and IF NOT EXISTS");
+    run.assertStackTrace();
+  }
+
+  @Test
   void queryPassedToCreateOptionSuggestsQueryArgument() {
     Run run = run("SELECT * FROM foo", "-c", "SELECT 1");
 

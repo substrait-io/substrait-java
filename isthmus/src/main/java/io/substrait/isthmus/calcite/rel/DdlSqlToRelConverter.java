@@ -91,6 +91,9 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
   /**
    * Handles {@code CREATE TABLE AS SELECT} statements.
    *
+   * <p>Isthmus rejects the combination of OR REPLACE and IF NOT EXISTS rather than choosing which
+   * policy takes precedence. Substrait does not define how these SQL flags interact.
+   *
    * @param sqlCreateTable the CREATE TABLE node
    * @return a {@link RelRoot} wrapping a synthetic {@code CreateTable} relational node
    * @throws IllegalArgumentException if the statement is not a CTAS or combines OR REPLACE and IF
@@ -111,9 +114,11 @@ public class DdlSqlToRelConverter extends SqlBasicVisitor<RelRoot> {
     final RelNode input = converter.convertQuery(sqlCreateTable.query, true, true).rel;
     final RelDataType schema = declaredSchema(sqlCreateTable.columnList, input);
     return RelRoot.of(
-        schema == null
-            ? new CreateTable(sqlCreateTable.name.names, input, createMode)
-            : new CreateTable(sqlCreateTable.name.names, schema, input, createMode),
+        new CreateTable(
+            sqlCreateTable.name.names,
+            schema == null ? input.getRowType() : schema,
+            input,
+            createMode),
         sqlCreateTable.getKind());
   }
 
