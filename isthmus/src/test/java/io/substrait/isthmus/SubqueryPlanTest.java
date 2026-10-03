@@ -8,11 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.util.JsonFormat;
 import io.substrait.isthmus.expression.RexExpressionConverter;
+import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
+import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.Expression;
 import io.substrait.proto.Expression.Subquery.SetPredicate.PredicateOp;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.Plan;
 import java.io.IOException;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexFieldAccess;
@@ -25,6 +28,61 @@ import org.junit.jupiter.api.Test;
 class SubqueryPlanTest extends PlanTestBase {
   // TODO: Add a roundtrip test once the ProtoRelConverter is committed and updated to support
   // subqueries
+
+  @Test
+  void nestedOuterFieldKeepsItsCorrelationAnchor() throws SqlParseException {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE outer_table (id INTEGER NOT NULL, s ROW(v INTEGER NOT NULL) NOT NULL);"
+                + "CREATE TABLE inner_table (id INTEGER NOT NULL, s ROW(v INTEGER NOT NULL) NOT NULL)");
+    io.substrait.plan.Plan pojo =
+        toSubstraitPlan(
+            "SELECT o.id FROM outer_table o WHERE EXISTS"
+                + " (SELECT 1 FROM inner_table i WHERE i.id = o.s.v)",
+            catalog);
+    Plan plan = toProto(pojo);
+
+    FilterRel outerFilter =
+        plan.getRelations(0).getRoot().getInput().getProject().getInput().getFilter();
+    FilterRel innerFilter =
+        outerFilter.getCondition().getSubquery().getSetPredicate().getTuples().getFilter();
+    Expression.FieldReference outerField =
+        innerFilter.getCondition().getScalarFunction().getArguments(1).getValue().getSelection();
+
+    assertTrue(outerFilter.getInput().getRead().getCommon().hasRelAnchor());
+    assertTrue(outerField.hasOuterReference());
+    assertTrue(outerField.getOuterReference().hasRelReference());
+    assertEquals(
+        outerFilter.getInput().getRead().getCommon().getRelAnchor(),
+        outerField.getOuterReference().getRelReference());
+    assertEquals(1, outerField.getDirectReference().getStructField().getField());
+    assertTrue(outerField.getDirectReference().getStructField().hasChild());
+    assertEquals(
+        0, outerField.getDirectReference().getStructField().getChild().getStructField().getField());
+    assertTrue(
+        innerFilter
+            .getCondition()
+            .getScalarFunction()
+            .getArguments(0)
+            .getValue()
+            .getSelection()
+            .hasRootReference());
+
+    assertEquals(
+        "Nested field access in outer references is not yet supported",
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> new ProtoPlanConverter(extensions).from(plan))
+            .getMessage());
+    assertEquals(
+        "Nested field access in outer references is not yet supported",
+        assertThrows(
+                UnsupportedOperationException.class,
+                () ->
+                    new SubstraitToCalcite(converterProvider, catalog)
+                        .convert(pojo.getRoots().get(0)))
+            .getMessage());
+  }
 
   @Test
   void existsCorrelatedSubquery() throws SqlParseException {

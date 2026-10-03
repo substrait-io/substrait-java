@@ -12,6 +12,8 @@ import io.substrait.expression.ImmutableFieldReference;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.type.Type;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Round-trip tests for the two outer-reference resolution mechanisms introduced with Substrait
@@ -53,6 +55,25 @@ class OuterReferenceRoundtripTest extends TestBase {
     assertTrue(reference.isOuterReference());
     assertFalse(reference.isSimpleRootReference());
     verifyOuterReferenceRoundTrip(reference);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void nestedOuterReferenceIsRejected(boolean byAnchor) {
+    Type.Struct nestedType = R.struct(R.BOOLEAN, R.I64);
+    FieldReference outer =
+        byAnchor
+            ? FieldReference.newRootStructOuterReferenceByRelReference(1, nestedType, 42)
+            : FieldReference.newRootStructOuterReference(1, nestedType, 1);
+    io.substrait.proto.Expression proto =
+        expressionProtoConverter.toProto(outer.dereferenceStruct(0));
+
+    assertEquals(
+        "Nested field access in outer references is not yet supported",
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> protoExpressionConverterWithRoot.from(proto))
+            .getMessage());
   }
 
   /**

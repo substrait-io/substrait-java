@@ -1,5 +1,6 @@
 package io.substrait.isthmus;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.substrait.expression.Expression;
@@ -35,6 +36,19 @@ class LambdaExpressionTest extends PlanTestBase {
 
     Project project = Project.builder().expressions(exprs).input(emptyTable).build();
     assertFullRoundTrip(project);
+  }
+
+  @Test
+  void nestedLambdaParameterFieldIsRejected() {
+    Expression.Lambda lambda =
+        lb.lambda(
+            List.of(R.struct(R.I32, R.I32), R.I32), params -> params.ref(0).dereferenceStruct(1));
+    Project project = Project.builder().addExpressions(lambda).input(emptyTable).build();
+
+    assertEquals(
+        "Nested field access in lambda parameters is not yet supported",
+        assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(project))
+            .getMessage());
   }
 
   // (x: i32) -> 42

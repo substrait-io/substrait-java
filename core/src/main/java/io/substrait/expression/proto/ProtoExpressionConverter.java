@@ -89,6 +89,10 @@ public class ProtoExpressionConverter {
             rootType, getDirectReferenceSegments(reference.getDirectReference()));
       case OUTER_REFERENCE:
         {
+          if (reference.getDirectReference().getStructField().hasChild()) {
+            throw new UnsupportedOperationException(
+                "Nested field access in outer references is not yet supported");
+          }
           io.substrait.proto.Expression.FieldReference.OuterReference outerReference =
               reference.getOuterReference();
           int field = reference.getDirectReference().getStructField().getField();
