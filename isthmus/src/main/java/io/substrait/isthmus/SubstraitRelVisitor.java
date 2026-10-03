@@ -834,13 +834,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
 
           RelNode input = modify.getInput();
           List<RexNode> conditions = new ArrayList<>();
+          List<RelNode> correlationBindings = new ArrayList<>();
           List<RexNode> sourceExpressions =
               Optional.ofNullable(modify.getSourceExpressionList()).orElse(Collections.emptyList());
           while (true) {
             if (outerReferenceResolver != null
                 && outerReferenceResolver.anchorForTarget(input) != null) {
-              throw new UnsupportedOperationException(
-                  "UPDATE cannot remove an input that binds a correlated subquery");
+              if (!(input instanceof org.apache.calcite.rel.core.TableScan)
+                  && !(input instanceof org.apache.calcite.rel.core.Filter
+                      && ((org.apache.calcite.rel.core.Filter) input).getInput()
+                          instanceof org.apache.calcite.rel.core.TableScan)) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot remove an input that binds a correlated subquery");
+              }
+              correlationBindings.add(input);
             }
             if (input instanceof org.apache.calcite.rel.core.Project) {
               org.apache.calcite.rel.core.Project project =
@@ -870,9 +877,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             throw new UnsupportedOperationException(
                 "UPDATE requires a scan of its target table beneath projections and filters");
           }
+          if (!input.getRowType().equals(table.getRowType())) {
+            throw new UnsupportedOperationException(
+                "UPDATE target scan schema must match the target table schema");
+          }
           if (conditions.size() > 1
               && conditions.stream().anyMatch(expr -> !isDeterministic(expr))) {
             throw new UnsupportedOperationException("UPDATE cannot merge nondeterministic filters");
+          }
+          for (RelNode binding : correlationBindings) {
+            outerReferenceResolver.rebindTarget(binding, modify);
           }
           Expression condition =
               toExpression(

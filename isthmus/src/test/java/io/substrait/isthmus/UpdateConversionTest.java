@@ -4,21 +4,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.protobuf.Message;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
+import io.substrait.plan.Plan;
+import io.substrait.plan.PlanProtoConverter;
+import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.relation.Filter;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
@@ -28,11 +37,18 @@ import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.schema.ColumnStrategy;
+import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql2rel.InitializerContext;
+import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -140,10 +156,133 @@ class UpdateConversionTest {
         "UPDATE src1 SET intcol = 10 WHERE EXISTS"
             + " (SELECT 1 FROM src1 AS other WHERE other.intcol = src1.intcol)",
         "UPDATE src1 SET intcol ="
+            + " (SELECT MAX(other.intcol) FROM src1 AS other WHERE other.charcol = src1.charcol)",
+        "UPDATE src1 SET intcol ="
             + " (SELECT MAX(other.intcol) FROM src1 AS other WHERE other.charcol = src1.charcol)"
+            + " WHERE EXISTS (SELECT 1 FROM src1 AS other WHERE other.intcol = src1.intcol)"
       })
-  void rejectsRemovedCorrelationBindings(String sql) {
-    assertThrows(UnsupportedOperationException.class, () -> convert(sql));
+  void preservesCorrelationBindingsInTableCoordinates(String sql) throws SqlParseException {
+    Plan plan = new SqlToSubstrait(provider).convert(sql, catalog);
+    io.substrait.proto.Plan encoded = new PlanProtoConverter().toProto(plan);
+    io.substrait.proto.UpdateRel update = encoded.getRelations(0).getRoot().getInput().getUpdate();
+    assertTrue(update.getCommon().hasRelAnchor());
+    int anchor = update.getCommon().getRelAnchor();
+    int referenceCount =
+        (sql.contains(" WHERE EXISTS") ? 1 : 0) + (sql.contains("SELECT MAX") ? 1 : 0);
+    assertEquals(Collections.nCopies(referenceCount, anchor), outerReferences(update));
+    Plan decoded = new ProtoPlanConverter().from(encoded);
+    assertEquals(encoded, new PlanProtoConverter().toProto(decoded));
+    RelNode restored =
+        new SubstraitToCalcite(provider, catalog).convert(decoded.getRoots().get(0).getInput());
+    Plan reconverted =
+        Plan.builder()
+            .from(plan)
+            .roots(
+                List.of(
+                    Plan.Root.builder()
+                        .from(plan.getRoots().get(0))
+                        .input(SubstraitRelVisitor.convert(restored, provider))
+                        .build()))
+            .build();
+    assertEquals(encoded, new PlanProtoConverter().toProto(reconverted));
+  }
+
+  private List<Integer> outerReferences(Message message) {
+    List<Integer> anchors = new ArrayList<>();
+    if (message instanceof io.substrait.proto.Expression.FieldReference.OuterReference) {
+      anchors.add(
+          ((io.substrait.proto.Expression.FieldReference.OuterReference) message)
+              .getRelReference());
+    }
+    for (Object field : message.getAllFields().values()) {
+      for (Object value : field instanceof List<?> ? (List<?>) field : List.of(field)) {
+        if (value instanceof Message) {
+          anchors.addAll(outerReferences((Message) value));
+        }
+      }
+    }
+    return anchors;
+  }
+
+  @Test
+  void rejectsCorrelationBindingOnProjection() throws SqlParseException {
+    TableModify original =
+        modification(
+            "UPDATE src1 SET intcol = 10 WHERE EXISTS"
+                + " (SELECT 1 FROM src1 AS other WHERE other.intcol = src1.intcol)");
+    org.apache.calcite.rel.core.Project source =
+        assertInstanceOf(org.apache.calcite.rel.core.Project.class, original.getInput());
+    org.apache.calcite.rel.core.Filter filter =
+        assertInstanceOf(org.apache.calcite.rel.core.Filter.class, source.getInput());
+    RelNode scan = filter.getInput();
+    RexBuilder rexBuilder = scan.getCluster().getRexBuilder();
+    LogicalProject projected =
+        LogicalProject.create(
+            scan,
+            List.of(),
+            List.of(rexBuilder.makeInputRef(scan, 0), rexBuilder.makeInputRef(scan, 1)),
+            scan.getRowType());
+    RelNode filtered = filter.copy(filter.getTraitSet(), projected, filter.getCondition());
+    RelNode modified =
+        original.copy(
+            original.getTraitSet(), List.of(source.copy(source.getTraitSet(), List.of(filtered))));
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modified, provider));
+    assertEquals(
+        "UPDATE cannot remove an input that binds a correlated subquery", error.getMessage());
+  }
+
+  @Test
+  void rejectsVirtualColumnScanWithDifferentSchema() throws SqlParseException {
+    CalciteCatalogReader virtualCatalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(provider);
+    virtualCatalog
+        .getRootSchema()
+        .add(
+            "vt",
+            new AbstractTable() {
+              @Override
+              public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+                return typeFactory
+                    .builder()
+                    .add("a", SqlTypeName.INTEGER)
+                    .add("v", SqlTypeName.INTEGER)
+                    .add("b", SqlTypeName.INTEGER)
+                    .build();
+              }
+
+              @Override
+              public <T> T unwrap(Class<T> type) {
+                NullInitializerExpressionFactory initializer =
+                    new NullInitializerExpressionFactory() {
+                      @Override
+                      public ColumnStrategy generationStrategy(RelOptTable table, int column) {
+                        return column == 1 ? ColumnStrategy.VIRTUAL : ColumnStrategy.NOT_NULLABLE;
+                      }
+
+                      @Override
+                      public RexNode newColumnDefaultValue(
+                          RelOptTable table, int column, InitializerContext context) {
+                        return context.getRexBuilder().makeExactLiteral(BigDecimal.TEN);
+                      }
+                    };
+                return type.isInstance(initializer) ? type.cast(initializer) : super.unwrap(type);
+              }
+            });
+    RelNode modification =
+        SubstraitSqlToCalcite.convertQuery(
+                "UPDATE vt SET a = b WHERE b > 0", virtualCatalog, provider)
+            .rel;
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals(
+        "UPDATE target scan schema must match the target table schema", error.getMessage());
   }
 
   @Test
