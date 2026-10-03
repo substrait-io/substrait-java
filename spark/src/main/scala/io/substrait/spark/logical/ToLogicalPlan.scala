@@ -57,7 +57,7 @@ import java.net.URI
 import java.util.Optional
 
 import scala.annotation.nowarn
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, HashSet}
 import scala.jdk.CollectionConverters._
 
 /**
@@ -329,30 +329,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case a: Aggregate => (a.aggregateExpressions, false)
       case other => (other.output, true)
     }
-    val names = fieldNames(project).getOrElse(List.empty)
-
     withOutput(output) {
-      val projectExprs = {
-        project.getExpressions.asScala
-          .map(_.accept(expressionConverter, context))
-          .toSeq
-      }
-      val projectList = if (names.size == projectExprs.size) {
-        projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
-      } else {
-        projectExprs.map(toNamedExpression)
-      }
+      val projectList = project.getExpressions.asScala
+        .map(expr => toNamedExpression(expr.accept(expressionConverter, context)))
+        .toSeq
+      val remapped = remapExpressions(output ++ projectList, project.getRemap)
+      val named = fieldNames(project)
+        .filter(_.size == remapped.size)
+        .map(names => remapped.zip(names).map { case (expr, name) => Alias(expr, name)() })
+        .getOrElse(remapped)
       if (createProject) {
-        val allExpressions = output.map(_.toAttribute) ++ projectList
-        val remapped = if (project.getRemap.isPresent) {
-          project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
-        } else {
-          allExpressions
-        }
-        Project(remapped, child)
+        Project(named, child)
       } else {
         val aggregate: Aggregate = child.asInstanceOf[Aggregate]
-        aggregate.copy(aggregateExpressions = projectList)
+        aggregate.copy(aggregateExpressions = named)
       }
     }
   }
@@ -655,9 +645,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     if (remap.isEmpty) {
       return plan
     }
-    val projectExprs =
-      plan.output.map { case ne: NamedExpression => ne.toAttribute }.map(toNamedExpression)
-    Project(remap.get().indices().asScala.map(i => projectExprs(i)).toSeq, plan)
+    Project(remapExpressions(plan.output, remap), plan)
+  }
+
+  private def remapExpressions(
+      expressions: Seq[NamedExpression],
+      remap: Optional[relation.Rel.Remap]): Seq[NamedExpression] = {
+    val selected = if (remap.isPresent) {
+      val indexed = expressions.toIndexedSeq
+      remap.get().indices().asScala.map(indexed(_)).toSeq
+    } else {
+      expressions
+    }
+    val seen = HashSet.empty[ExprId]
+    selected.map(expr => if (seen.add(expr.exprId)) expr else Alias(expr, expr.name)())
   }
 
   private def resolve(plan: LogicalPlan): LogicalPlan = {
