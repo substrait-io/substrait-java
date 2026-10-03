@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
@@ -78,6 +79,7 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalValues;
@@ -919,8 +921,15 @@ public class SubstraitRelNodeConverter
           transform.getTransformation().accept(expressionRexConverter, context));
     }
 
-    relBuilder.filter(context.exitScope(), condition);
-    RelNode inputForModify = relBuilder.build();
+    java.util.Set<CorrelationId> correlationIds = context.exitScope();
+    RelNode inputForModify;
+    if (condition.isAlwaysTrue() && !correlationIds.isEmpty()) {
+      // SET expressions still need their binding when the filter itself would simplify away.
+      inputForModify =
+          LogicalFilter.create(relBuilder.build(), condition, ImmutableSet.copyOf(correlationIds));
+    } else {
+      inputForModify = relBuilder.filter(correlationIds, condition).build();
+    }
 
     final RelOptTable table = requireRelOptSchema().getTableForMember(update.getNames());
 
