@@ -9,7 +9,6 @@ import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan;
-import io.substrait.proto.AggregateFunction;
 import io.substrait.proto.AggregateRel;
 import io.substrait.proto.ConsistentPartitionWindowRel;
 import io.substrait.proto.CrossRel;
@@ -82,6 +81,8 @@ public class RelProtoConverter
   /** Collects function and type references encountered during conversion. */
   @NonNull protected final ExtensionCollector extensionCollector;
 
+  private final AggregateFunctionProtoConverter aggregateFunctionProtoConverter;
+
   /**
    * Constructor with custom {@link ExtensionCollector}.
    *
@@ -112,6 +113,9 @@ public class RelProtoConverter
     this.exprProtoConverter = new ExpressionProtoConverter(extensionCollector, this);
     this.typeProtoConverter = new TypeProtoConverter(extensionCollector);
     this.extensionProtoConverter = extensionProtoConverter;
+    this.aggregateFunctionProtoConverter =
+        new AggregateFunctionProtoConverter(
+            extensionCollector, exprProtoConverter, typeProtoConverter);
   }
 
   /**
@@ -252,33 +256,9 @@ public class RelProtoConverter
   }
 
   private AggregateRel.Measure toProto(Aggregate.Measure measure) {
-    FunctionArg.FuncArgVisitor<
-            io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
-        argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
-    List<FunctionArg> args = measure.getFunction().arguments();
-    SimpleExtension.AggregateFunctionVariant aggFuncDef = measure.getFunction().declaration();
-
-    AggregateFunction.Builder func =
-        AggregateFunction.newBuilder()
-            .setPhase(measure.getFunction().aggregationPhase().toProto())
-            .setInvocation(measure.getFunction().invocation().toProto())
-            .setOutputType(toProto(measure.getFunction().getType()))
-            .addAllArguments(
-                IntStream.range(0, args.size())
-                    .mapToObj(
-                        i ->
-                            args.get(i)
-                                .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
-                    .collect(Collectors.toList()))
-            .addAllSorts(toProtoS(measure.getFunction().sort()))
-            .setFunctionReference(
-                extensionCollector.getFunctionReference(measure.getFunction().declaration()))
-            .addAllOptions(
-                measure.getFunction().options().stream()
-                    .map(ExpressionProtoConverter::from)
-                    .collect(Collectors.toList()));
-
-    AggregateRel.Measure.Builder builder = AggregateRel.Measure.newBuilder().setMeasure(func);
+    AggregateRel.Measure.Builder builder =
+        AggregateRel.Measure.newBuilder()
+            .setMeasure(aggregateFunctionProtoConverter.toProto(measure));
 
     measure.getPreMeasureFilter().ifPresent(f -> builder.setFilter(toProto(f)));
     return builder.build();

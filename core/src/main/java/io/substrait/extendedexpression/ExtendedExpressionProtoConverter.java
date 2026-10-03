@@ -29,6 +29,10 @@ public class ExtendedExpressionProtoConverter {
 
     final ExpressionProtoConverter expressionProtoConverter =
         new ExpressionProtoConverter(functionCollector, null);
+    final TypeProtoConverter typeProtoConverter = new TypeProtoConverter(functionCollector);
+    final AggregateFunctionProtoConverter aggregateFunctionProtoConverter =
+        new AggregateFunctionProtoConverter(
+            functionCollector, expressionProtoConverter, typeProtoConverter);
 
     for (io.substrait.extendedexpression.ExtendedExpression.ExpressionReferenceBase
         expressionReference : extendedExpression.getReferredExpressions()) {
@@ -52,9 +56,7 @@ public class ExtendedExpressionProtoConverter {
                 expressionReference;
         ExpressionReference.Builder expressionReferenceBuilder =
             ExpressionReference.newBuilder()
-                .setMeasure(
-                    new AggregateFunctionProtoConverter(functionCollector)
-                        .toProto(aft.getMeasure()))
+                .setMeasure(aggregateFunctionProtoConverter.toProto(aft.getMeasure()))
                 .addAllOutputNames(expressionReference.getOutputNames());
         builder.addReferredExpr(expressionReferenceBuilder);
       } else {
@@ -62,8 +64,7 @@ public class ExtendedExpressionProtoConverter {
             "Only Expression or Aggregate Function type are supported in conversion to proto Extended Expressions");
       }
     }
-    builder.setBaseSchema(
-        extendedExpression.getBaseSchema().toProto(new TypeProtoConverter(functionCollector)));
+    builder.setBaseSchema(extendedExpression.getBaseSchema().toProto(typeProtoConverter));
 
     // the process of adding simple extensions (URNs and declarations) is handled on the fly
     functionCollector.addExtensionsToExtendedExpression(builder);
