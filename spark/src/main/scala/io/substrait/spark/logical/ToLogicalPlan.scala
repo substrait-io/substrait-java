@@ -45,7 +45,7 @@ import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
-import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
+import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
@@ -531,19 +531,23 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   }
 
   override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
-    val mode = write.getOperation match {
-      case WriteOp.INSERT => SaveMode.Append
-      case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
+    if (write.getOperation != WriteOp.INSERT) {
+      throw new UnsupportedOperationException(s"Write mode ${write.getOperation} not supported")
     }
-    // create_mode applies only to CTAS. Older file writes used it for Spark save modes,
-    // so reject the modes that cannot be represented by an append-only file extension.
+    // The spec defines create_mode for CTAS and is silent on INSERT. Older file writes used
+    // it for Spark save modes, so reject the modes an append-only file extension cannot honor.
     write.getCreateMode match {
       case CreateMode.UNSPECIFIED | CreateMode.APPEND_IF_EXISTS =>
       case createMode =>
         throw new UnsupportedOperationException(
           s"Filesystem INSERT does not support create mode $createMode")
     }
-    val child = write.getInput.accept(this, context)
+    write.getOutputMode match {
+      case OutputMode.UNSPECIFIED | OutputMode.NO_OUTPUT =>
+      case outputMode =>
+        throw new UnsupportedOperationException(
+          s"Filesystem INSERT does not support output mode $outputMode")
+    }
 
     val file = write.getDetail match {
       case FileHolder(f) => f
@@ -561,6 +565,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
 
     val name = file.getPath.get.split('/').reverse.head
     val table = catalogTable(Seq(name))
+    val child = write.getInput.accept(this, context)
 
     val plan = withChild(child) {
       V1Writes.apply(
@@ -573,7 +578,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
           fileFormat = format,
           options = options,
           query = child,
-          mode = mode,
+          mode = SaveMode.Append,
           catalogTable = Some(table),
           fileIndex = None,
           outputColumnNames = write.getTableSchema.names.asScala.toSeq

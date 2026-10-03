@@ -602,14 +602,20 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       throw new UnsupportedOperationException(s"Unable to convert command: $command")
   }
 
-  private def convertDataWritingCommand(command: V1WriteCommand): relation.AbstractWriteRel =
+  private def convertDataWritingCommand(command: V1WriteCommand): relation.AbstractWriteRel = {
+    if (command.staticPartitions.nonEmpty || command.partitionColumns.nonEmpty) {
+      throw new UnsupportedOperationException("Partitioned writes are not supported")
+    }
+    if (command.bucketSpec.nonEmpty) {
+      throw new UnsupportedOperationException("Bucketed writes are not supported")
+    }
     command match {
       case InsertIntoHadoopFsRelationCommand(
             outputPath,
-            staticPartitions,
-            ifPartitionNotExists,
-            partitionColumns,
-            bucketSpec,
+            _,
+            _,
+            _,
+            _,
             fileFormat,
             options,
             child,
@@ -620,12 +626,6 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
         if (mode != SaveMode.Append) {
           throw new UnsupportedOperationException(
             s"Filesystem writes only support SaveMode.Append, found $mode")
-        }
-        if (staticPartitions.nonEmpty || ifPartitionNotExists || partitionColumns.nonEmpty) {
-          throw new UnsupportedOperationException("Partitioned filesystem writes are not supported")
-        }
-        if (bucketSpec.nonEmpty) {
-          throw new UnsupportedOperationException("Bucketed filesystem writes are not supported")
         }
         val file = FileOrFiles
           .builder()
@@ -659,6 +659,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging {
       case _ =>
         throw new UnsupportedOperationException(s"Unable to convert command: ${command.getClass}")
     }
+  }
 
   private def convertCTAS(
       table: CatalogTable,

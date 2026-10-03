@@ -4,7 +4,9 @@ import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.catalog.BucketSpec
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.hive.execution.InsertIntoHiveTable
 
 import io.substrait.extension.ExtensionLookup
 import io.substrait.plan.{PlanProtoConverter, ProtoPlanConverter}
@@ -110,6 +112,60 @@ class HiveTableSuite extends SparkFunSuite {
     val plan = assertRoundTripExtension(df.queryExecution.optimizedPlan)
     spark.sessionState.executePlan(plan).executedPlan.execute()
     assertResult(2)(spark.sql("select * from ctas").count())
+  }
+
+  test("reject partitioned Hive writes before losing the partition scope") {
+    spark.sql("drop table if exists partitioned_write_target")
+    try {
+      spark.sql(
+        "create table partitioned_write_target(id int, p string) using hive partitioned by (p)")
+      val parsed = spark.sessionState.sqlParser.parsePlan(
+        "insert overwrite table partitioned_write_target partition (p='a') select 1")
+      val staticWrite = spark.sessionState
+        .executePlan(parsed)
+        .analyzed
+        .collectFirst { case command: InsertIntoHiveTable => command }
+        .get
+      val dynamicInput = spark.sql("select 1 as id, 'a' as p").queryExecution.optimizedPlan
+      val dynamicWrite = staticWrite.copy(
+        partition = Map("p" -> None),
+        partitionColumns = Seq(dynamicInput.output.last),
+        query = dynamicInput,
+        outputColumnNames = Seq("id", "p"))
+      Seq(staticWrite, dynamicWrite)
+        .foreach {
+          command =>
+            val error = intercept[UnsupportedOperationException] {
+              new ToSubstraitRel().convert(command)
+            }
+            assert(error.getMessage.contains("Partitioned writes are not supported"))
+        }
+    } finally {
+      spark.sql("drop table if exists partitioned_write_target")
+    }
+  }
+
+  test("reject bucketed Hive writes before losing the bucket layout") {
+    spark.sql("drop table if exists bucketed_write_target")
+    try {
+      spark.sql("create table bucketed_write_target(id int) using hive")
+      val parsed =
+        spark.sessionState.sqlParser.parsePlan("insert into table bucketed_write_target select 1")
+      val command = spark.sessionState
+        .executePlan(parsed)
+        .analyzed
+        .collectFirst { case write: InsertIntoHiveTable => write }
+        .get
+      val bucketSpec = Some(BucketSpec(2, Seq("id"), Seq.empty))
+      val error = intercept[UnsupportedOperationException] {
+        new ToSubstraitRel().convert(
+          command
+            .copy(table = command.table.copy(bucketSpec = bucketSpec), bucketSpec = bucketSpec))
+      }
+      assert(error.getMessage.contains("Bucketed writes are not supported"))
+    } finally {
+      spark.sql("drop table if exists bucketed_write_target")
+    }
   }
 
 }

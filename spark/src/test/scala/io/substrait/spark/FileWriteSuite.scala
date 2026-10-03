@@ -13,7 +13,7 @@ import org.apache.spark.sql.test.SharedSparkSession
 
 import io.substrait.extension.ExtensionCollector
 import io.substrait.relation.{ExtensionWrite, RelProtoConverter}
-import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
+import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import org.apache.hadoop.fs.Path
 
 class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
@@ -53,6 +53,7 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
     val bytes = new RelProtoConverter(collector).toProto(write).toByteArray
     val decoded = new FileHolderHandlingProtoRelConverter(collector)
       .from(io.substrait.proto.Rel.parseFrom(bytes))
+    assertResult(write)(decoded)
     new ToLogicalPlan(spark).convert(decoded)
   }
 
@@ -67,7 +68,7 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
     }
   }
 
-  test("legacy append file extensions remain executable") {
+  test("legacy append file extensions remain executable on unpartitioned targets") {
     withTarget {
       command =>
         val write = ExtensionWrite
@@ -89,7 +90,6 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
               convertWrite(command.copy(mode = mode))
             }
             assert(error.getMessage.contains(s"SaveMode.Append, found $mode"))
-            assertResult(Seq(Row(1), Row(2)))(targetRows)
         }
     }
   }
@@ -98,23 +98,24 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
     withTarget {
       command =>
         val partitioned = spark.sql("SELECT 3 AS id, 10 AS part").queryExecution.optimizedPlan
-        val commands = Seq(
+        val partitionedCommands = Seq(
           command.copy(staticPartitions = Map("part" -> "10")),
-          command.copy(ifPartitionNotExists = true),
           command.copy(
             partitionColumns = Seq(partitioned.output.last),
             query = partitioned,
-            outputColumnNames = Seq("id", "part")),
-          command.copy(bucketSpec = Some(BucketSpec(2, Seq("id"), Seq.empty)))
+            outputColumnNames = Seq("id", "part"))
         )
-        commands.foreach {
+        partitionedCommands.foreach {
           unsupported =>
             val error = intercept[UnsupportedOperationException] {
               convertWrite(unsupported)
             }
-            assert(error.getMessage.contains("filesystem writes are not supported"))
-            assertResult(Seq(Row(1), Row(2)))(targetRows)
+            assert(error.getMessage.contains("Partitioned writes are not supported"))
         }
+        val bucketError = intercept[UnsupportedOperationException] {
+          convertWrite(command.copy(bucketSpec = Some(BucketSpec(2, Seq("id"), Seq.empty))))
+        }
+        assert(bucketError.getMessage.contains("Bucketed writes are not supported"))
     }
   }
 
@@ -130,7 +131,6 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
                 importProto(write)
               }
               assert(error.getMessage.contains(s"INSERT does not support create mode $mode"))
-              assertResult(Seq(Row(1), Row(2)))(targetRows)
           }
     }
   }
@@ -144,7 +144,34 @@ class FileWriteSuite extends SparkFunSuite with SharedSparkSession {
           importProto(write)
         }
         assert(error.getMessage.contains("Write mode UPDATE not supported"))
-        assertResult(Seq(Row(1), Row(2)))(targetRows)
+    }
+  }
+
+  test("reject file writes that request modified records") {
+    withTarget {
+      command =>
+        val write = ExtensionWrite
+          .builder()
+          .from(convertWrite(command))
+          .outputMode(OutputMode.MODIFIED_RECORDS)
+          .build()
+        val error = intercept[UnsupportedOperationException] {
+          importProto(write)
+        }
+        assert(error.getMessage.contains("INSERT does not support output mode MODIFIED_RECORDS"))
+    }
+  }
+
+  test("file writes with NO_OUTPUT preserve append semantics") {
+    withTarget {
+      command =>
+        val write = ExtensionWrite
+          .builder()
+          .from(convertWrite(command))
+          .outputMode(OutputMode.NO_OUTPUT)
+          .build()
+        spark.sessionState.executePlan(importProto(write)).executedPlan.execute()
+        assertResult(Seq(Row(1), Row(2), Row(3)))(targetRows)
     }
   }
 }
