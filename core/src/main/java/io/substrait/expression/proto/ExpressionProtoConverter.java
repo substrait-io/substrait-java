@@ -778,14 +778,7 @@ public class ExpressionProtoConverter
     List<Expression> partitionExprs = toProto(expr.partitionBy());
 
     List<SortField> sortFields =
-        expr.sort().stream()
-            .map(
-                s ->
-                    SortField.newBuilder()
-                        .setDirection(s.direction().toProto())
-                        .setExpr(toProto(s.expr()))
-                        .build())
-            .collect(java.util.stream.Collectors.toList());
+        expr.sort().stream().map(this::toProto).collect(java.util.stream.Collectors.toList());
 
     Expression.WindowFunction.Bound lowerBound = toProto(expr.lowerBound());
     Expression.WindowFunction.Bound upperBound = toProto(expr.upperBound());
@@ -808,6 +801,36 @@ public class ExpressionProtoConverter
                         .map(ExpressionProtoConverter::from)
                         .collect(java.util.stream.Collectors.toList())))
         .build();
+  }
+
+  /**
+   * Converts a sort field to its protobuf representation.
+   *
+   * @param s the sort field to convert
+   * @return the proto sort field
+   */
+  public SortField toProto(io.substrait.expression.Expression.SortField s) {
+    return toProto(s, toProto(s.expr()));
+  }
+
+  /**
+   * Converts a sort field to its protobuf representation, using an already-converted proto
+   * expression. Lets a caller that overrides {@link #toProto(io.substrait.expression.Expression)}
+   * route the sort field's expression through that override.
+   *
+   * @param s the sort field to convert
+   * @param expr the already-converted proto expression for {@code s.expr()}
+   * @return the proto sort field
+   */
+  public SortField toProto(io.substrait.expression.Expression.SortField s, Expression expr) {
+    SortField.Builder builder = SortField.newBuilder().setExpr(expr);
+    if (s.comparisonFunction().isPresent()) {
+      builder.setComparisonFunctionReference(
+          extensionCollector.getFunctionReference(s.comparisonFunction().get()));
+    } else {
+      builder.setDirection(s.direction().get().toProto());
+    }
+    return builder.build();
   }
 
   @Override

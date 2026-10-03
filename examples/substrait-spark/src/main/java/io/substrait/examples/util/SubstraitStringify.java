@@ -1,5 +1,6 @@
 package io.substrait.examples.util;
 
+import io.substrait.expression.Expression;
 import io.substrait.relation.Aggregate;
 import io.substrait.relation.ConsistentPartitionWindow;
 import io.substrait.relation.Cross;
@@ -71,6 +72,13 @@ public class SubstraitStringify extends ParentStringify
   /** Constructor. */
   public SubstraitStringify() {
     super(0);
+  }
+
+  private static String sortKind(Expression.SortField sortField) {
+    return sortField
+        .direction()
+        .<String>map(Object::toString)
+        .orElseGet(() -> "comparisonFunction=" + sortField.comparisonFunction().get());
   }
 
   /**
@@ -300,7 +308,7 @@ public class SubstraitStringify extends ParentStringify
         .forEach(
             sf -> {
               ExpressionStringify expr = new ExpressionStringify(indent);
-              sb.append(sf.expr().accept(expr, context)).append(" ").append(sf.direction());
+              sb.append(sf.expr().accept(expr, context)).append(" ").append(sortKind(sf));
             });
     List<Rel> inputs = sort.getInputs();
     inputs.forEach(
@@ -457,7 +465,7 @@ public class SubstraitStringify extends ParentStringify
         .forEach(
             sf -> {
               ExpressionStringify expr = new ExpressionStringify(indent);
-              sb.append(sf.expr().accept(expr, context)).append(" ").append(sf.direction());
+              sb.append(sf.expr().accept(expr, context)).append(" ").append(sortKind(sf));
             });
     topN.getInputs()
         .forEach(

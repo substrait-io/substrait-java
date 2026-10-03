@@ -86,14 +86,15 @@ class ParameterizedReturnTypeTest {
   }
 
   @Test
-  void aContainerDeclarationIsNotRefusedForABindingItNeverMakes() {
-    // Binding descends into none of the container declarations, so a `list<any1>` or a
-    // `func<any1 -> boolean?>` argument binds nothing. All four of these declare a concrete return
-    // and need no binding at all, so refusing the shape would reject calls that resolve today.
+  void concreteReturnsStillBindContainerArguments() {
     assertEquals(R.I64, resolve("cardinality:list", R.list(R.I64)));
     assertEquals(N.I64, resolve("index_in:any_list", R.I64, R.list(R.I64)));
-    assertEquals(N.BOOLEAN, resolve("all_match:list_func", R.list(R.I64), N.BOOLEAN));
-    assertEquals(N.BOOLEAN, resolve("any_match:list_func", R.list(R.I64), N.BOOLEAN));
+    assertEquals(
+        N.BOOLEAN,
+        resolve("all_match:list_func", R.list(R.I64), R.func(List.of(R.I64), N.BOOLEAN)));
+    assertEquals(
+        N.BOOLEAN,
+        resolve("any_match:list_func", R.list(R.I64), R.func(List.of(R.I64), N.BOOLEAN)));
   }
 
   @Test
@@ -156,11 +157,11 @@ class ParameterizedReturnTypeTest {
   }
 
   /**
-   * The census of list returns the evaluator does not derive. The catalog is owned upstream, so
+   * The census of list returns, which now derive recursively. The catalog is owned upstream, so
    * this catches declarations added by a {@code substrait-packaging} bump.
    */
   @Test
-  void theReturnShapesThatAreNotDerivedYet() {
+  void catalogReturnShapes() {
     assertEquals(
         List.of(
             "filter:list_func",
@@ -171,10 +172,19 @@ class ParameterizedReturnTypeTest {
             "string_split:vchar_vchar",
             "transform:list_func"),
         variantsReturning(ParameterizedType.ListType.class));
+    // A container element carrying arithmetic or a program local parses to the TypeExpression
+    // flavour, a sibling class the assertion above cannot see, so census both. The pinned catalog
+    // declares neither, and no map, struct or func return in any flavour.
+    assertEquals(List.of(), variantsReturning(TypeExpression.ListType.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Map.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Map.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Struct.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Struct.class));
+    assertEquals(List.of(), variantsReturning(ParameterizedType.Func.class));
+    assertEquals(List.of(), variantsReturning(TypeExpression.Func.class));
 
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
+    assertEquals(
+        R.list(R.varChar(20)), resolve("string_split:vchar_vchar", R.varChar(20), R.varChar(20)));
   }
 
   @Test
