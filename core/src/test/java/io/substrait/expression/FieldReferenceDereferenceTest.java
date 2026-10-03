@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
 import io.substrait.type.Type;
-import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -25,7 +24,7 @@ class FieldReferenceDereferenceTest extends TestBase {
     FieldReference reference = reference(scope, R.struct(R.BOOLEAN, N.I64));
 
     assertDereference(
-        reference, reference.dereferenceStruct(1), N.I64, FieldReference.StructField.of(1));
+        reference, reference.dereferenceStruct(0), R.BOOLEAN, FieldReference.StructField.of(0));
   }
 
   @ParameterizedTest
@@ -48,34 +47,20 @@ class FieldReferenceDereferenceTest extends TestBase {
   }
 
   private FieldReference reference(ReferenceScope scope, Type type) {
-    ImmutableFieldReference.Builder builder =
-        FieldReference.builder().type(type).addSegments(FieldReference.StructField.of(1));
-    switch (scope) {
-      case EXPRESSION:
-        builder.inputExpression(
-            Expression.DynamicParameter.builder()
-                .type(R.struct(R.BOOLEAN, type))
-                .parameterReference(0)
-                .build());
-        break;
-      case OUTER_STEPS:
-        builder.outerReferenceStepsOut(2);
-        break;
-      case OUTER_ANCHOR:
-        builder.outerReferenceRelReference(7);
-        break;
-      case LAMBDA_CURRENT:
-        builder.lambdaParameterReferenceStepsOut(0);
-        break;
-      case LAMBDA_OUTER:
-        builder.lambdaParameterReferenceStepsOut(2);
-        break;
-      case ROOT:
-        break;
-      default:
-        throw new IllegalArgumentException("Unexpected reference scope: " + scope);
-    }
-    return builder.build();
+    return switch (scope) {
+      case ROOT -> FieldReference.newRootStructReference(1, type);
+      case EXPRESSION ->
+          FieldReference.newStructReference(
+              1,
+              Expression.DynamicParameter.builder()
+                  .type(R.struct(R.BOOLEAN, type))
+                  .parameterReference(0)
+                  .build());
+      case OUTER_STEPS -> FieldReference.newRootStructOuterReference(1, type, 2);
+      case OUTER_ANCHOR -> FieldReference.newRootStructOuterReferenceByRelReference(1, type, 7);
+      case LAMBDA_CURRENT -> FieldReference.newLambdaParameterReference(0, 1, type);
+      case LAMBDA_OUTER -> FieldReference.newLambdaParameterReference(2, 1, type);
+    };
   }
 
   private void assertDereference(
@@ -83,14 +68,11 @@ class FieldReferenceDereferenceTest extends TestBase {
       FieldReference dereferenced,
       Type expectedType,
       FieldReference.ReferenceSegment nextSegment) {
-    assertEquals(expectedType, dereferenced.getType());
-    assertEquals(List.of(nextSegment, original.segments().get(0)), dereferenced.segments());
-    assertEquals(original.inputExpression(), dereferenced.inputExpression());
-    assertEquals(original.outerReferenceStepsOut(), dereferenced.outerReferenceStepsOut());
-    assertEquals(original.outerReferenceRelReference(), dereferenced.outerReferenceRelReference());
     assertEquals(
-        original.lambdaParameterReferenceStepsOut(),
-        dereferenced.lambdaParameterReferenceStepsOut());
+        ImmutableFieldReference.copyOf(original)
+            .withType(expectedType)
+            .withSegments(nextSegment, original.segments().get(0)),
+        dereferenced);
 
     io.substrait.proto.Expression.FieldReference originalProto =
         expressionProtoConverter.toProto(original).getSelection();

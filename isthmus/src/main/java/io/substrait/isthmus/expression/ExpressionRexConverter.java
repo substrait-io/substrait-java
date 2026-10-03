@@ -831,6 +831,10 @@ public class ExpressionRexConverter
 
       return rexInputRef;
     } else if (expr.isOuterReference()) {
+      if (expr.segments().size() > 1) {
+        throw new UnsupportedOperationException(
+            "Nested field access in outer references is not yet supported");
+      }
       final ReferenceSegment segment = expr.segments().get(0);
 
       if (segment instanceof FieldReference.StructField) {
@@ -852,6 +856,10 @@ public class ExpressionRexConverter
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
     } else if (expr.isLambdaParameterReference()) {
+      if (expr.segments().size() > 1) {
+        throw new UnsupportedOperationException(
+            "Nested field access in lambda parameters is not yet supported");
+      }
       // as of now calcite doesn't support nested lambda functions
       // https://github.com/substrait-io/substrait-java/issues/711
       int stepsOut = expr.lambdaParameterReferenceStepsOut().get();
