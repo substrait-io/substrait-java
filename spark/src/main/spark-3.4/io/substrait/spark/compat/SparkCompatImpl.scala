@@ -8,6 +8,12 @@ import io.substrait.relation
 
 class SparkCompatImpl extends SparkCompat {
 
+  override def createPartitionDirectory(
+      values: org.apache.spark.sql.catalyst.InternalRow,
+      files: Seq[org.apache.hadoop.fs.FileStatus]
+  ): org.apache.spark.sql.execution.datasources.PartitionDirectory =
+    org.apache.spark.sql.execution.datasources.PartitionDirectory(values, files)
+
   override def supportsCaseInsensitivePartitionOverlap: Boolean = false
 
   override def createLogicalRelation(
@@ -59,7 +65,7 @@ class SparkCompatImpl extends SparkCompat {
 
   override def createHadoopFsRelation(
       spark: AnyRef,
-      location: org.apache.spark.sql.execution.datasources.InMemoryFileIndex,
+      location: org.apache.spark.sql.execution.datasources.FileIndex,
       partitionSchema: org.apache.spark.sql.types.StructType,
       dataSchema: org.apache.spark.sql.types.StructType,
       bucketSpec: Option[org.apache.spark.sql.catalyst.catalog.BucketSpec],

@@ -10,6 +10,11 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
  */
 trait SparkCompat {
 
+  def createPartitionDirectory(
+      values: org.apache.spark.sql.catalyst.InternalRow,
+      files: Seq[org.apache.hadoop.fs.FileStatus]
+  ): org.apache.spark.sql.execution.datasources.PartitionDirectory
+
   /** Whether partition values override differently cased file columns in case-insensitive mode. */
   def supportsCaseInsensitivePartitionOverlap: Boolean = true
 
@@ -47,7 +52,7 @@ trait SparkCompat {
 
   def createHadoopFsRelation(
       spark: AnyRef,
-      location: org.apache.spark.sql.execution.datasources.InMemoryFileIndex,
+      location: org.apache.spark.sql.execution.datasources.FileIndex,
       partitionSchema: org.apache.spark.sql.types.StructType,
       dataSchema: org.apache.spark.sql.types.StructType,
       bucketSpec: Option[org.apache.spark.sql.catalyst.catalog.BucketSpec],
