@@ -7,7 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.proto.ExpressionProtoConverter;
+import io.substrait.expression.proto.ProtoExpressionConverter;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
+import io.substrait.isthmus.TypeConverter;
+import io.substrait.isthmus.UserTypeMapper;
+import io.substrait.isthmus.utils.UserTypeFactory;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
 import java.math.BigDecimal;
@@ -47,13 +53,9 @@ class FieldSelectionConverterTest {
     assertEquals(expectedValue, executable.execute()[0]);
 
     Expression converted = call.accept(converter);
-    if (expectedOffset == null) {
-      assertEquals(
-          TypeCreator.NULLABLE.I32,
-          assertInstanceOf(Expression.NullLiteral.class, converted).getType());
-    } else {
-      assertEquals(expectedOffset.intValue(), listOffset(converted));
-    }
+    assertEquals(
+        expectedOffset == null ? Integer.MAX_VALUE : expectedOffset, listOffset(converted));
+    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @ParameterizedTest
@@ -96,9 +98,8 @@ class FieldSelectionConverterTest {
   @MethodSource("invalidLowIndexes")
   void invalidLowIndexesAreNull(SqlOperator operator, long index) {
     Expression converted = rexBuilder.makeCall(operator, array(), integer(index)).accept(converter);
-    assertEquals(
-        TypeCreator.NULLABLE.I32,
-        assertInstanceOf(Expression.NullLiteral.class, converted).getType());
+    assertEquals(Integer.MAX_VALUE, listOffset(converted));
+    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   private static Stream<Arguments> invalidLowIndexes() {
@@ -117,14 +118,13 @@ class FieldSelectionConverterTest {
         rexBuilder
             .makeCall(SqlStdOperatorTable.ITEM, array(), rexBuilder.makeNullLiteral(intType))
             .accept(converter);
-    assertEquals(
-        TypeCreator.NULLABLE.I32,
-        assertInstanceOf(Expression.NullLiteral.class, converted).getType());
+    assertEquals(Integer.MAX_VALUE, listOffset(converted));
+    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @ParameterizedTest
   @MethodSource("nullOrInvalidIndexes")
-  void rejectsDiscardingThrowingArray(SqlOperator operator, Integer index) {
+  void retainsThrowingArray(SqlOperator operator, Integer index) {
     RexNode cast =
         rexBuilder.makeAbstractCast(intType, rexBuilder.makeLiteral("not an integer"), false);
     RexNode throwingArray = rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, cast);
@@ -139,31 +139,43 @@ class FieldSelectionConverterTest {
           RexExecutorImpl.getExecutable(rexBuilder, List.of(call), typeFactory.builder().build());
       executable.setDataContext(DataContexts.EMPTY);
       assertThrows(NumberFormatException.class, executable::execute);
-      assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+      FieldReference converted = assertInstanceOf(FieldReference.class, call.accept(converter));
+      assertEquals(
+          Integer.MAX_VALUE, ((FieldReference.ListElement) converted.segments().get(0)).offset());
+      Expression source = input.accept(converter);
+      assertEquals(
+          source instanceof FieldReference
+              ? ((FieldReference) source).inputExpression().orElseThrow()
+              : source,
+          converted.inputExpression().orElseThrow());
     }
   }
 
   @ParameterizedTest
   @MethodSource("nullOrInvalidIndexes")
-  void rejectsDiscardingNonliteralArray(SqlOperator operator, Integer index) {
+  void retainsNonliteralArray(SqlOperator operator, Integer index) {
     RexNode text = rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR, 20), 0);
     RexNode cast = rexBuilder.makeAbstractCast(intType, text, false);
     RexNode array = rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, cast);
     RexNode call = rexBuilder.makeCall(operator, array, nullableIndex(index));
 
-    assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+    FieldReference converted = assertInstanceOf(FieldReference.class, call.accept(converter));
+    assertEquals(Integer.MAX_VALUE, listOffset(converted));
+    assertEquals(array.accept(converter), converted.inputExpression().orElseThrow());
   }
 
   @ParameterizedTest
   @MethodSource("nullOrInvalidIndexes")
-  void literalAndColumnArraysCanBeDiscarded(SqlOperator operator, Integer index) {
+  void literalAndColumnArraysRetainReferences(SqlOperator operator, Integer index) {
     RexNode column = rexBuilder.makeInputRef(array().getType(), 0);
     for (RexNode input : List.of(array(), column)) {
       Expression converted =
           rexBuilder.makeCall(operator, input, nullableIndex(index)).accept(converter);
+      FieldReference reference = assertInstanceOf(FieldReference.class, converted);
       assertEquals(
-          TypeCreator.NULLABLE.I32,
-          assertInstanceOf(Expression.NullLiteral.class, converted).getType());
+          Integer.MAX_VALUE, ((FieldReference.ListElement) reference.segments().get(0)).offset());
+      assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
+      verifyRoundTrip(converted, TypeConverter.DEFAULT.toSubstrait(input.getType()));
     }
   }
 
@@ -180,6 +192,84 @@ class FieldSelectionConverterTest {
 
   private RexNode nullableIndex(Integer index) {
     return index == null ? rexBuilder.makeNullLiteral(intType) : integer(index);
+  }
+
+  @Test
+  void invalidIndexesRemainReferencesInsideCollections() {
+    RexNode column = rexBuilder.makeInputRef(array().getType(), 0);
+    RexNode missing = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, column, integer(0));
+    Expression list =
+        rexBuilder
+            .makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, integer(1), missing)
+            .accept(converter);
+    assertInstanceOf(Expression.NestedList.class, list);
+    verifyRoundTrip(list, TypeConverter.DEFAULT.toSubstrait(column.getType()));
+    Expression map =
+        rexBuilder
+            .makeCall(
+                SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, missing, rexBuilder.makeLiteral("x"))
+            .accept(converter);
+    assertInstanceOf(Expression.NestedMap.class, map);
+    verifyRoundTrip(map, TypeConverter.DEFAULT.toSubstrait(column.getType()));
+
+    RelDataType nestedType =
+        typeFactory.createArrayType(typeFactory.createArrayType(array().getType(), -1), -1);
+    RexNode nested = rexBuilder.makeInputRef(nestedType, 0);
+    for (int index : new int[] {0, 1, 0}) {
+      nested = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, nested, integer(index));
+    }
+    FieldReference reference = assertInstanceOf(FieldReference.class, nested.accept(converter));
+    assertEquals(4, reference.segments().size());
+    assertEquals(TypeCreator.NULLABLE.I32, reference.getType());
+    verifyRoundTrip(reference, TypeConverter.DEFAULT.toSubstrait(nestedType));
+  }
+
+  @Test
+  void rowElementTypesRemainIdenticalForValidAndInvalidIndexes() {
+    RelDataType row = typeFactory.builder().add("x", intType).build();
+    RexNode column = rexBuilder.makeInputRef(typeFactory.createArrayType(row, -1), 0);
+    RexNode first = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, column, integer(1));
+    RexNode missing = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, column, integer(0));
+    Expression list =
+        rexBuilder
+            .makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, missing, first)
+            .accept(converter);
+    assertEquals(first.accept(converter).getType(), missing.accept(converter).getType());
+    assertInstanceOf(Expression.NestedList.class, list);
+    verifyRoundTrip(list, TypeConverter.DEFAULT.toSubstrait(column.getType()));
+  }
+
+  @Test
+  void requiredUserDefinedElementsCanBeAccessedWithInvalidIndexes() {
+    UserTypeFactory factory = new UserTypeFactory("extension:test:array", "element");
+    TypeConverter types =
+        new TypeConverter(
+            new UserTypeMapper() {
+              @Override
+              public Type toSubstrait(RelDataType type) {
+                return factory.isTypeFromFactory(type)
+                    ? factory.createSubstrait(type.isNullable(), factory.getTypeParameters(type))
+                    : null;
+              }
+
+              @Override
+              public RelDataType toCalcite(Type.UserDefined type) {
+                return factory.createCalcite(type.nullable(), type.typeParameters());
+              }
+            });
+    RexExpressionConverter custom =
+        new RexExpressionConverter(null, CallConverters.defaults(types), null, types);
+    RexNode column =
+        rexBuilder.makeInputRef(typeFactory.createArrayType(factory.createCalcite(false), -1), 0);
+    for (Integer index : new Integer[] {0, null}) {
+      Expression converted =
+          rexBuilder
+              .makeCall(SqlStdOperatorTable.ITEM, column, nullableIndex(index))
+              .accept(custom);
+      assertInstanceOf(FieldReference.class, converted);
+      assertEquals(factory.createSubstrait(true), converted.getType());
+      verifyRoundTrip(converted, types.toSubstrait(column.getType()));
+    }
   }
 
   @ParameterizedTest
@@ -222,5 +312,19 @@ class FieldSelectionConverterTest {
     return expression.accept(
         new ExpressionProtoConverter(new ExtensionCollector(), null),
         EmptyVisitationContext.INSTANCE);
+  }
+
+  private void verifyRoundTrip(Expression expression, Type inputType) {
+    ExtensionCollector extensions = new ExtensionCollector();
+    io.substrait.proto.Expression proto =
+        new ExpressionProtoConverter(extensions, null).toProto(expression);
+    Expression restored =
+        new ProtoExpressionConverter(
+                extensions,
+                DefaultExtensionCatalog.DEFAULT_COLLECTION,
+                TypeCreator.REQUIRED.struct(inputType),
+                null)
+            .from(proto);
+    assertEquals(expression, restored);
   }
 }

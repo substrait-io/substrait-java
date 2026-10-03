@@ -1,13 +1,18 @@
 package io.substrait.type.proto;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.TestBase;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
+import io.substrait.expression.FieldReference;
 import io.substrait.relation.Filter;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.type.Type;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -157,5 +162,40 @@ class FieldReferenceRoundtripTest extends TestBase {
             .build();
 
     verifyRoundTrip(projection);
+  }
+
+  @Test
+  void listSelectionsRemainNullableThroughNestedFields() {
+    Rel input =
+        sb.namedScan(
+            List.of("arrays"),
+            List.of("lists", "rows", "maps"),
+            List.of(
+                R.list(R.list(R.I32)), R.list(R.struct(R.I32)), R.list(R.map(R.STRING, R.I32))));
+    for (int offset : new int[] {0, -1, Integer.MAX_VALUE}) {
+      List<Expression> selections =
+          List.of(
+              FieldReference.newInputRelReference(0, input)
+                  .dereferenceList(offset)
+                  .dereferenceList(0),
+              FieldReference.newInputRelReference(1, input)
+                  .dereferenceList(offset)
+                  .dereferenceStruct(0),
+              FieldReference.newInputRelReference(2, input)
+                  .dereferenceList(offset)
+                  .dereferenceMap(ExpressionCreator.string(false, "key")));
+      selections.forEach(selection -> assertEquals(N.I32, selection.getType()));
+      verifyRoundTrip(Project.builder().input(input).expressions(selections).build());
+    }
+  }
+
+  @Test
+  void listSelectionOnExpressionRemainsNullable() {
+    Expression input = ExpressionCreator.list(false, ExpressionCreator.i32(false, 1));
+    for (int offset : new int[] {0, Integer.MAX_VALUE}) {
+      FieldReference selection = FieldReference.newListReference(offset, input);
+      assertEquals(N.I32, selection.getType());
+      verifyRoundTrip(selection);
+    }
   }
 }

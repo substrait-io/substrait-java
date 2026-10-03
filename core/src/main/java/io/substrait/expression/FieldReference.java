@@ -532,7 +532,8 @@ public abstract class FieldReference implements Expression {
       if (expr.fields().size() < index) {
         throw new IllegalArgumentException("Undefined struct type.");
       }
-      return expr.fields().get(index);
+      Type field = expr.fields().get(index);
+      return field.withNullable(field.nullable() || expr.nullable());
     }
 
     public static Type getReferencedType(Type type, int index) {
@@ -549,7 +550,8 @@ public abstract class FieldReference implements Expression {
 
     @Override
     public Type visit(Type.ListType expr) throws RuntimeException {
-      return expr.elementType();
+      // An out-of-range offset returns null even when the list's elements are required.
+      return expr.elementType().withNullable(true);
     }
 
     public static Type getReferencedType(Type type, int index) {
@@ -575,7 +577,8 @@ public abstract class FieldReference implements Expression {
             String.format(
                 "Key type %s of map does not matched expected type of %s.", expr.key(), keyType));
       }
-      return expr.value();
+      Type value = expr.value();
+      return value.withNullable(value.nullable() || expr.nullable());
     }
 
     public static Type getReferencedType(Type typeToDereference, Type keyType) {

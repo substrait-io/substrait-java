@@ -101,20 +101,20 @@ public class FieldSelectionConverter implements CallConverter {
           if (!operator.safe || (operator.offset != 0 && operator.offset != 1)) {
             return Optional.empty();
           }
-          if (literal instanceof Expression.NullLiteral) {
-            return nullIfInputCanBeDiscarded(call, input);
+          long offset = Integer.MAX_VALUE;
+          if (!(literal instanceof Expression.NullLiteral)) {
+            Optional<Long> index = toLong(literal);
+            if (index.isEmpty()) {
+              return Optional.empty();
+            }
+            // Negative Substrait offsets count from the end, whereas Calcite returns null below
+            // the operator's base. Substrait lists have at most Integer.MAX_VALUE elements, so that
+            // zero-based offset cannot select an element. Keep the reference to evaluate the
+            // array operand and preserve its element type, including for a null index.
+            if (index.get() >= operator.offset) {
+              offset = index.get() - operator.offset;
+            }
           }
-
-          Optional<Long> index = toLong(literal);
-          if (index.isEmpty()) {
-            return Optional.empty();
-          }
-          // Substrait negative offsets count from the end of the list. Calcite treats an index
-          // below the operator's base as out of range, including zero for one-based ITEM.
-          if (index.get() < operator.offset) {
-            return nullIfInputCanBeDiscarded(call, input);
-          }
-          long offset = index.get() - operator.offset;
           if (offset > Integer.MAX_VALUE) {
             return Optional.empty();
           }
@@ -142,17 +142,6 @@ public class FieldSelectionConverter implements CallConverter {
         }
     }
 
-    return Optional.empty();
-  }
-
-  private Optional<Expression> nullIfInputCanBeDiscarded(RexCall call, Expression input) {
-    // Calcite still evaluates the array operand for a null or out-of-range index. Only literals
-    // and references into an existing record are safe to omit; even deterministic calls can fail.
-    if (input instanceof Literal
-        || (input instanceof FieldReference
-            && ((FieldReference) input).inputExpression().isEmpty())) {
-      return Optional.of(ExpressionCreator.typedNull(typeConverter.toSubstrait(call.getType())));
-    }
     return Optional.empty();
   }
 
