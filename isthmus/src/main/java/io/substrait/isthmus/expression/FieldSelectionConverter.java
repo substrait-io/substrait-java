@@ -12,6 +12,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlItemOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,7 @@ public class FieldSelectionConverter implements CallConverter {
    *
    * <ul>
    *   <li>ROW dereference by integer index
-   *   <li>ARRAY dereference by integer index
+   *   <li>ARRAY dereference by integer index, preserving the safe operator's indexing base
    *   <li>MAP dereference by string key
    * </ul>
    *
@@ -65,7 +66,8 @@ public class FieldSelectionConverter implements CallConverter {
       LOGGER
           .atWarn()
           .log(
-              "Found item operator without literal kind/type. This isn't handled well. Reference was {} with toString {}.",
+              "Found item operator without literal kind/type. This isn't handled well. Reference"
+                  + " was {} with toString {}.",
               reference.getKind().name(),
               reference);
       return Optional.empty();
@@ -90,15 +92,37 @@ public class FieldSelectionConverter implements CallConverter {
         }
       case ARRAY:
         {
-          Optional<Integer> index = toInt(literal);
-          if (index.isEmpty()) {
+          if (!(call.getOperator() instanceof SqlItemOperator)) {
+            return Optional.empty();
+          }
+          SqlItemOperator operator = (SqlItemOperator) call.getOperator();
+          // A Substrait list reference returns null for an out-of-range index, so it cannot
+          // preserve the error behavior of OFFSET or ORDINAL.
+          if (!operator.safe || (operator.offset != 0 && operator.offset != 1)) {
+            return Optional.empty();
+          }
+          long offset = Integer.MAX_VALUE;
+          if (!(literal instanceof Expression.NullLiteral)) {
+            Optional<Long> index = toLong(literal);
+            if (index.isEmpty()) {
+              return Optional.empty();
+            }
+            // Negative Substrait offsets count from the end, whereas Calcite returns null below
+            // the operator's base. Substrait lists have at most Integer.MAX_VALUE elements, so that
+            // zero-based offset cannot select an element. Keep the reference to evaluate the
+            // array operand and preserve its element type, including for a null index.
+            if (index.get() >= operator.offset) {
+              offset = index.get() - operator.offset;
+            }
+          }
+          if (offset > Integer.MAX_VALUE) {
             return Optional.empty();
           }
 
           if (input instanceof FieldReference) {
-            return Optional.of(((FieldReference) input).dereferenceList(index.get()));
+            return Optional.of(((FieldReference) input).dereferenceList((int) offset));
           } else {
-            return Optional.of(FieldReference.newListReference(index.get(), input));
+            return Optional.of(FieldReference.newListReference((int) offset, input));
           }
         }
 
@@ -139,6 +163,13 @@ public class FieldSelectionConverter implements CallConverter {
     }
     LOGGER.atWarn().log("Literal expected to be int type but was not. {}.", l);
     return Optional.empty();
+  }
+
+  private Optional<Long> toLong(Expression.Literal literal) {
+    if (literal instanceof Expression.I64Literal) {
+      return Optional.of(((Expression.I64Literal) literal).value());
+    }
+    return toInt(literal).map(Integer::longValue);
   }
 
   /**

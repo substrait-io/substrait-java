@@ -502,7 +502,7 @@ class RelCopyOnWriteVisitorTest extends TestBase {
   @Test
   void listElementSegmentOnANonListIsLeftAlone() {
     assertEquals(
-        R.STRING,
+        N.STRING,
         rewriteNestedReference(R.list(R.STRING), R.struct(R.I64), ListElement.of(0)).getType());
   }
 
