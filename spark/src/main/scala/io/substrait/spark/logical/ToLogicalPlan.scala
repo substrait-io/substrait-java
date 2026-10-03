@@ -232,7 +232,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
           throw new UnsupportedOperationException(s"Unsupported join type $other")
       }
       val plan = Join(left, right, joinType, condition, hint = JoinHint.NONE)
-      remap(plan, join.getRemap)
+      remap(applyFilter(plan, join.getPostJoinFilter, context), join.getRemap)
     }
   }
 
@@ -424,7 +424,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case _ =>
         LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
     }
-    remap(plan, virtualTableScan.getRemap)
+    remap(applyFilter(plan, virtualTableScan.getFilter, context), virtualTableScan.getRemap)
   }
 
   override def visit(
@@ -434,7 +434,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case m: MultiInstanceRelation => m.newInstance()
       case other => other
     }
-    remap(plan, namedScan.getRemap)
+    remap(applyFilter(plan, namedScan.getFilter, context), namedScan.getRemap)
   }
 
   override def visit(localFiles: LocalFiles, context: EmptyVisitationContext): LogicalPlan = {
@@ -467,7 +467,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       catalogTable = None,
       isStreaming = false
     )
-    remap(plan, localFiles.getRemap)
+    remap(applyFilter(plan, localFiles.getFilter, context), localFiles.getRemap)
+  }
+
+  private def applyFilter(
+      plan: LogicalPlan,
+      predicate: Optional[SExpression],
+      context: EmptyVisitationContext): LogicalPlan = {
+    if (predicate.isPresent) {
+      withChild(plan) {
+        Filter(predicate.get.accept(expressionConverter, context), plan)
+      }
+    } else {
+      plan
+    }
   }
 
   def convertFileFormat(fileFormat: FileFormat): (SparkFileFormat, Map[String, String]) = {
