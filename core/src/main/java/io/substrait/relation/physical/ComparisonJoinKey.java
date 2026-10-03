@@ -2,6 +2,8 @@ package io.substrait.relation.physical;
 
 import io.substrait.expression.FieldReference;
 import io.substrait.extension.SimpleExtension;
+import io.substrait.type.Type;
+import java.util.Arrays;
 import org.immutables.value.Value;
 
 /**
@@ -35,6 +37,20 @@ public abstract class ComparisonJoinKey {
    * @return the comparison type
    */
   public abstract ComparisonType getComparison();
+
+  /** Validates parameterized comparison returns, which require the actual key types to resolve. */
+  @Value.Check
+  protected void checkCustomComparisonReturnType() {
+    if (getComparison() instanceof CustomComparison) {
+      SimpleExtension.ScalarFunctionVariant declaration =
+          ((CustomComparison) getComparison()).getDeclaration();
+      if (!(declaration.returnType() instanceof Type)
+          && !(declaration.resolveType(Arrays.asList(getLeft().getType(), getRight().getType()))
+              instanceof Type.Bool)) {
+        throw new IllegalArgumentException("Custom comparison function must return boolean");
+      }
+    }
+  }
 
   /**
    * Creates a builder for {@link ComparisonJoinKey}.
@@ -128,7 +144,10 @@ public abstract class ComparisonJoinKey {
     }
   }
 
-  /** A custom comparison behavior, given by a binary scalar function with a boolean return type. */
+  /**
+   * A custom comparison behavior, given by a binary function with a boolean return type.
+   * Substrait-java resolves this function as a scalar function.
+   */
   @Value.Immutable
   public abstract static class CustomComparison implements ComparisonType {
     /**
@@ -139,6 +158,18 @@ public abstract class ComparisonJoinKey {
      * @return the comparison function declaration
      */
     public abstract SimpleExtension.ScalarFunctionVariant getDeclaration();
+
+    /** Validates the comparator's arity and any concrete return type. */
+    @Value.Check
+    protected void checkDeclaration() {
+      if (!getDeclaration().getRange().within(2)) {
+        throw new IllegalArgumentException("Custom comparison function must accept two arguments");
+      }
+      if (getDeclaration().returnType() instanceof Type
+          && !(getDeclaration().returnType() instanceof Type.Bool)) {
+        throw new IllegalArgumentException("Custom comparison function must return boolean");
+      }
+    }
 
     /**
      * Creates a {@link CustomComparison} using the given comparison function declaration.
