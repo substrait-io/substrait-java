@@ -47,6 +47,10 @@ class IsthmusExecutionExceptionHandler implements CommandLine.IExecutionExceptio
   /** The message the DDL converter reports for a CREATE TABLE without a query. */
   private static final String CTAS_ONLY = "Only create table as select statements are supported";
 
+  /** The message for SQL flags that request conflicting table creation policies. */
+  private static final String CONFLICTING_CTAS_POLICIES =
+      "CREATE TABLE cannot combine OR REPLACE and IF NOT EXISTS";
+
   // The hints are hard-wrapped for a terminal rather than joined into single long lines.
 
   private static final String CREATE_HINT =
@@ -138,7 +142,10 @@ class IsthmusExecutionExceptionHandler implements CommandLine.IExecutionExceptio
       return ((SqlParseException) ex).getPos() != null;
     }
     // CalciteContextException is, by construction, a complaint about the SQL at a line and column.
-    return ex instanceof CalciteContextException || isPlainCreateTableQuery(ex);
+    return ex instanceof CalciteContextException
+        || isPlainCreateTableQuery(ex)
+        || (ex instanceof IllegalArgumentException
+            && CONFLICTING_CTAS_POLICIES.equals(ex.getMessage()));
   }
 
   /**
