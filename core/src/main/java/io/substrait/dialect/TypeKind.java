@@ -54,6 +54,8 @@ public enum TypeKind {
   LIST,
   /** The map type. */
   MAP,
+  /** The function type, the type of a lambda expression. */
+  FUNC,
   /** A user-defined extension type. */
   USER_DEFINED
 }

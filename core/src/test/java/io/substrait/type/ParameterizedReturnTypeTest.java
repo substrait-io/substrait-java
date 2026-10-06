@@ -106,14 +106,11 @@ class ParameterizedReturnTypeTest {
     assertTrue(
         comparison.getMessage().contains("Inconsistent binding for type parameter 'any1'"),
         comparison.getMessage());
+  }
 
-    UnsupportedOperationException strpos =
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> resolve("strpos:vchar_vchar", R.varChar(20), R.varChar(3)));
-    assertTrue(
-        strpos.getMessage().contains("Inconsistent binding for type parameter 'L1'"),
-        strpos.getMessage());
+  @Test
+  void independentParametersBindSeparately() {
+    assertEquals(R.I64, resolve("strpos:vchar_vchar", R.varChar(20), R.varChar(3)));
   }
 
   @Test
