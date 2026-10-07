@@ -196,9 +196,9 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(Filter filter, Context context) throws RuntimeException {
     RelNode input = filter.getInput().accept(this, context);
-    context.enterScope(AnchoredInput.of(filter.getInput().getRelAnchor(), input.getRowType()));
-    RexNode filterCondition = filter.getCondition().accept(expressionRexConverter, context);
-    RelNode node = relBuilder.push(input).filter(context.exitScope(), filterCondition).build();
+    RelNode node =
+        applyFilter(
+            input, Optional.of(filter.getCondition()), context, filter.getInput().getRelAnchor());
     return applyRelCommon(node, filter, input);
   }
 
@@ -209,14 +209,30 @@ public class SubstraitRelNodeConverter
     return applyRelCommon(applyProjection(node, namedScan.getProjection()), namedScan);
   }
 
-  private RelNode applyFilter(RelNode input, Optional<Expression> filter, Context context) {
+  /**
+   * Applies a filter against the input's direct row type, preserving correlation scopes.
+   *
+   * @param input the Calcite input before projection or emit remapping
+   * @param filter the optional filter to apply
+   * @param context the conversion context
+   * @return the input with the filter applied, or the input unchanged when no filter is present
+   */
+  protected RelNode applyFilter(RelNode input, Optional<Expression> filter, Context context) {
+    return applyFilter(input, filter, context, Optional.empty());
+  }
+
+  private RelNode applyFilter(
+      RelNode input,
+      Optional<Expression> filter,
+      Context context,
+      Optional<Integer> inputRelAnchor) {
     if (filter.isEmpty()) {
       return input;
     }
-    // Embedded predicates use the operator's direct row, before projection or emit mapping. This
-    // is an internal input, not another anchored Substrait relation; enclosing scopes still own
-    // any outer references used by the predicate.
-    context.enterScope(AnchoredInput.of(Optional.empty(), input.getRowType()));
+    // Predicates use the direct input row, before projection or emit mapping. Embedded filters on
+    // the relation being built have no anchor here; Filter relations retain their input anchor.
+    // Existing enclosing scopes remain available for outer references.
+    context.enterScope(AnchoredInput.of(inputRelAnchor, input.getRowType()));
     RexNode condition = filter.get().accept(expressionRexConverter, context);
     return relBuilder.push(input).filter(context.exitScope(), condition).build();
   }

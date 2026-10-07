@@ -22,6 +22,7 @@ import io.substrait.type.NamedStruct;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.Interpreter;
@@ -34,11 +35,14 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.Frameworks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class EmbeddedPredicateTest extends PlanTestBase {
@@ -123,16 +127,15 @@ class EmbeddedPredicateTest extends PlanTestBase {
     assertRowMatch(project.getRowType(), R.I32);
   }
 
-  @Test
-  void namedScanFalseAndNullFiltersProduceNoRows() {
+  @ParameterizedTest(name = "mandatory named scan filter {0} produces no rows")
+  @MethodSource("falseAndNullPredicates")
+  void namedScanFalseAndNullFiltersProduceNoRows(String conditionName, Expression condition) {
     NamedScan scan = sb.namedScan(List.of("example"), List.of("id"), List.of(R.I32));
-    for (Expression condition : List.of(sb.bool(false), ExpressionCreator.typedNull(N.BOOLEAN))) {
-      NamedScan filtered = NamedScan.builder().from(scan).filter(condition).build();
+    NamedScan filtered = NamedScan.builder().from(scan).filter(condition).build();
 
-      Values values = assertInstanceOf(Values.class, substraitToCalcite.convert(filtered));
-      assertTrue(values.getTuples().isEmpty());
-      assertRowMatch(values.getRowType(), R.I32);
-    }
+    Values values = assertInstanceOf(Values.class, substraitToCalcite.convert(filtered));
+    assertEquals(List.of(), values.getTuples());
+    assertRowMatch(values.getRowType(), R.I32);
   }
 
   @ParameterizedTest
@@ -230,17 +233,14 @@ class EmbeddedPredicateTest extends PlanTestBase {
     assertEquals(expected, rows(substraitToCalcite.convert(decoded)));
   }
 
-  @ParameterizedTest
-  @EnumSource(
-      value = JoinType.class,
-      names = {"INNER", "LEFT", "LEFT_SEMI", "LEFT_ANTI"})
-  void falseAndNullPostJoinFiltersProduceNoRows(JoinType joinType) {
+  @ParameterizedTest(name = "{0} post-join filter {1} produces no rows")
+  @MethodSource("falseAndNullPostJoinPredicates")
+  void falseAndNullPostJoinFiltersProduceNoRows(
+      JoinType joinType, String conditionName, Expression condition) {
     Join join = equalityJoin(joinType);
-    for (Expression condition : List.of(sb.bool(false), ExpressionCreator.typedNull(N.BOOLEAN))) {
-      Join filtered = Join.builder().from(join).postJoinFilter(condition).build();
+    Join filtered = Join.builder().from(join).postJoinFilter(condition).build();
 
-      assertEquals(List.of(), rows(substraitToCalcite.convert(filtered)));
-    }
+    assertEquals(List.of(), rows(substraitToCalcite.convert(filtered)));
   }
 
   @ParameterizedTest
@@ -282,7 +282,7 @@ class EmbeddedPredicateTest extends PlanTestBase {
     assertFalse(converted.getVariablesSet().isEmpty());
     RexSubQuery exists = assertInstanceOf(RexSubQuery.class, converted.getCondition());
     Filter innerFilter = assertInstanceOf(Filter.class, exists.rel);
-    assertTrue(innerFilter.getCondition().toString().contains("$cor"));
+    assertTrue(RexUtil.containsCorrelation(innerFilter.getCondition()));
   }
 
   @Test
@@ -303,7 +303,22 @@ class EmbeddedPredicateTest extends PlanTestBase {
     RexSubQuery exists = assertInstanceOf(RexSubQuery.class, converted.getCondition());
     Filter innerFilter = assertInstanceOf(Filter.class, exists.rel);
     assertInstanceOf(org.apache.calcite.rel.core.Join.class, innerFilter.getInput());
-    assertTrue(innerFilter.getCondition().toString().contains("$cor"));
+    assertTrue(RexUtil.containsCorrelation(innerFilter.getCondition()));
+  }
+
+  static Stream<Arguments> falseAndNullPredicates() {
+    return Stream.of(
+        Arguments.of("FALSE", ExpressionCreator.bool(false, false)),
+        Arguments.of("NULL", ExpressionCreator.typedNull(N.BOOLEAN)));
+  }
+
+  static Stream<Arguments> falseAndNullPostJoinPredicates() {
+    return Stream.of(JoinType.INNER, JoinType.LEFT, JoinType.LEFT_SEMI, JoinType.LEFT_ANTI)
+        .flatMap(
+            joinType ->
+                Stream.of(
+                    Arguments.of(joinType, "FALSE", ExpressionCreator.bool(false, false)),
+                    Arguments.of(joinType, "NULL", ExpressionCreator.typedNull(N.BOOLEAN))));
   }
 
   private Join equalityJoin(JoinType joinType) {

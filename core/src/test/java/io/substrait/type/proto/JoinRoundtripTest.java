@@ -28,18 +28,7 @@ class JoinRoundtripTest extends TestBase {
           Arrays.asList(R.FP64, R.STRING, R.I64));
 
   @ParameterizedTest
-  @EnumSource(
-      value = Join.JoinType.class,
-      names = {
-        "INNER",
-        "LEFT",
-        "RIGHT",
-        "OUTER",
-        "LEFT_SEMI",
-        "LEFT_ANTI",
-        "RIGHT_SEMI",
-        "RIGHT_ANTI"
-      })
+  @EnumSource(value = Join.JoinType.class, names = "UNKNOWN", mode = EnumSource.Mode.EXCLUDE)
   void postJoinFilterUsesOutputSchemaBeforeEmit(Join.JoinType joinType) {
     Join join =
         sb.join(

@@ -21,7 +21,8 @@ public abstract class AbstractReadRel extends ZeroInputRel implements HasExtensi
   public abstract NamedStruct getInitialSchema();
 
   /**
-   * Returns an optional filter expression that must be applied during the read.
+   * Returns an optional filter expression that must be applied during the read. Its field
+   * references are indexed against the initial schema, before projection or emit remapping.
    *
    * @return the filter expression, if present
    */
