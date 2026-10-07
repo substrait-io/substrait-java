@@ -70,6 +70,12 @@ class SubstraitBuilderAggregateTest extends TestBase {
     List<Aggregate.Measure> measures = List.of(sb.min(input), sb.max(input), sb.avg(input));
 
     assertEquals(List.of(sb.min(scan, 0), sb.max(scan, 0), sb.avg(scan, 0)), measures);
+    assertEquals(
+        List.of("min", "max", "avg"),
+        List.of(
+            measures.get(0).getFunction().declaration().name(),
+            measures.get(1).getFunction().declaration().name(),
+            measures.get(2).getFunction().declaration().name()));
     for (Aggregate.Measure measure : measures) {
       assertEquals(inputType.withNullable(true), measure.getFunction().outputType());
     }

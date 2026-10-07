@@ -17,6 +17,8 @@ import io.substrait.expression.FunctionOption;
 import io.substrait.expression.StatisticalDistribution;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.FunctionBindingResolver;
+import io.substrait.extension.ResolvedArgument;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.function.ToTypeString;
 import io.substrait.plan.ImmutableExecutionBehavior;
@@ -1756,7 +1758,9 @@ public class SubstraitBuilder {
     return measure(
         AggregateFunctionInvocation.builder()
             .arguments(Arrays.asList(expr))
-            .outputType(declaration.resolveType(Arrays.asList(expr.getType())))
+            .outputType(
+                FunctionBindingResolver.deriveOutputType(
+                    declaration, Collections.singletonList(ResolvedArgument.value(expr.getType()))))
             .declaration(declaration)
             // INITIAL_TO_RESULT is the most restrictive aggregation phase type,
             // as it does not allow decomposition. Use it as the default for now.
