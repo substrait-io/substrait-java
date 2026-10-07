@@ -51,6 +51,7 @@ import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class UpdateConversionTest {
@@ -324,6 +325,180 @@ class UpdateConversionTest {
         () -> SubstraitRelVisitor.convert(modification, provider));
   }
 
+  @Test
+  void rejectsWindowFilterAboveAnotherFilter() throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    org.apache.calcite.rel.core.Project window =
+        assertInstanceOf(
+            org.apache.calcite.rel.core.Project.class,
+            SubstraitSqlToCalcite.convertQuery(
+                    "SELECT COUNT(*) OVER () FROM src1", catalog, provider)
+                .rel);
+    RelNode scan = window.getInput();
+    RexBuilder rexBuilder = scan.getCluster().getRexBuilder();
+    LogicalFilter lower =
+        LogicalFilter.create(
+            scan,
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.GREATER_THAN,
+                rexBuilder.makeInputRef(scan, 0),
+                rexBuilder.makeExactLiteral(BigDecimal.ZERO)));
+    LogicalFilter upper =
+        LogicalFilter.create(
+            lower,
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.LESS_THAN,
+                window.getProjects().get(0),
+                rexBuilder.makeExactLiteral(BigDecimal.TEN)));
+    TableModify modification =
+        LogicalTableModify.create(
+            original.getTable(),
+            original.getCatalogReader(),
+            upper,
+            TableModify.Operation.UPDATE,
+            original.getUpdateColumnList(),
+            List.of(rexBuilder.makeExactLiteral(BigDecimal.TEN)),
+            false);
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals("UPDATE cannot merge a window filter with a lower filter", error.getMessage());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", " WHERE v > 0"})
+  void preservesSingleUseNondeterministicAssignment(String where) throws SqlParseException {
+    ConverterProvider customProvider = randomProvider();
+    Prepare.CatalogReader doubleCatalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            customProvider, "CREATE TABLE doubles (v DOUBLE)");
+    NamedUpdate update =
+        assertInstanceOf(
+            NamedUpdate.class,
+            new SqlToSubstrait(customProvider)
+                .convert("UPDATE doubles SET v = RAND()" + where, doubleCatalog)
+                .getRoots()
+                .get(0)
+                .getInput());
+
+    Expression.ScalarFunctionInvocation random =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class,
+            update.getTransformations().get(0).getTransformation());
+    assertEquals("random", random.declaration().name());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void rejectsDuplicatingProjectedSubqueryBindings(boolean filterReference)
+      throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    RelNode input = original.getInput();
+    RexBuilder rexBuilder = input.getCluster().getRexBuilder();
+    RexNode scalar =
+        RexSubQuery.scalar(
+            SubstraitSqlToCalcite.convertQuery(
+                    "SELECT MAX(a.intcol) FROM src1 a WHERE EXISTS"
+                        + " (SELECT 1 FROM src1 b WHERE b.charcol = a.charcol)",
+                    catalog,
+                    provider)
+                .rel);
+    LogicalProject projected =
+        LogicalProject.create(input, List.of(), List.of(scalar), List.of("next_value"));
+    RexNode value = rexBuilder.makeInputRef(projected, 0);
+    RelNode selected =
+        filterReference
+            ? LogicalFilter.create(
+                projected,
+                rexBuilder.makeCall(
+                    SqlStdOperatorTable.GREATER_THAN,
+                    value,
+                    rexBuilder.makeExactLiteral(BigDecimal.ZERO)))
+            : projected;
+    RexNode assignment =
+        filterReference ? value : rexBuilder.makeCall(SqlStdOperatorTable.PLUS, value, value);
+    TableModify modification =
+        LogicalTableModify.create(
+            original.getTable(),
+            original.getCatalogReader(),
+            selected,
+            TableModify.Operation.UPDATE,
+            original.getUpdateColumnList(),
+            List.of(assignment),
+            false);
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals("UPDATE cannot duplicate a projected subquery", error.getMessage());
+  }
+
+  @Test
+  void rejectsExponentialProjectionInlining() throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    RelNode input = original.getInput();
+    RexBuilder rexBuilder = input.getCluster().getRexBuilder();
+    for (int i = 0; i < 10; i++) {
+      RexNode value = rexBuilder.makeInputRef(input, 0);
+      input =
+          LogicalProject.create(
+              input,
+              List.of(),
+              List.of(rexBuilder.makeCall(SqlStdOperatorTable.PLUS, value, value)),
+              List.of("next_value"));
+    }
+    TableModify modification =
+        LogicalTableModify.create(
+            original.getTable(),
+            original.getCatalogReader(),
+            input,
+            TableModify.Operation.UPDATE,
+            original.getUpdateColumnList(),
+            List.of(rexBuilder.makeInputRef(input, 0)),
+            false);
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals(
+        "UPDATE projection flattening would exceed the expression complexity limit",
+        error.getMessage());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "'SELECT intcol FROM src1 FETCH NEXT 1 ROWS ONLY', false",
+    "'SELECT intcol FROM src1 ORDER BY intcol FETCH NEXT 1 ROWS ONLY', false",
+    "'SELECT n FROM (VALUES (1), (2)) AS t(n) ORDER BY n FETCH NEXT 1 ROWS ONLY', true"
+  })
+  void checksOrderingOfLimitedSubqueriesInMergedFilters(String sql, boolean deterministic)
+      throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    RexBuilder rexBuilder = original.getCluster().getRexBuilder();
+    RexNode scalar =
+        RexSubQuery.scalar(SubstraitSqlToCalcite.convertQuery(sql, catalog, provider).rel);
+    RexNode predicate =
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.GREATER_THAN, scalar, rexBuilder.makeExactLiteral(BigDecimal.ZERO));
+    LogicalFilter filtered =
+        LogicalFilter.create(LogicalFilter.create(original.getInput(), predicate), predicate);
+    RelNode modification = original.copy(original.getTraitSet(), List.of(filtered));
+
+    if (deterministic) {
+      assertInstanceOf(NamedUpdate.class, SubstraitRelVisitor.convert(modification, provider));
+    } else {
+      UnsupportedOperationException error =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () -> SubstraitRelVisitor.convert(modification, provider));
+      assertEquals("UPDATE cannot merge nondeterministic filters", error.getMessage());
+    }
+  }
+
   @ParameterizedTest
   @ValueSource(ints = {0, 1, 2})
   void rejectsDuplicatingNondeterministicProjectedValues(int subqueryDepth)
@@ -437,7 +612,7 @@ class UpdateConversionTest {
     RexNode predicate =
         rexBuilder.makeCall(
             SqlStdOperatorTable.GREATER_THAN,
-            rexBuilder.makeInputRef(projected, 2),
+            rexBuilder.makeInputRef(projected, 0),
             rexBuilder.makeExactLiteral(BigDecimal.ZERO));
     LogicalFilter filtered =
         LogicalFilter.create(LogicalFilter.create(projected, predicate), predicate);

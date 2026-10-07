@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
@@ -66,6 +67,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
@@ -856,16 +858,47 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                 throw new UnsupportedOperationException(
                     "UPDATE cannot flatten a window projection");
               }
-              if (project.getProjects().stream().anyMatch(expr -> !isDeterministic(expr))) {
-                throw new UnsupportedOperationException(
-                    "UPDATE cannot flatten a nondeterministic projection");
+              List<RexNode> expressions = new ArrayList<>(sourceExpressions);
+              expressions.addAll(conditions);
+              int[] referenceCounts = new int[project.getProjects().size()];
+              new RexShuttle() {
+                @Override
+                public RexNode visitInputRef(RexInputRef inputRef) {
+                  referenceCounts[inputRef.getIndex()]++;
+                  return inputRef;
+                }
+              }.apply(expressions);
+              for (int i = 0; i < referenceCounts.length; i++) {
+                RexNode expression = project.getProjects().get(i);
+                if (referenceCounts[i] > 1 && RexUtil.SubQueryFinder.find(expression) != null) {
+                  throw new UnsupportedOperationException(
+                      "UPDATE cannot duplicate a projected subquery");
+                }
+                if (referenceCounts[i] > 0
+                    && (!conditions.isEmpty() || referenceCounts[i] > 1)
+                    && !isDeterministic(expression)) {
+                  throw new UnsupportedOperationException(
+                      "UPDATE cannot flatten a nondeterministic projection");
+                }
               }
-              sourceExpressions = resolveProjectedRefs(sourceExpressions, project);
-              conditions = new ArrayList<>(resolveProjectedRefs(conditions, project));
+              List<RexNode> flattened =
+                  RelOptUtil.pushPastProjectUnlessBloat(
+                      expressions, project, RelOptUtil.DEFAULT_BLOAT);
+              if (flattened == null) {
+                throw new UnsupportedOperationException(
+                    "UPDATE projection flattening would exceed the expression complexity limit");
+              }
+              int assignmentCount = sourceExpressions.size();
+              sourceExpressions = flattened.subList(0, assignmentCount);
+              conditions = new ArrayList<>(flattened.subList(assignmentCount, flattened.size()));
               input = project.getInput();
             } else if (input instanceof org.apache.calcite.rel.core.Filter) {
               org.apache.calcite.rel.core.Filter filter =
                   (org.apache.calcite.rel.core.Filter) input;
+              if (conditions.stream().anyMatch(RexOver::containsOver)) {
+                throw new UnsupportedOperationException(
+                    "UPDATE cannot merge a window filter with a lower filter");
+              }
               conditions.add(filter.getCondition());
               input = filter.getInput();
             } else {
@@ -940,17 +973,6 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     return table;
   }
 
-  private List<RexNode> resolveProjectedRefs(
-      List<RexNode> expressions, org.apache.calcite.rel.core.Project project) {
-    List<RexNode> projects = project.getProjects();
-    return new RexShuttle() {
-      @Override
-      public RexNode visitInputRef(RexInputRef inputRef) {
-        return projects.get(inputRef.getIndex());
-      }
-    }.apply(expressions);
-  }
-
   private static boolean isDeterministic(RexNode expression) {
     DeterminismChecker checker = new DeterminismChecker();
     expression.accept(checker);
@@ -982,6 +1004,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             return;
           }
           node.accept(DeterminismChecker.this);
+          if (node instanceof org.apache.calcite.rel.core.Sort) {
+            org.apache.calcite.rel.core.Sort sort = (org.apache.calcite.rel.core.Sort) node;
+            if (sort.fetch != null
+                && !Boolean.TRUE.equals(
+                    sort.getCluster()
+                        .getMetadataQuery()
+                        .areColumnsUnique(
+                            sort.getInput(), ImmutableBitSet.of(sort.getCollation().getKeys())))) {
+              deterministic = false;
+            }
+          }
           if (node instanceof org.apache.calcite.rel.core.Aggregate) {
             // Aggregate operators and their direct arguments are not visited by accept(RexShuttle).
             for (AggregateCall call :
