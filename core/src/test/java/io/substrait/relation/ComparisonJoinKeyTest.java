@@ -46,14 +46,30 @@ class ComparisonJoinKeyTest extends TestBase {
     assertThrows(IllegalArgumentException.class, () -> joinKey(comparison, R.I32));
   }
 
+  @Test
+  void rejectsKeyTypesThatCannotBindToComparatorParameters() {
+    CustomComparison decimalAdd =
+        CustomComparison.of(
+            scalar(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "add:dec_dec"));
+    assertThrows(IllegalArgumentException.class, () -> joinKey(decimalAdd, R.I32));
+
+    CustomComparison nullIf =
+        CustomComparison.of(scalar(DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "nullif:any_any"));
+    assertThrows(IllegalArgumentException.class, () -> joinKey(nullIf, N.BOOLEAN, R.I32));
+  }
+
   private SimpleExtension.ScalarFunctionVariant scalar(String urn, String key) {
     return extensions.getScalarFunction(SimpleExtension.FunctionAnchor.of(urn, key));
   }
 
   private ComparisonJoinKey joinKey(CustomComparison comparison, Type type) {
+    return joinKey(comparison, type, type);
+  }
+
+  private ComparisonJoinKey joinKey(CustomComparison comparison, Type leftType, Type rightType) {
     return ComparisonJoinKey.builder()
-        .left(FieldReference.newRootStructReference(0, type))
-        .right(FieldReference.newRootStructReference(0, type))
+        .left(FieldReference.newRootStructReference(0, leftType))
+        .right(FieldReference.newRootStructReference(0, rightType))
         .comparison(comparison)
         .build();
   }

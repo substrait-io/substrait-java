@@ -44,9 +44,18 @@ public abstract class ComparisonJoinKey {
     if (getComparison() instanceof CustomComparison) {
       SimpleExtension.ScalarFunctionVariant declaration =
           ((CustomComparison) getComparison()).getDeclaration();
-      if (!(declaration.returnType() instanceof Type)
-          && !(declaration.resolveType(Arrays.asList(getLeft().getType(), getRight().getType()))
-              instanceof Type.Bool)) {
+      if (declaration.returnType() instanceof Type) {
+        return;
+      }
+      Type resolvedReturnType;
+      try {
+        resolvedReturnType =
+            declaration.resolveType(Arrays.asList(getLeft().getType(), getRight().getType()));
+      } catch (UnsupportedOperationException e) {
+        throw new IllegalArgumentException(
+            "Custom comparison function cannot be resolved with the join key types", e);
+      }
+      if (!(resolvedReturnType instanceof Type.Bool)) {
         throw new IllegalArgumentException("Custom comparison function must return boolean");
       }
     }
