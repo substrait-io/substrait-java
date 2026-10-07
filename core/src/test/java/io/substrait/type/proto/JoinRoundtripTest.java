@@ -10,6 +10,8 @@ import io.substrait.relation.physical.NestedLoopJoin;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class JoinRoundtripTest extends TestBase {
 
@@ -25,6 +27,28 @@ class JoinRoundtripTest extends TestBase {
           Arrays.asList("d", "e", "f"),
           Arrays.asList(R.FP64, R.STRING, R.I64));
 
+  @ParameterizedTest
+  @EnumSource(value = Join.JoinType.class, names = "UNKNOWN", mode = EnumSource.Mode.EXCLUDE)
+  void postJoinFilterUsesOutputSchemaBeforeEmit(Join.JoinType joinType) {
+    Join join =
+        sb.join(
+            input -> sb.equal(sb.fieldReference(input, 0), sb.fieldReference(input, 5)),
+            joinType,
+            leftTable,
+            rightTable);
+    Join filtered =
+        Join.builder()
+            .from(join)
+            .postJoinFilter(
+                sb.and(
+                    sb.isNull(sb.fieldReference(join, 0)),
+                    sb.isNull(sb.fieldReference(join, join.getRecordType().fields().size() - 1))))
+            .remap(sb.remap(0))
+            .build();
+
+    verifyRoundTrip(filtered);
+  }
+
   @Test
   void hashJoin() {
     List<Integer> leftKeys = Arrays.asList(0, 1);
@@ -34,6 +58,21 @@ class JoinRoundtripTest extends TestBase {
             .from(sb.hashJoin(leftKeys, rightKeys, HashJoin.JoinType.INNER, leftTable, rightTable))
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = HashJoin.JoinType.class, names = "UNKNOWN", mode = EnumSource.Mode.EXCLUDE)
+  void hashPostJoinFilterUsesOutputSchemaBeforeEmit(HashJoin.JoinType joinType) {
+    HashJoin join = sb.hashJoin(List.of(0), List.of(2), joinType, leftTable, rightTable);
+    verifyRoundTrip(
+        HashJoin.builder()
+            .from(join)
+            .postJoinFilter(
+                sb.and(
+                    sb.isNull(sb.fieldReference(join, 0)),
+                    sb.isNull(sb.fieldReference(join, join.getRecordType().fields().size() - 1))))
+            .remap(sb.remap(0))
+            .build());
   }
 
   @Test
@@ -63,6 +102,21 @@ class JoinRoundtripTest extends TestBase {
                 sb.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
             .build();
     verifyRoundTrip(relWithoutKeys);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MergeJoin.JoinType.class, names = "UNKNOWN", mode = EnumSource.Mode.EXCLUDE)
+  void mergePostJoinFilterUsesOutputSchemaBeforeEmit(MergeJoin.JoinType joinType) {
+    MergeJoin join = sb.mergeJoin(List.of(0), List.of(2), joinType, leftTable, rightTable);
+    verifyRoundTrip(
+        MergeJoin.builder()
+            .from(join)
+            .postJoinFilter(
+                sb.and(
+                    sb.isNull(sb.fieldReference(join, 0)),
+                    sb.isNull(sb.fieldReference(join, join.getRecordType().fields().size() - 1))))
+            .remap(sb.remap(0))
+            .build());
   }
 
   @Test
@@ -130,10 +184,13 @@ class JoinRoundtripTest extends TestBase {
     verifyRoundTrip(rel);
   }
 
-  @Test
-  void lateralJoinWithAnchorAndPostFilter() {
+  @ParameterizedTest
+  @EnumSource(
+      value = Join.JoinType.class,
+      names = {"INNER", "LEFT", "LEFT_SEMI", "LEFT_ANTI", "LEFT_SINGLE", "LEFT_MARK"})
+  void lateralJoinWithAnchorAndPostFilter(Join.JoinType joinType) {
     // A lateral join sets a rel anchor so the right input can reference the current left row.
-    Rel rel =
+    LateralJoin join =
         LateralJoin.builder()
             .left(leftTable)
             .right(rightTable)
@@ -141,13 +198,17 @@ class JoinRoundtripTest extends TestBase {
                 sb.equal(
                     sb.fieldReference(Arrays.asList(leftTable, rightTable), 0),
                     sb.fieldReference(Arrays.asList(leftTable, rightTable), 5)))
-            .postJoinFilter(
-                sb.equal(
-                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 2),
-                    sb.fieldReference(Arrays.asList(leftTable, rightTable), 4)))
-            .joinType(Join.JoinType.LEFT)
+            .joinType(joinType)
             .relAnchor(1)
             .build();
-    verifyRoundTrip(rel);
+    verifyRoundTrip(
+        LateralJoin.builder()
+            .from(join)
+            .postJoinFilter(
+                sb.and(
+                    sb.isNull(sb.fieldReference(join, 0)),
+                    sb.isNull(sb.fieldReference(join, join.getRecordType().fields().size() - 1))))
+            .remap(sb.remap(0))
+            .build());
   }
 }

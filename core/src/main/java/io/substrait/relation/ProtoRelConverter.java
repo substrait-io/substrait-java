@@ -1008,15 +1008,20 @@ public class ProtoRelConverter {
     Type.Struct unionedStruct = Type.Struct.builder().from(leftStruct).from(rightStruct).build();
     ProtoExpressionConverter converter =
         new ProtoExpressionConverter(lookup, extensions, unionedStruct, this);
+    Join.JoinType joinType = Join.JoinType.fromProto(rel.getType());
     ImmutableJoin.Builder builder =
         Join.builder()
             .left(left)
             .right(right)
             .condition(converter.from(rel.getExpression()))
-            .joinType(Join.JoinType.fromProto(rel.getType()))
-            .postJoinFilter(
-                Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null));
+            .joinType(joinType);
+
+    if (rel.hasPostJoinFilter()) {
+      ProtoExpressionConverter outputConverter =
+          new ProtoExpressionConverter(
+              lookup, extensions, Join.deriveRecordType(joinType, left, right), this);
+      builder.postJoinFilter(outputConverter.from(rel.getPostJoinFilter()));
+    }
 
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
@@ -1050,13 +1055,16 @@ public class ProtoRelConverter {
                 Optional.ofNullable(
                     rel.hasExpression() ? converter.from(rel.getExpression()) : null))
             .joinType(Join.JoinType.fromProto(rel.getType()))
-            .postJoinFilter(
-                Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? converter.from(rel.getPostJoinFilter()) : null))
             // A lateral join validates that it carries an anchor at construction time, so the
             // anchor has to be set here rather than being left to applyRelCommon, which only runs
             // after build() (it then sees the same value and skips it).
             .relAnchor(relAnchor);
+
+    if (rel.hasPostJoinFilter()) {
+      ProtoExpressionConverter outputConverter =
+          new ProtoExpressionConverter(lookup, extensions, builder.build().getRecordType(), this);
+      builder.postJoinFilter(outputConverter.from(rel.getPostJoinFilter()));
+    }
 
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
@@ -1126,14 +1134,16 @@ public class ProtoRelConverter {
             .right(right)
             .keys(comparisonJoinKeys(rel.getKeysList(), leftConverter, rightConverter))
             .joinType(HashJoin.JoinType.fromProto(rel.getType()))
-            .postJoinFilter(
-                Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
             .residualExpression(
                 Optional.ofNullable(
                     rel.hasResidualExpression()
                         ? unionConverter.from(rel.getResidualExpression())
                         : null));
+    if (rel.hasPostJoinFilter()) {
+      ProtoExpressionConverter outputConverter =
+          new ProtoExpressionConverter(lookup, extensions, builder.build().getRecordType(), this);
+      builder.postJoinFilter(outputConverter.from(rel.getPostJoinFilter()));
+    }
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
     }
@@ -1165,14 +1175,17 @@ public class ProtoRelConverter {
             .right(right)
             .keys(comparisonJoinKeys(rel.getKeysList(), leftConverter, rightConverter))
             .joinType(MergeJoin.JoinType.fromProto(rel.getType()))
-            .postJoinFilter(
-                Optional.ofNullable(
-                    rel.hasPostJoinFilter() ? unionConverter.from(rel.getPostJoinFilter()) : null))
             .residualExpression(
                 Optional.ofNullable(
                     rel.hasResidualExpression()
                         ? unionConverter.from(rel.getResidualExpression())
                         : null));
+
+    if (rel.hasPostJoinFilter()) {
+      ProtoExpressionConverter outputConverter =
+          new ProtoExpressionConverter(lookup, extensions, builder.build().getRecordType(), this);
+      builder.postJoinFilter(outputConverter.from(rel.getPostJoinFilter()));
+    }
 
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));

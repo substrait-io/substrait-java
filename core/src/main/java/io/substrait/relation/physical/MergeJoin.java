@@ -60,7 +60,9 @@ public abstract class MergeJoin extends BiRel implements HasExtension {
   public abstract JoinType getJoinType();
 
   /**
-   * Returns the filter applied to the join output after the join is performed, if any.
+   * Returns the filter applied to the join output after the join is performed, if any. Its field
+   * references are indexed against the direct join output before emit remapping, including any
+   * null-extended fields produced by an outer join.
    *
    * @return the optional post-join filter
    */
