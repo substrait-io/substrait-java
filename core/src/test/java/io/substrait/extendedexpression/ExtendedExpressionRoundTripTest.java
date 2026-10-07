@@ -90,7 +90,7 @@ class ExtendedExpressionRoundTripTest extends TestBase {
         AggregateFunctionInvocation.builder()
             .from(sb.sum(FieldReference.newRootStructReference(0, R.I64)).getFunction())
             .addOptions(
-                FunctionOption.builder().name("overflow").addValues("ERROR", "SATURATE").build())
+                FunctionOption.builder().name("overflow").addValues("SATURATE", "ERROR").build())
             .build();
 
     assertExtendedExpressionOperation(
