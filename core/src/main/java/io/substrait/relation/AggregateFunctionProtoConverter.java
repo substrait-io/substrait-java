@@ -28,9 +28,26 @@ public class AggregateFunctionProtoConverter {
    * @param functionCollector the extension collector for tracking function references
    */
   public AggregateFunctionProtoConverter(ExtensionCollector functionCollector) {
+    this(
+        functionCollector,
+        new ExpressionProtoConverter(functionCollector, null),
+        new TypeProtoConverter(functionCollector));
+  }
+
+  /**
+   * Constructs a converter using the caller's expression and type converters.
+   *
+   * @param functionCollector the extension collector shared by the converters
+   * @param exprProtoConverter the converter for arguments and sort expressions
+   * @param typeProtoConverter the converter for argument and output types
+   */
+  public AggregateFunctionProtoConverter(
+      ExtensionCollector functionCollector,
+      ExpressionProtoConverter exprProtoConverter,
+      TypeProtoConverter typeProtoConverter) {
     this.functionCollector = functionCollector;
-    this.exprProtoConverter = new ExpressionProtoConverter(functionCollector, null);
-    this.typeProtoConverter = new TypeProtoConverter(functionCollector);
+    this.exprProtoConverter = exprProtoConverter;
+    this.typeProtoConverter = typeProtoConverter;
   }
 
   /**
@@ -56,8 +73,16 @@ public class AggregateFunctionProtoConverter {
                         args.get(i)
                             .accept(aggFuncDef, i, argVisitor, EmptyVisitationContext.INSTANCE))
                 .collect(Collectors.toList()))
+        .addAllSorts(
+            measure.getFunction().sort().stream()
+                .map(exprProtoConverter::toProto)
+                .collect(Collectors.toList()))
         .setFunctionReference(
             functionCollector.getFunctionReference(measure.getFunction().declaration()))
+        .addAllOptions(
+            measure.getFunction().options().stream()
+                .map(ExpressionProtoConverter::from)
+                .collect(Collectors.toList()))
         .build();
   }
 }
