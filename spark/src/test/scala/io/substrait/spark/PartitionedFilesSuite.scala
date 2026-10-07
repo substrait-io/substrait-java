@@ -96,6 +96,26 @@ class PartitionedFilesSuite extends SharedSparkSession {
     }
   }
 
+  test("an unpartitioned zero-byte CSV file round-trips as an empty table") {
+    withTempPath {
+      directory =>
+        val path = directory.getAbsolutePath
+        spark.sql("select 1 id where false").coalesce(1).write.csv(path)
+        val data = spark.read.schema("id INT").csv(path)
+        assert(data.inputFiles.nonEmpty)
+        assertRoundTrip(data.queryExecution.optimizedPlan, Seq.empty)
+    }
+  }
+
+  test("an unpartitioned directory without data files round-trips as an empty table") {
+    withTempPath {
+      directory =>
+        assert(directory.mkdirs())
+        val data = spark.read.schema("id INT").csv(directory.getAbsolutePath)
+        assertRoundTrip(data.queryExecution.optimizedPlan, Seq.empty)
+    }
+  }
+
   test("date null and escaped string partition values retain their types and values") {
     withSQLConf("spark.sql.datetime.java8API.enabled" -> "true") {
       withTempPath {
