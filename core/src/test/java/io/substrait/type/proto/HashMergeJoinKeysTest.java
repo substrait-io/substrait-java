@@ -3,6 +3,8 @@ package io.substrait.type.proto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
 import io.substrait.relation.Rel;
 import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.ComparisonJoinKey.SimpleComparisonType;
@@ -81,7 +83,11 @@ class HashMergeJoinKeysTest extends TestBase {
             ComparisonJoinKey.builder()
                 .left(sb.fieldReference(leftTable, 2))
                 .right(sb.fieldReference(rightTable, 1))
-                .comparison(ComparisonJoinKey.CustomComparison.of(42))
+                .comparison(
+                    ComparisonJoinKey.CustomComparison.of(
+                        extensions.getScalarFunction(
+                            SimpleExtension.FunctionAnchor.of(
+                                DefaultExtensionCatalog.FUNCTIONS_COMPARISON, "equal:any_any"))))
                 .build());
 
     Rel hash =
