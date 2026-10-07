@@ -79,7 +79,8 @@ public abstract class SupportedRelation {
   public abstract List<ExpandFieldType> fieldTypes();
 
   /**
-   * Supported message type URIs for {@code EXTENSION_SINGLE}/{@code MULTI}/{@code LEAF}.
+   * Supported message type URIs for {@code EXTENSION_SINGLE}/{@code MULTI}/{@code LEAF}, which must
+   * name at least one.
    *
    * @return the supported message type URIs
    */
@@ -100,21 +101,37 @@ public abstract class SupportedRelation {
   }
 
   /**
+   * The schema requires an extension relation entry to name at least one message type, the same way
+   * a {@code USER_DEFINED} type entry names its extension.
+   */
+  @Value.Check
+  protected void checkMessageTypes() {
+    if (isExtension(relation()) && messageTypes().isEmpty()) {
+      throw new IllegalArgumentException(
+          relation() + " relations must declare at least one supported message type.");
+    }
+  }
+
+  private static boolean isExtension(RelationKind relation) {
+    switch (relation) {
+      case EXTENSION_SINGLE:
+      case EXTENSION_MULTI:
+      case EXTENSION_LEAF:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
    * Whether this entry can be written as a bare enum string. Extension relations are never bare:
    * they are absent from the schema's bare-enum list.
    *
    * @return {@code true} if the entry carries no configuration
    */
   public boolean isBare() {
-    switch (relation()) {
-      case EXTENSION_SINGLE:
-      case EXTENSION_MULTI:
-      case EXTENSION_LEAF:
-        return false;
-      default:
-        break;
-    }
-    return !metadata().isPresent()
+    return !isExtension(relation())
+        && !metadata().isPresent()
         && joinTypes().isEmpty()
         && readTypes().isEmpty()
         && operations().isEmpty()

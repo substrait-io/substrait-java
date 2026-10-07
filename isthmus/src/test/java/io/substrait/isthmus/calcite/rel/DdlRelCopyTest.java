@@ -1,14 +1,21 @@
 package io.substrait.isthmus.calcite.rel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.substrait.isthmus.PlanTestBase;
+import io.substrait.relation.AbstractWriteRel.CreateMode;
 import java.util.List;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.externalize.RelJsonWriter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * The DDL relations are single-input, their {@code copy()} rejects any other input count, and the
@@ -22,6 +29,65 @@ class DdlRelCopyTest extends PlanTestBase {
   private RelDataType declaredSchema() {
     return typeFactory.createStructType(
         List.of(typeFactory.createSqlType(SqlTypeName.BIGINT)), List.of("declared"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = CreateMode.class,
+      names = {"ERROR_IF_EXISTS", "IGNORE_IF_EXISTS", "REPLACE_IF_EXISTS"})
+  void creationPolicySurvivesPlannerCopies(CreateMode mode) {
+    CreateTable original = new CreateTable(List.of("DST"), declaredSchema(), input, mode);
+    CreateTable copied =
+        assertInstanceOf(
+            CreateTable.class, original.copy(original.getTraitSet(), List.of(otherInput)));
+    assertEquals(mode, copied.getCreateMode());
+    assertEquals(declaredSchema(), copied.getTableSchema());
+    assertEquals(otherInput, copied.getInput());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = CreateMode.class,
+      names = {"ERROR_IF_EXISTS", "IGNORE_IF_EXISTS", "REPLACE_IF_EXISTS"})
+  void creationPolicyCanBeExplainedAsJson(CreateMode mode) throws Exception {
+    CreateTable table = new CreateTable(List.of("DST"), declaredSchema(), input, mode);
+    RelJsonWriter writer = new RelJsonWriter();
+    table.explain(writer);
+    assertEquals(
+        List.of(mode.name()),
+        new ObjectMapper().readTree(writer.asString()).findValuesAsText("createMode"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = CreateMode.class,
+      names = {"ERROR_IF_EXISTS", "IGNORE_IF_EXISTS", "REPLACE_IF_EXISTS"},
+      mode = EnumSource.Mode.EXCLUDE)
+  void constructorsRejectUnsupportedCreationPolicies(CreateMode mode) {
+    assertEquals(
+        "Unsupported CTAS creation mode: " + mode,
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new CreateTable(List.of("DST"), declaredSchema(), input, mode))
+            .getMessage());
+  }
+
+  @Test
+  void existingConstructorsRetainTheirCreationPolicy() {
+    assertEquals(
+        CreateMode.REPLACE_IF_EXISTS, new CreateTable(List.of("DST"), input).getCreateMode());
+    assertEquals(
+        CreateMode.REPLACE_IF_EXISTS,
+        new CreateTable(List.of("DST"), declaredSchema(), input).getCreateMode());
+  }
+
+  @Test
+  void differentCreationPoliciesHaveDifferentPlannerDigests() {
+    CreateTable plain =
+        new CreateTable(List.of("DST"), declaredSchema(), input, CreateMode.ERROR_IF_EXISTS);
+    CreateTable replace =
+        new CreateTable(List.of("DST"), declaredSchema(), input, CreateMode.REPLACE_IF_EXISTS);
+    assertNotEquals(plain.getDigest(), replace.getDigest());
   }
 
   @Test

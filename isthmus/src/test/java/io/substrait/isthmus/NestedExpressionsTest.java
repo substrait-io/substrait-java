@@ -273,10 +273,11 @@ class NestedExpressionsTest extends PlanTestBase {
 
   @Test
   void nullableStructLiteralTest() {
-    // The same nullability, on a value that is a StructLiteral to begin with. Its fields are
-    // nullable because Calcite makes every field of a nullable record type nullable.
+    // The same nullability, on a value that is a StructLiteral to begin with. Each field keeps its
+    // own nullability, whatever the struct's is.
     Expression.StructLiteral structLiteral =
-        ExpressionCreator.struct(true, ExpressionCreator.i32(true, 7));
+        ExpressionCreator.struct(
+            true, ExpressionCreator.i32(true, 7), ExpressionCreator.i32(false, 8));
 
     Project project =
         Project.builder().expressions(List.of(structLiteral)).input(emptyTable).build();

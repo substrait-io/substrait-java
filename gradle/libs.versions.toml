@@ -5,7 +5,7 @@ classgraph = "4.8.195"
 graal = "25.0.2"
 graal-plugin = "1.1.14"
 gradle-extensions = "4.0.0"
-guava = "33.7.1-jre"
+guava = "33.7.2-jre"
 httpclient = "5.6.4"
 httpcore = "5.4.4"
 immutables = "2.12.2"
@@ -29,11 +29,11 @@ slf4j = "2.0.20"
 spark-3-4 = "3.4.4"
 spark-3-5 = "3.5.4"
 spark-4-0 = "4.0.2"
-spotless = "8.10.2"
+spotless = "8.10.3"
 # substrait-packaging artifacts, versioned by the Substrait spec release they are generated from.
-substrait-packaging = "0.102.0"
+substrait-packaging = "0.103.0"
 testcontainers = "2.0.5"
-validator = "3.0.7"
+validator = "3.0.8"
 
 [libraries]
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }

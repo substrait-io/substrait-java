@@ -1,6 +1,90 @@
 Release Notes
 ---
 
+## [0.105.0](https://github.com/substrait-io/substrait-java/compare/v0.104.0...v0.105.0) (2026-10-04)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** Consumers must handle added datetime casts. Conversion
+rejects DATE arithmetic with non-literal sub-day intervals, unsupported
+timestamp precision, and literal widening overflow.
+* **core:** `RelCopyOnWriteVisitor.visitComparisonJoinKey` now
+takes the record types of the join's two sides alongside the key, so an
+override must adopt the new signature. A rewrite that leaves a field
+reference unable to resolve against its input no longer throws from
+inside the visitor; it returns a plan in which that reference keeps its
+stale type, so callers relying on that exception as a validation signal
+must validate separately. A visitor instance now carries the scope of
+the traversal it is running, so a single instance can no longer visit
+several relation trees concurrently; sequential reuse is unaffected. An
+override of `ExpressionCopyOnWriteVisitor.visit(FieldReference)` now
+also applies to a `ScatterExchange`'s fields and a `ComparisonJoinKey`'s
+sides, and rewriting one of those to anything other than a field
+reference throws `IllegalStateException`.
+* **isthmus:** isthmus types SUM, SUM0, AVG and decimal + - * / % as
+the extensions declare them: an integer SUM or SUM0 is BIGINT, a
+floating-point one DOUBLE, and a decimal SUM, SUM0 or AVG is DECIMAL(38,
+s); STDDEV_* and VAR_* over a decimal become DECIMAL(38, s) as well. A
+decimal result above precision 38 now gives up scale, so DECIMAL(38,20)
+* DECIMAL(38,20) is DECIMAL(38,6) rather than DECIMAL(38,38). Cast the
+results where code relies on the previous types.
+* **isthmus:** calls converted from Calcite get different operand
+casts, and some bind another variant, for example `concat:str` for `c ||
+c` over chars and `like:str_str` for `LIKE` over an unbounded varchar.
+Consumers matching the old shape have to accept the new ones.
+* **isthmus:** a `NamedScan` carrying a projection now converts to
+Calcite with the mask applied, where it used to convert with the mask
+dropped and give a tree whose columns were not the relation's. A
+`VirtualTableScan` carrying one converts as well, where it used to be
+refused. A `NamedScan` whose mask selects inside a column now throws
+`UnsupportedOperationException`, where that projection used to be
+dropped in silence along with the rest. To convert such a plan, have the
+mask select the whole column: isthmus refuses a nested field reference
+in a `ProjectRel` above the read as well, so neither place can prune
+inside a column.
+* **core:** `Expression.SortField.direction()` now returns
+`Optional<SortDirection>` instead of `SortDirection`. `direction()` is
+empty exactly when `comparisonFunction()` is set, so handle that case
+instead of calling `get()` directly.
+* **core:** Function.resolveType now checks container argument
+shapes and shared parameter constraints even when the return type is
+concrete. Calls that previously derived a type despite invalid arguments
+can now fail. Among them is index_in(i32, list<i32?>), whose value and
+element bind any1 with different nullability. Pass Type.Func for
+function arguments and use types that satisfy the declared shapes and
+parameter constraints.
+* **isthmus:** precision_time, precision_timestamp and
+precision_timestamp_tz convert up to nanoseconds, so plans that were
+refused now convert and TIME(9) or TIMESTAMP(9) can appear where the
+type system allowed at most 6. A TIMESTAMP(9) column compared with a
+literal outside 1677-2262 no longer converts. A precision_timestamp
+outside years 0000-9999 no longer converts to Calcite.
+* **isthmus:** Substrait-to-Calcite conversion keeps a struct field's
+declared nullability, so a required field inside a nullable struct stays
+NOT NULL. `SchemaCollector` gives a table a NOT NULL row type.
+* **isthmus:** The grouping-set index produced by Substrait-to-Calcite
+* **isthmus:** with more than one table, a column of any table after
+the first gets its index in `base_schema`. With `A (A1, A2, A3)` and `B
+(B1, B2)`, `B2` is field 4, not 1. This includes the repeatable
+`-c/--create` CLI option.
+
+### Features
+
+* **core:** derive container return types from nested argument bindings ([#1289](https://github.com/substrait-io/substrait-java/issues/1289)) ([c198b76](https://github.com/substrait-io/substrait-java/commit/c198b76ac7457991fe26488685cd4e2234e7e02a))
+* **core:** support comparison_function_reference in SortField ([#1342](https://github.com/substrait-io/substrait-java/issues/1342)) ([50f8268](https://github.com/substrait-io/substrait-java/commit/50f82687c527a1717ef73c9d8a28e92e8d7a7aa1))
+
+### Bug Fixes
+
+* **core:** re-derive field reference types when copy-on-write replaces a relation ([#1061](https://github.com/substrait-io/substrait-java/issues/1061)) ([bba143b](https://github.com/substrait-io/substrait-java/commit/bba143b26f20b8b394b639292a5a48471ba98669))
+* **isthmus:** apply the projection a read relation carries ([#1280](https://github.com/substrait-io/substrait-java/issues/1280)) ([cd1f301](https://github.com/substrait-io/substrait-java/commit/cd1f3014b3e4eef4e5f9afa6201017fe58c3e31d))
+* **isthmus:** cast operands until the function's declaration binds them ([#1348](https://github.com/substrait-io/substrait-java/issues/1348)) ([bac6b43](https://github.com/substrait-io/substrait-java/commit/bac6b43c2024d1a05739f2fd1312db4a55a60944))
+* **isthmus:** convert precision_time and precision_timestamp up to nanoseconds ([#1318](https://github.com/substrait-io/substrait-java/issues/1318)) ([3a6c248](https://github.com/substrait-io/substrait-java/commit/3a6c248b64f1d5b2529227d132a483f634aea60b))
+* **isthmus:** derive SUM, AVG and decimal arithmetic types as the extensions declare ([#1347](https://github.com/substrait-io/substrait-java/issues/1347)) ([3f1bb3e](https://github.com/substrait-io/substrait-java/commit/3f1bb3e3360aeee2f37c67ca8ed21751c4e47120))
+* **isthmus:** index extended expression fields against the combined schema ([#1286](https://github.com/substrait-io/substrait-java/issues/1286)) ([7113cfd](https://github.com/substrait-io/substrait-java/commit/7113cfdc7b7ac1294212f3bc1e626b6d4bf831a1))
+* **isthmus:** keep a struct's declared field nullability in Calcite ([#1317](https://github.com/substrait-io/substrait-java/issues/1317)) ([4bb0297](https://github.com/substrait-io/substrait-java/commit/4bb029742c09aaf77be5a5d28addf4008f48294e))
+* **isthmus:** preserve grouping-set indices through Calcite conversion ([#1287](https://github.com/substrait-io/substrait-java/issues/1287)) ([4d21734](https://github.com/substrait-io/substrait-java/commit/4d21734da039a6a048b8e06759527a64b544eb78)), closes [#1162](https://github.com/substrait-io/substrait-java/issues/1162)
+* **isthmus:** write the output type the datetime extension declares ([#1346](https://github.com/substrait-io/substrait-java/issues/1346)) ([bc050d3](https://github.com/substrait-io/substrait-java/commit/bc050d377e893a7b565ce0cc4bf0dd4771666a68))
+
 ## [0.104.0](https://github.com/substrait-io/substrait-java/compare/v0.103.0...v0.104.0) (2026-09-27)
 
 ### ⚠ BREAKING CHANGES

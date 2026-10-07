@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.MaskExpression;
 import io.substrait.extension.FunctionBindingResolver;
 import io.substrait.extension.ResolvedAggregateBinding;
 import io.substrait.extension.ResolvedArgument;
@@ -204,7 +205,7 @@ public class SubstraitRelNodeConverter
   @Override
   public RelNode visit(NamedScan namedScan, Context context) throws RuntimeException {
     RelNode node = relBuilder.scan(namedScan.getNames()).build();
-    return applyRelCommon(node, namedScan);
+    return applyRelCommon(applyProjection(node, namedScan.getProjection()), namedScan);
   }
 
   @Override
@@ -812,9 +813,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RexNode directedRexNode(Expression.SortField sortField, Context context) {
+    SortDirection sortDirection = requireDirection(sortField);
     Expression expression = sortField.expr();
     RexNode rexNode = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = sortField.direction();
 
     if (sortDirection == Expression.SortDirection.ASC_NULLS_FIRST) {
       return relBuilder.nullsFirst(rexNode);
@@ -836,6 +837,15 @@ public class SubstraitRelNodeConverter
     throw new IllegalArgumentException("Unsupported sort direction: " + sortDirection);
   }
 
+  private static SortDirection requireDirection(Expression.SortField sortField) {
+    return sortField
+        .direction()
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "A sort field using a custom comparison function is not supported"));
+  }
+
   @Override
   public RelNode visit(Fetch fetch, Context context) throws RuntimeException {
     RelNode child = fetch.getInput().accept(this, context);
@@ -853,9 +863,9 @@ public class SubstraitRelNodeConverter
   }
 
   private RelFieldCollation toRelFieldCollation(Expression.SortField sortField, Context context) {
+    SortDirection sortDirection = requireDirection(sortField);
     Expression expression = sortField.expr();
     RexNode rex = expression.accept(expressionRexConverter, context);
-    SortDirection sortDirection = sortField.direction();
     RexSlot rexSlot = (RexSlot) rex;
     int fieldIndex = rexSlot.getIndex();
 
@@ -991,11 +1001,6 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(VirtualTableScan virtualTableScan, Context context) {
-    if (virtualTableScan.getProjection().isPresent()) {
-      throw new UnsupportedOperationException(
-          "Projection on a VirtualTableScan is not supported: its columns would have to be "
-              + "masked before an emit mapping selects from them");
-    }
     // A schema's names are one per field at every level of the struct, in depth-first order, so
     // they have to be handed to the conversion rather than paired with the row type afterwards:
     // with a nested struct anywhere in the schema the two lists do not even have the same length.
@@ -1046,7 +1051,9 @@ public class SubstraitRelNodeConverter
         tuplesBuilder.add(tupleBuilder.build());
       }
       return applyRelCommon(
-          LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+          applyProjection(
+              LogicalValues.create(relBuilder.getCluster(), rowType, tuplesBuilder.build()),
+              virtualTableScan.getProjection()),
           virtualTableScan);
     } else {
       // A row that does not fit a LogicalValues tuple keeps its expressions, in a relation of our
@@ -1055,7 +1062,10 @@ public class SubstraitRelNodeConverter
       // consumer whose planner only knows Calcite's own relations can expand it with
       // VirtualTableExpansionRule.
       return applyRelCommon(
-          VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows), virtualTableScan);
+          applyProjection(
+              VirtualTable.create(relBuilder.getCluster(), rowType, convertedRows),
+              virtualTableScan.getProjection()),
+          virtualTableScan);
     }
   }
 
@@ -1070,12 +1080,12 @@ public class SubstraitRelNodeConverter
    *
    * <p>Names are what a row, list or map value is rebuilt for: a row's field types are checked
    * against the schema when the {@link VirtualTableScan} is built, so a value that is one of those
-   * agrees with its declared type on everything a Substrait type says. It can still be stamped
-   * nullable where it was not -- Calcite makes a struct's fields nullable along with the struct,
-   * and a value that cannot be null stands in a column that can. A value that cannot take the
-   * declared type at all -- a call returning a struct, say, whose names are not the declared ones
-   * -- is reported here: {@link LogicalProject} and {@link LogicalValues} check the row type they
-   * are handed with an {@code assert}, which says nothing at all unless assertions are on.
+   * agrees with its declared type on everything a Substrait type says. Its nullability can still
+   * differ, since Calcite derives that from the expression: a value that cannot be null stands in a
+   * column that can. A value that cannot take the declared type at all -- a call returning a
+   * struct, say, whose names are not the declared ones -- is reported here: {@link LogicalProject}
+   * and {@link LogicalValues} check the row type they are handed with an {@code assert}, which says
+   * nothing at all unless assertions are on.
    *
    * @param value the converted row value
    * @param declaredType the type its column is declared at
@@ -1096,10 +1106,11 @@ public class SubstraitRelNodeConverter
   /**
    * Whether a converted value can stand at the type it is declared at.
    *
-   * <p>A value that cannot be null stands in a column that can: Calcite makes a struct's fields
-   * nullable along with the struct, so the fields of a nullable struct are declared that way
-   * whatever the values in them are. The other direction is a mismatch, and so is any difference
-   * beyond nullability -- a field name included, which is the one this rename is about.
+   * <p>A value that cannot be null stands in a column that can: Calcite derives a value's
+   * nullability from its expression, and a value that is never null is valid wherever null is
+   * allowed. The other direction is a mismatch -- a scalar subquery, say, which Calcite types
+   * nullable whatever its Substrait type says -- and so is any difference beyond nullability, a
+   * field name included, which is the one this rename is about.
    */
   private boolean fitsDeclared(RelDataType valueType, RelDataType declaredType) {
     return SqlTypeUtil.equalSansNullability(typeFactory, valueType, declaredType)
@@ -1196,20 +1207,29 @@ public class SubstraitRelNodeConverter
   }
 
   private RelNode handleCreateTableAs(NamedWrite namedWrite, Context context) {
-    if (namedWrite.getCreateMode() != AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS
-        || namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
+    if (namedWrite.getOutputMode() != AbstractWriteRel.OutputMode.NO_OUTPUT) {
       throw new UnsupportedOperationException(
           String.format(
-              "Can only handle CTAS NamedWrite with (%s, %s), given (%s, %s)",
-              AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS,
-              AbstractWriteRel.OutputMode.NO_OUTPUT,
-              namedWrite.getCreateMode(),
-              namedWrite.getOutputMode()));
+              "Can only handle CTAS NamedWrite with output mode %s, given %s",
+              AbstractWriteRel.OutputMode.NO_OUTPUT, namedWrite.getOutputMode()));
+    }
+    switch (namedWrite.getCreateMode()) {
+      case ERROR_IF_EXISTS:
+      case IGNORE_IF_EXISTS:
+      case REPLACE_IF_EXISTS:
+        break;
+      default:
+        throw new UnsupportedOperationException(
+            "Cannot convert CTAS creation mode to Calcite: " + namedWrite.getCreateMode());
     }
 
     Rel input = namedWrite.getInput();
     RelNode relNode = input.accept(this, context);
-    return new CreateTable(namedWrite.getNames(), toRowType(namedWrite.getTableSchema()), relNode);
+    return new CreateTable(
+        namedWrite.getNames(),
+        toRowType(namedWrite.getTableSchema()),
+        relNode,
+        namedWrite.getCreateMode());
   }
 
   @Override
@@ -1308,6 +1328,55 @@ public class SubstraitRelNodeConverter
   }
 
   /**
+   * Applies a read relation's projection to the node its scan was converted into.
+   *
+   * <p>A projection masks the columns of the initial schema, and the read produces the ones it
+   * leaves: {@link io.substrait.relation.AbstractReadRel#deriveRecordType()} applies it to that
+   * schema, so an emit mapping's indices, and every field reference a parent relation makes, count
+   * the masked columns. Building the scan from the schema alone leaves the node one column list and
+   * the relation another.
+   *
+   * <p>The columns come out in the order the mask lists them. That is the order {@link
+   * io.substrait.expression.MaskExpressionTypeProjector} builds the record type in, and the node
+   * has to carry the columns the relation says it carries. Spec v0.102.0 describes a mask as
+   * removing columns and asks whether reordering should be supported at all, so this order follows
+   * the record type the model derives rather than a rule the specification settles.
+   *
+   * <p>Only a mask that selects whole columns is converted. A mask can also select inside a column
+   * -- some of a struct's fields, some of a list's elements, some of a map's entries -- and
+   * applying that would mean rebuilding the column's value from the parts the mask keeps, which
+   * this conversion does not do. Such a mask is reported rather than applied to the columns it
+   * selects whole, which would drop the rest of what it says.
+   *
+   * <p>{@link MaskExpression#getMaintainSingularStruct()} is not read. A relation's record type is
+   * always a struct, so a mask over its columns has nothing to unwrap, and the only masks that
+   * could unwrap a nested struct select inside a column, which is refused above.
+   *
+   * @param relNode the node the read was converted into
+   * @param projection the projection the read carries, if any
+   * @return the node, with the masked columns projected out of it
+   */
+  protected RelNode applyProjection(RelNode relNode, Optional<MaskExpression> projection) {
+    if (projection.isEmpty()) {
+      return relNode;
+    }
+    List<MaskExpression.StructItem> items = projection.get().getSelect().getStructItems();
+    RelDataType rowType = relNode.getRowType();
+    List<RexNode> rexList = new ArrayList<>(items.size());
+    for (MaskExpression.StructItem item : items) {
+      if (item.getChild().isPresent()) {
+        throw new UnsupportedOperationException(
+            "A read projection that selects inside a column is not supported: only a mask that "
+                + "selects whole columns is applied, and pruning a struct, a list or a map would "
+                + "have to rebuild the column's value");
+      }
+      rexList.add(
+          new RexInputRef(item.getField(), rowType.getFieldList().get(item.getField()).getType()));
+    }
+    return relBuilder.push(relNode).project(rexList).build();
+  }
+
+  /**
    * Applies the parts of a relation's {@code RelCommon} that Calcite can hold: its emit mapping
    * first, and then the alternative output field names of its hint.
    *
@@ -1330,13 +1399,14 @@ public class SubstraitRelNodeConverter
    * converted into.
    *
    * <p>The names are applied to the projection this relation's own conversion produced: the one a
-   * {@link Project} becomes, or the one {@link #applyRemap(RelNode, Optional)} adds for a relation
-   * with an emit mapping. Anywhere else they are dropped, rather than renaming a node that stands
-   * for another relation or adding a projection the plan never asked for. A relation converted into
-   * a bare Calcite operator therefore keeps the names Calcite derives, and so does one Calcite
-   * builds no operator for at all -- a filter that cannot filter, a sort with no sort fields, an
-   * identity emit mapping -- where the node handed back is the input's, which is what the given
-   * inputs are compared against.
+   * {@link Project} becomes, the one {@link #applyRemap(RelNode, Optional)} adds for a relation
+   * with an emit mapping, or the one {@link #applyProjection(RelNode, Optional)} adds for a read's
+   * projection. Anywhere else they are dropped, rather than renaming a node that stands for another
+   * relation or adding a projection the plan never asked for. A relation converted into a bare
+   * Calcite operator therefore keeps the names Calcite derives, and so does one Calcite builds no
+   * operator for at all -- a filter that cannot filter, a sort with no sort fields, an identity
+   * emit mapping -- where the node handed back is the input's, which is what the given inputs are
+   * compared against.
    *
    * <p>They are dropped as well where the columns of that projection are not the columns of the
    * relation's record type, type by type. A measure converted under {@link
@@ -1411,13 +1481,48 @@ public class SubstraitRelNodeConverter
    */
   private boolean describesColumnsOf(List<Type> fields, RelDataType rowType) {
     for (int field = 0; field < fields.size(); field++) {
-      RelDataType declared = typeConverter.toCalcite(typeFactory, fields.get(field));
-      if (!SqlTypeUtil.equalSansNullability(
-          declared, rowType.getFieldList().get(field).getType())) {
+      if (!sameSansNamesAndNullability(
+          typeConverter.toCalcite(typeFactory, fields.get(field)),
+          rowType.getFieldList().get(field).getType())) {
         return false;
       }
     }
     return true;
+  }
+
+  /**
+   * Returns whether two types are the same, ignoring nullability and field names at every depth.
+   *
+   * <p>A column's nullability, and that of anything inside it, is Calcite's to derive from the
+   * expression producing it. The names inside a column are not what a hint restates, and a declared
+   * type converts without a name list, so the names inside it are placeholders. Calcite's own
+   * {@link SqlTypeUtil#equalAsStructSansNullability} ignores both only on the outermost struct.
+   */
+  private static boolean sameSansNamesAndNullability(RelDataType declared, RelDataType actual) {
+    if (declared.isStruct() || actual.isStruct()) {
+      if (!declared.isStruct()
+          || !actual.isStruct()
+          || declared.getFieldCount() != actual.getFieldCount()) {
+        return false;
+      }
+      for (int field = 0; field < declared.getFieldCount(); field++) {
+        if (!sameSansNamesAndNullability(
+            declared.getFieldList().get(field).getType(),
+            actual.getFieldList().get(field).getType())) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (declared.getKeyType() != null && actual.getKeyType() != null) {
+      return sameSansNamesAndNullability(declared.getKeyType(), actual.getKeyType())
+          && sameSansNamesAndNullability(declared.getValueType(), actual.getValueType());
+    }
+    if (declared.getComponentType() != null && actual.getComponentType() != null) {
+      return declared.getSqlTypeName() == actual.getSqlTypeName()
+          && sameSansNamesAndNullability(declared.getComponentType(), actual.getComponentType());
+    }
+    return SqlTypeUtil.equalSansNullability(declared, actual);
   }
 
   /**

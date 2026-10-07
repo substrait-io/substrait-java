@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,8 +10,10 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.isthmus.sql.SubstraitSqlToCalcite;
 import io.substrait.plan.Plan;
+import io.substrait.proto.WriteRel;
 import io.substrait.relation.AbstractDdlRel;
 import io.substrait.relation.AbstractWriteRel;
+import io.substrait.relation.AbstractWriteRel.CreateMode;
 import io.substrait.relation.NamedDdl;
 import io.substrait.relation.NamedWrite;
 import io.substrait.relation.Project;
@@ -22,6 +25,10 @@ import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DdlRoundtripTest extends PlanTestBase {
   final Prepare.CatalogReader catalogReader =
@@ -37,6 +44,72 @@ class DdlRoundtripTest extends PlanTestBase {
   void testCreateTable() throws Exception {
     String sql = "create table dst1 as select * from src1";
     assertFullRoundTrip(sql, catalogReader);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "CREATE TABLE dst AS SELECT 99 AS v, CREATE_MODE_ERROR_IF_EXISTS",
+    "CREATE TABLE IF NOT EXISTS dst AS SELECT 99 AS v, CREATE_MODE_IGNORE_IF_EXISTS",
+    "CREATE OR REPLACE TABLE dst AS SELECT 99 AS v, CREATE_MODE_REPLACE_IF_EXISTS",
+    "CREATE TABLE dst(v INTEGER) AS SELECT 99 AS v, CREATE_MODE_ERROR_IF_EXISTS",
+    "CREATE TABLE IF NOT EXISTS dst(v INTEGER) AS SELECT 99 AS v, CREATE_MODE_IGNORE_IF_EXISTS",
+    "CREATE OR REPLACE TABLE dst(v INTEGER) AS SELECT 99 AS v, CREATE_MODE_REPLACE_IF_EXISTS"
+  })
+  void preservesCreationPolicyWithOrWithoutAnExistingTarget(
+      String sql, WriteRel.CreateMode expected) throws SqlParseException {
+    for (Prepare.CatalogReader catalog :
+        List.of(
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(),
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                "CREATE TABLE dst(v INTEGER)"))) {
+      assertFullRoundTrip(sql, catalog);
+      Plan plan = new SqlToSubstrait(converterProvider).convert(sql, catalog);
+      assertEquals(
+          expected, toProto(plan).getRelations(0).getRoot().getInput().getWrite().getCreateMode());
+    }
+  }
+
+  @Test
+  void rejectsConflictingCreationPolicies() {
+    assertEquals(
+        "CREATE TABLE cannot combine OR REPLACE and IF NOT EXISTS",
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    new SqlToSubstrait(converterProvider)
+                        .convert(
+                            "CREATE OR REPLACE TABLE IF NOT EXISTS dst AS SELECT 99 AS v",
+                            catalogReader))
+            .getMessage());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"CREATE TABLE", "CREATE TABLE IF NOT EXISTS", "CREATE OR REPLACE TABLE"})
+  void createWithoutAQueryRemainsUnsupported(String prefix) {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new SqlToSubstrait(converterProvider)
+                .convert(prefix + " dst(v INTEGER)", catalogReader));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = CreateMode.class,
+      names = {"ERROR_IF_EXISTS", "IGNORE_IF_EXISTS", "REPLACE_IF_EXISTS"},
+      mode = EnumSource.Mode.EXCLUDE)
+  void unsupportedCreationModesAreRefused(CreateMode mode) throws SqlParseException {
+    Plan plan =
+        new SqlToSubstrait(converterProvider)
+            .convert("CREATE TABLE dst AS SELECT 99 AS v", catalogReader);
+    NamedWrite write = assertInstanceOf(NamedWrite.class, plan.getRoots().get(0).getInput());
+    NamedWrite unsupported = NamedWrite.builder().from(write).createMode(mode).build();
+    assertEquals(
+        "Cannot convert CTAS creation mode to Calcite: " + mode,
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> new SubstraitToCalcite(converterProvider, catalogReader).convert(unsupported))
+            .getMessage());
   }
 
   @Test

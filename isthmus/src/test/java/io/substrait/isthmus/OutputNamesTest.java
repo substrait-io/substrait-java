@@ -97,6 +97,31 @@ class OutputNamesTest extends PlanTestBase {
   }
 
   @Test
+  void namesAStructColumnComputedByAnIfThen() {
+    // Calcite types a CASE over a nullable struct with nullable fields, where the relation declares
+    // the struct's first field required. That field's nullability is the expression's to derive,
+    // like the column's own, so it does not keep the names off the column.
+    Type.Struct inner = TypeCreator.NULLABLE.struct(R.I64, N.STRING);
+    Rel structScan = sb.namedScan(List.of("t"), List.of("s", "x", "y", "k"), List.of(inner, R.I64));
+    Rel project =
+        Project.builder()
+            .input(structScan)
+            .remap(Rel.Remap.offset(2, 1))
+            .addExpressions(
+                sb.ifThen(
+                    List.of(
+                        sb.ifClause(
+                            sb.equal(sb.fieldReference(structScan, 1), sb.i64(1)),
+                            sb.fieldReference(structScan, 0))),
+                    sb.fieldReference(structScan, 0)))
+            .hint(Hint.builder().addOutputNames("renamed", "first", "second").build())
+            .build();
+
+    assertEquals(
+        List.of("renamed"), substraitToCalcite.convert(project).getRowType().getFieldNames());
+  }
+
+  @Test
   void keepsCalciteNamesWithoutAHint() {
     RelNode node = substraitToCalcite.convert(projectWithHint(Optional.empty()));
 
@@ -312,13 +337,13 @@ class OutputNamesTest extends PlanTestBase {
   @Test
   void dropsNamesWhereTheColumnsAreNotTheRelationsColumns() {
     // Under CALCITE_INFERENCE a measure takes the type Calcite infers rather than the one the plan
-    // declares: SUM(i32) declared i64 becomes an INTEGER column, so the names would land on a
+    // declares: a plan typing SUM(i32) as fp64 gets a BIGINT column, so the names would land on a
     // column the plan does not describe. With the declared types they apply.
     Rel scan32 = sb.namedScan(List.of("t32"), List.of("a", "b"), List.of(R.I32, N.STRING));
     Rel aggregate =
         sb.aggregate(
                 input -> List.of(sb.grouping(input, 1)),
-                input -> List.of(declaring(sb.sum(input, 0), N.I64)),
+                input -> List.of(declaring(sb.sum(input, 0), N.FP64)),
                 Optional.of(Rel.Remap.of(List.of(1, 0))),
                 scan32)
             .withHint(Optional.of(Hint.builder().addOutputNames("total", "label").build()));

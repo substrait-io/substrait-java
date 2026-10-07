@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -143,9 +144,84 @@ class CalciteLiteralTest extends CalciteObjs {
 
   @Test
   void tTimeWithNanoSecond() {
+    bitest(
+        ExpressionCreator.precisionTime(
+            false, (14L * 60 * 60 + 22 * 60 + 47) * 1_000_000_000L + 123_456_789, 9),
+        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9));
+  }
+
+  /**
+   * A Substrait temporal value is a 64-bit count of its own unit, so the finer the unit the
+   * narrower the range: nanoseconds run out in 2262, where a Calcite TimestampString reaches 9999.
+   * A timestamp past that is reported rather than wrapped into a different instant.
+   */
+  @Test
+  void aTimestampTooLargeForItsPrecisionIsReported() {
+    RexLiteral literal =
+        rex.makeTimestampLiteral(new TimestampString("9999-12-31 23:59:59.999999999"), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  /**
+   * Both ends of the nanosecond range convert, and one nanosecond past either is reported. The
+   * lower end is the one a floored split can get wrong: its seconds alone do not fit in 64 bits.
+   */
+  @ParameterizedTest
+  @CsvSource({
+    "1677-09-21 00:12:43.145224192, -9223372036854775808",
+    "2262-04-11 23:47:16.854775807,  9223372036854775807",
+  })
+  void theEndsOfTheNanosecondRangeConvert(String timestamp, long nanos) {
     assertEquals(
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456789"), 9),
-        rex.makeTimeLiteral(new TimeString("14:22:47.123456"), 6));
+        ExpressionCreator.precisionTimestamp(false, nanos, 9),
+        new LiteralConverter(TypeConverter.DEFAULT)
+            .convert(rex.makeTimestampLiteral(new TimestampString(timestamp), 9)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1677-09-21 00:12:43.145224191", "2262-04-11 23:47:16.854775808"})
+  void oneNanosecondPastTheRangeIsReported(String timestamp) {
+    RexLiteral literal = rex.makeTimestampLiteral(new TimestampString(timestamp), 9);
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new LiteralConverter(TypeConverter.DEFAULT).convert(literal));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  /**
+   * Compared with a nanosecond column, a literal is widened to the column's precision, so a
+   * sentinel date outside the nanosecond range has no value of that type and is reported. DuckDB's
+   * {@code TIMESTAMP_NS} and Arrow's {@code timestamp[ns]} refuse the same comparison.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"9999-12-31 23:59:59", "1600-01-01 00:00:00"})
+  void aFarDateComparedWithANanosecondColumnIsReported(String timestamp) throws Exception {
+    Prepare.CatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE v (ts TIMESTAMP(9))");
+    String query = "SELECT * FROM v WHERE ts > TIMESTAMP '" + timestamp + "'";
+
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class, () -> new SqlToSubstrait().convert(query, catalog));
+
+    assertTrue(error.getMessage().contains("does not fit in a 64-bit count of 10^-9 seconds"));
+  }
+
+  @Test
+  void tPrecisionTimestampAtNanosecondPrecision() {
+    bitest(
+        ExpressionCreator.precisionTimestamp(false, 1_704_067_200_123_456_789L, 9),
+        rex.makeTimestampLiteral(new TimestampString("2024-01-01 00:00:00.123456789"), 9));
   }
 
   @Test
@@ -186,6 +262,36 @@ class CalciteLiteralTest extends CalciteObjs {
     // The last second that is still a time of day, and the first, are not.
     assertEquals(new TimeString("23:59:59"), timeStringOf(86_399L, 0));
     assertEquals(new TimeString("00:00:00"), timeStringOf(0L, 0));
+  }
+
+  @Test
+  void tPrecisionTimestampRejectsAnOutOfRangeValue() {
+    // A TimestampString spans 0000-01-01 to 9999-12-31, and past it Calcite renders the year
+    // modulo 10000: year 11476 at precision 7 would convert to 1476-08-15 05:20:00 with nothing
+    // said. Rejected by value instead, at every precision.
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value 3000000000000000000.",
+        timestampRejectionOf(3_000_000_000_000_000_000L, 7));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value -9223372036854775808.",
+        timestampRejectionOf(Long.MIN_VALUE, 8));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value 253402300800.",
+        timestampRejectionOf(253_402_300_800L, 0));
+    assertEquals(
+        "Cannot handle PrecisionTimestamp with out-of-range value -62167219201.",
+        timestampRejectionOf(-62_167_219_201L, 0));
+
+    // The last second a TimestampString holds, and the first, still convert.
+    assertEquals(
+        new TimestampString("9999-12-31 23:59:59"), timestampStringOf(253_402_300_799L, 0));
+    assertEquals(
+        new TimestampString("0000-01-01 00:00:00"), timestampStringOf(-62_167_219_200L, 0));
+  }
+
+  private String timestampRejectionOf(long value, int precision) {
+    return assertThrows(IllegalArgumentException.class, () -> timestampStringOf(value, precision))
+        .getMessage();
   }
 
   private TimestampString timestampStringOf(long value, int precision) {
@@ -239,7 +345,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimeKeepsItsPrecision(int precision) {
     Expression.PrecisionTimeLiteral time =
         ExpressionCreator.precisionTime(false, timeValue(precision), precision);
@@ -250,7 +356,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimestampKeepsItsPrecision(int precision) {
     PrecisionTimestampLiteral timestamp =
         ExpressionCreator.precisionTimestamp(false, timestampValue(precision), precision);
@@ -261,7 +367,7 @@ class CalciteLiteralTest extends CalciteObjs {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+  @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
   void tPrecisionTimestampTZStaysTimeZoned(int precision) {
     // Calcite has no dedicated timestamp-with-time-zone literal, but it does have the
     // TIMESTAMP_WITH_LOCAL_TIME_ZONE type that TypeConverter maps precision_timestamp_tz to, so a
@@ -376,10 +482,10 @@ class CalciteLiteralTest extends CalciteObjs {
         + subseconds(precision);
   }
 
-  /** 123 milliseconds expressed at the given precision, or none at all when there is no room. */
+  /** .123456789 seconds cut to the given precision, or none at all when there is no room. */
   private static long subseconds(int precision) {
-    // The first `precision` digits of .123456, so no precision is left with an empty fraction.
-    return 123_456L / LongMath.pow(10, 6 - precision);
+    // The first `precision` digits of .123456789, so no precision is left with an empty fraction.
+    return 123_456_789L / LongMath.pow(10, 9 - precision);
   }
 
   @Test

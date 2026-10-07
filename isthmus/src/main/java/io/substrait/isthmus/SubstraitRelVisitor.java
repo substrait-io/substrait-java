@@ -927,7 +927,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
         .input(inputRel)
         .tableSchema(schema)
         .operation(AbstractWriteRel.WriteOp.CTAS)
-        .createMode(AbstractWriteRel.CreateMode.REPLACE_IF_EXISTS)
+        .createMode(createTable.getCreateMode())
         .outputMode(AbstractWriteRel.OutputMode.NO_OUTPUT)
         .names(createTable.getTableName())
         .build();
@@ -965,9 +965,9 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   @Override
   public Rel visit(VirtualTable virtualTable) {
     // At the row type's field types rather than the values' own, as visit(Values) does: a literal
-    // narrower than its column -- Calcite infers one for a tuple value, and pushes a struct's
-    // nullability down into its fields -- would otherwise disagree with the schema built from the
-    // same row type, and VirtualTableScan rejects the relation on that.
+    // narrower than its column -- Calcite infers one for a tuple value -- would otherwise disagree
+    // with the schema built from the same row type, and VirtualTableScan rejects the relation on
+    // that.
     List<RelDataTypeField> rowFields = virtualTable.getRowType().getFieldList();
     LiteralConverter literalConverter = new LiteralConverter(typeConverter);
     List<Expression.NestedStruct> rows = new ArrayList<>(virtualTable.getRows().size());

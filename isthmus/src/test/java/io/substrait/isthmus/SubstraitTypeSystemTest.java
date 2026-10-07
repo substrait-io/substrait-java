@@ -6,8 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension;
+import io.substrait.function.ToTypeString;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
 import io.substrait.plan.Plan;
+import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
 import java.util.List;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -21,7 +25,149 @@ import org.junit.jupiter.api.Test;
 
 class SubstraitTypeSystemTest {
 
+  private static final TypeCreator R = TypeCreator.REQUIRED;
+
   private final RelDataTypeSystem typeSystem = SubstraitTypeSystem.TYPE_SYSTEM;
+
+  /**
+   * Decimal addition, subtraction, multiplication, division and modulus derive what the decimal
+   * extension declares, checked against the catalog's own derivation over precisions and scales on
+   * both sides of the 38 cap, where the result gives up scale.
+   */
+  @Test
+  void decimalArithmeticDerivesWhatTheExtensionDeclares() {
+    List<Integer> precisions = List.of(1, 5, 7, 12, 19, 28, 37, 38);
+    for (int p1 : precisions) {
+      for (int s1 : scales(p1)) {
+        for (int p2 : precisions) {
+          for (int s2 : scales(p2)) {
+            RelDataType left = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, p1, s1);
+            RelDataType right = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, p2, s2);
+            List<Type> operands = List.of(R.decimal(p1, s1), R.decimal(p2, s2));
+            assertEquals(
+                declared("add:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalPlusType(TYPE_FACTORY, left, right)));
+            assertEquals(
+                declared("subtract:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalPlusType(TYPE_FACTORY, left, right)));
+            assertEquals(
+                declared("multiply:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalMultiplyType(TYPE_FACTORY, left, right)));
+            assertEquals(
+                declared("divide:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalDivideType(TYPE_FACTORY, left, right)));
+            assertEquals(
+                declared("modulus:dec_dec", operands),
+                substrait(typeSystem.deriveDecimalModType(TYPE_FACTORY, left, right)));
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * For type derivation, an integer operand counts as the decimal that holds its type: {@code
+   * decimal(10,0)} for an INTEGER and {@code decimal(19,0)} for a BIGINT, whatever the type
+   * system's own decimal precision.
+   */
+  @Test
+  void decimalArithmeticWithAnIntegerOperandDerivesWhatTheExtensionDeclares() {
+    RelDataType decimal = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, 7, 2);
+    for (SqlTypeName integer : List.of(SqlTypeName.INTEGER, SqlTypeName.BIGINT)) {
+      RelDataType other = TYPE_FACTORY.createSqlType(integer);
+      List<Type> operands =
+          List.of(R.decimal(7, 2), R.decimal(integer == SqlTypeName.INTEGER ? 10 : 19, 0));
+      assertEquals(
+          declared("add:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalPlusType(TYPE_FACTORY, decimal, other)));
+      assertEquals(
+          declared("multiply:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalMultiplyType(TYPE_FACTORY, decimal, other)));
+      assertEquals(
+          declared("divide:dec_dec", operands),
+          substrait(typeSystem.deriveDecimalDivideType(TYPE_FACTORY, decimal, other)));
+    }
+  }
+
+  /**
+   * SUM and AVG derive what the arithmetic extensions declare. The aggregate function sets the
+   * result's nullability, so only the type is compared.
+   */
+  @Test
+  void sumAndAvgDeriveWhatTheExtensionsDeclare() {
+    List<SqlTypeName> numerics =
+        List.of(
+            SqlTypeName.TINYINT,
+            SqlTypeName.SMALLINT,
+            SqlTypeName.INTEGER,
+            SqlTypeName.BIGINT,
+            SqlTypeName.REAL,
+            SqlTypeName.DOUBLE);
+    for (SqlTypeName name : numerics) {
+      RelDataType argument = TYPE_FACTORY.createSqlType(name);
+      assertAggregate("sum", argument, typeSystem.deriveSumType(TYPE_FACTORY, argument));
+      assertAggregate("avg", argument, typeSystem.deriveAvgAggType(TYPE_FACTORY, argument));
+    }
+    for (int precision : List.of(1, 7, 38)) {
+      for (int scale : scales(precision)) {
+        RelDataType argument = TYPE_FACTORY.createSqlType(SqlTypeName.DECIMAL, precision, scale);
+        assertAggregate("sum", argument, typeSystem.deriveSumType(TYPE_FACTORY, argument));
+        assertAggregate("avg", argument, typeSystem.deriveAvgAggType(TYPE_FACTORY, argument));
+      }
+    }
+  }
+
+  /**
+   * The same in a query: isthmus's own SUM and AVG take their types from the type system, where
+   * they used to repeat the argument's. The average stays nullable, the right answer for an empty
+   * group, although avg:dec declares a required result.
+   */
+  @Test
+  void sumAndAvgInAQueryTakeTheTypeSystemsTypes() throws Exception {
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+            "CREATE TABLE t (d DECIMAL(7, 2), i INT)");
+    Plan plan = new SqlToSubstrait().convert("SELECT SUM(d), AVG(d), SUM(i) FROM t", catalog);
+
+    assertEquals(
+        List.of(
+            TypeCreator.NULLABLE.decimal(38, 2),
+            TypeCreator.NULLABLE.decimal(38, 2),
+            TypeCreator.NULLABLE.I64),
+        plan.getRoots().get(0).getInput().getRecordType().fields());
+  }
+
+  private static List<Integer> scales(int precision) {
+    return List.of(0, precision / 2, precision).stream().distinct().toList();
+  }
+
+  private static Type declared(String key, List<Type> operands) {
+    return DefaultExtensionCatalog.DEFAULT_COLLECTION
+        .getScalarFunction(
+            SimpleExtension.FunctionAnchor.of(
+                DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, key))
+        .resolveType(operands);
+  }
+
+  private static Type substrait(RelDataType type) {
+    return TypeConverter.DEFAULT.toSubstrait(type);
+  }
+
+  private static void assertAggregate(String name, RelDataType argument, RelDataType derived) {
+    Type operand = substrait(argument);
+    String urn =
+        argument.getSqlTypeName() == SqlTypeName.DECIMAL
+            ? DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL
+            : DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC;
+    String key = name + ":" + operand.accept(ToTypeString.INSTANCE);
+    Type declared =
+        DefaultExtensionCatalog.DEFAULT_COLLECTION
+            .getAggregateFunction(SimpleExtension.FunctionAnchor.of(urn, key))
+            .resolveType(List.of(operand));
+    assertTrue(
+        declared.equalsIgnoringNullability(substrait(derived)),
+        () -> key + " declares " + declared + " but derives " + derived.getFullTypeString());
+  }
 
   @Test
   void decimalMaxPrecision() {
@@ -45,12 +191,16 @@ class SubstraitTypeSystemTest {
 
   @Test
   void timestampMaxPrecision() {
-    assertEquals(6, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP));
+    // Nanoseconds: the finest unit a Calcite TimestampString carries, and what the type factory
+    // builds a TIMESTAMP at once the ceiling allows it. Picoseconds clamp rather than throw, so
+    // Substrait's 10 to 12 stay out.
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP));
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE));
   }
 
   @Test
   void timeMaxPrecision() {
-    assertEquals(6, typeSystem.getMaxPrecision(SqlTypeName.TIME));
+    assertEquals(9, typeSystem.getMaxPrecision(SqlTypeName.TIME));
   }
 
   @Test

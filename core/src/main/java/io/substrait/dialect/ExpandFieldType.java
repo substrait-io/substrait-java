@@ -4,6 +4,6 @@ package io.substrait.dialect;
 public enum ExpandFieldType {
   /** A field whose value switches between expressions per expansion. */
   SWITCHING_FIELD,
-  /** A field with a constant value across expansions. */
-  CONSTANT_FIELD
+  /** A field with the same value across expansions. */
+  CONSISTENT_FIELD
 }

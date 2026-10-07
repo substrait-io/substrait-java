@@ -17,6 +17,7 @@ import io.substrait.plan.Plan;
 import io.substrait.plan.Plan.Root;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
+import io.substrait.relation.Project;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
@@ -359,6 +360,15 @@ public class PlanTestBase {
   protected Plan toSubstraitPlan(String sql, CalciteCatalogReader catalog)
       throws SqlParseException {
     return new SqlToSubstrait().convert(sql, catalog);
+  }
+
+  protected Expression firstExpression(String query, String createStatements)
+      throws SqlParseException {
+    Plan plan =
+        toSubstraitPlan(
+            query,
+            SubstraitCreateStatementParser.processCreateStatementsToCatalog(createStatements));
+    return ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
   }
 
   protected String toSql(io.substrait.proto.Plan protoPlan) {

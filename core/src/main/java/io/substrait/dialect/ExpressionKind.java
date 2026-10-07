@@ -26,6 +26,10 @@ public enum ExpressionKind {
   NESTED,
   /** A dynamic parameter expression. */
   DYNAMIC_PARAMETER,
+  /** A lambda expression. */
+  LAMBDA,
+  /** A lambda invocation expression. */
+  LAMBDA_INVOCATION,
   /** An execution-context variable expression. */
   EXECUTION_CONTEXT_VARIABLE
 }

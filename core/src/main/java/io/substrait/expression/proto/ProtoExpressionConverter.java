@@ -89,6 +89,10 @@ public class ProtoExpressionConverter {
             rootType, getDirectReferenceSegments(reference.getDirectReference()));
       case OUTER_REFERENCE:
         {
+          if (reference.getDirectReference().getStructField().hasChild()) {
+            throw new UnsupportedOperationException(
+                "Nested field access in outer references is not yet supported");
+          }
           io.substrait.proto.Expression.FieldReference.OuterReference outerReference =
               reference.getOuterReference();
           int field = reference.getDirectReference().getStructField().getField();
@@ -745,10 +749,22 @@ public class ProtoExpressionConverter {
    * @return the converted sort field
    */
   public Expression.SortField fromSortField(SortField s) {
-    return Expression.SortField.builder()
-        .direction(Expression.SortDirection.fromProto(s.getDirection()))
-        .expr(from(s.getExpr()))
-        .build();
+    Expression expr = from(s.getExpr());
+    switch (s.getSortKindCase()) {
+      case DIRECTION:
+        return Expression.SortField.builder()
+            .expr(expr)
+            .direction(Expression.SortDirection.fromProto(s.getDirection()))
+            .build();
+      case COMPARISON_FUNCTION_REFERENCE:
+        return Expression.SortField.builder()
+            .expr(expr)
+            .comparisonFunction(
+                lookup.getScalarFunction(s.getComparisonFunctionReference(), extensions))
+            .build();
+      default:
+        throw new IllegalArgumentException("SortField has no sort_kind set");
+    }
   }
 
   /**

@@ -104,6 +104,16 @@ class ReturnProgramTypeTest {
   }
 
   @Test
+  void containersEvaluateTheirChildrenWithTheProgramsLocals() {
+    assertEquals(R.list(R.varChar(11)), evaluate("list<varchar<L + 1>>"));
+    assertEquals(R.list(R.varChar(20)), evaluate("a = L * 2\nlist<varchar<a>>"));
+    assertEquals(R.list(R.varChar(10)), evaluate("t = varchar<L>\nlist<t>"));
+    assertEquals(
+        R.map(R.varChar(10), N.varChar(12)), evaluate("t = varchar?<L + 2>\nmap<varchar<L>, t>"));
+    assertThrows(UnsupportedOperationException.class, () -> evaluate("a = L\nlist<a>"));
+  }
+
+  @Test
   void conditionsSelectOnlyTheChosenBranch() {
     assertEquals(R.varChar(10), evaluate("varchar<L > 5 ? L : missing>"));
     assertEquals(R.varChar(10), evaluate("varchar<L < 5 ? 1 / 0 : L>"));

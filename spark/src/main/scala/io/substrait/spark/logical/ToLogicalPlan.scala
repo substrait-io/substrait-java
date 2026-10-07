@@ -45,7 +45,7 @@ import io.substrait.plan.Plan
 import io.substrait.relation
 import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
-import io.substrait.relation.AbstractWriteRel.{CreateMode, WriteOp}
+import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
 import io.substrait.relation.Set.SetOp
 import io.substrait.relation.files.FileFormat
@@ -58,7 +58,7 @@ import java.net.{URI, URISyntaxException}
 import java.util.Optional
 
 import scala.annotation.nowarn
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, HashSet}
 import scala.jdk.CollectionConverters._
 
 /**
@@ -110,6 +110,11 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         )
         throw new IllegalArgumentException(msg)
       })
+
+    if (function.sort().asScala.exists(!_.direction().isPresent)) {
+      throw new UnsupportedOperationException(
+        "A sort field using a custom comparison function is not supported")
+    }
 
     val filter = Option(measure.getPreMeasureFilter.orElse(null))
       .map(_.accept(expressionConverter, EmptyVisitationContext.INSTANCE))
@@ -244,8 +249,12 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   }
 
   private def toSortOrder(sortField: SExpression.SortField): SortOrder = {
+    if (!sortField.direction().isPresent) {
+      throw new UnsupportedOperationException(
+        "A sort field using a custom comparison function is not supported")
+    }
     val expression = sortField.expr().accept(expressionConverter, EmptyVisitationContext.INSTANCE)
-    val (direction, nullOrdering) = sortField.direction() match {
+    val (direction, nullOrdering) = sortField.direction().get() match {
       case SExpression.SortDirection.ASC_NULLS_FIRST => (Ascending, NullsFirst)
       case SExpression.SortDirection.DESC_NULLS_FIRST => (Descending, NullsFirst)
       case SExpression.SortDirection.ASC_NULLS_LAST => (Ascending, NullsLast)
@@ -319,35 +328,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case a: Aggregate => (a.aggregateExpressions, false)
       case other => (other.output, true)
     }
-    val names = fieldNames(project).getOrElse(List.empty)
-
     withOutput(output) {
-      val projectExprs = {
-        project.getExpressions.asScala
-          .map(_.accept(expressionConverter, context))
-          .toSeq
-      }
-      val projectList = if (names.size == projectExprs.size) {
-        projectExprs.zip(names).map { case (expr, name) => Alias(expr, name)() }
-      } else {
-        projectExprs.map(toNamedExpression)
-      }
+      val projectList = project.getExpressions.asScala
+        .map(expr => toNamedExpression(expr.accept(expressionConverter, context)))
+        .toSeq
+      val remapped = remapExpressions(output ++ projectList, project.getRemap)
+      val named = fieldNames(project)
+        .filter(_.size == remapped.size)
+        .map(names => remapped.zip(names).map { case (expr, name) => Alias(expr, name)() })
+        .getOrElse(remapped)
       if (createProject) {
-        val allExpressions = output.map(_.toAttribute) ++ projectList
-        val remapped = if (project.getRemap.isPresent) {
-          project.getRemap.get().indices().asScala.map(allExpressions(_)).toSeq
-        } else {
-          allExpressions
-        }
-        val named = if (names.size == remapped.size) {
-          remapped.zip(names).map { case (expr, name) => Alias(expr, name)() }
-        } else {
-          remapped
-        }
         Project(named, child)
       } else {
         val aggregate: Aggregate = child.asInstanceOf[Aggregate]
-        aggregate.copy(aggregateExpressions = projectList)
+        aggregate.copy(aggregateExpressions = named)
       }
     }
   }
@@ -680,11 +674,22 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   }
 
   override def visit(write: ExtensionWrite, context: EmptyVisitationContext): LogicalPlan = {
-    val child = write.getInput.accept(this, context)
-    val mode = write.getOperation match {
-      case WriteOp.INSERT => SaveMode.Append
-      case WriteOp.UPDATE => SaveMode.Overwrite
-      case op => throw new UnsupportedOperationException(s"Write mode $op not supported")
+    if (write.getOperation != WriteOp.INSERT) {
+      throw new UnsupportedOperationException(s"Write mode ${write.getOperation} not supported")
+    }
+    // The spec defines create_mode for CTAS and is silent on INSERT. Older file writes used
+    // it for Spark save modes, so reject the modes an append-only file extension cannot honor.
+    write.getCreateMode match {
+      case CreateMode.UNSPECIFIED | CreateMode.APPEND_IF_EXISTS =>
+      case createMode =>
+        throw new UnsupportedOperationException(
+          s"Filesystem INSERT does not support create mode $createMode")
+    }
+    write.getOutputMode match {
+      case OutputMode.UNSPECIFIED | OutputMode.NO_OUTPUT =>
+      case outputMode =>
+        throw new UnsupportedOperationException(
+          s"Filesystem INSERT does not support output mode $outputMode")
     }
 
     val file = write.getDetail match {
@@ -703,6 +708,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
 
     val name = file.getPath.get.split('/').reverse.head
     val table = catalogTable(Seq(name))
+    val child = write.getInput.accept(this, context)
 
     val plan = withChild(child) {
       V1Writes.apply(
@@ -715,7 +721,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
           fileFormat = format,
           options = options,
           query = child,
-          mode = mode,
+          mode = SaveMode.Append,
           catalogTable = Some(table),
           fileIndex = None,
           outputColumnNames = write.getTableSchema.names.asScala.toSeq
@@ -795,9 +801,20 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     if (remap.isEmpty) {
       return plan
     }
-    val projectExprs =
-      plan.output.map { case ne: NamedExpression => ne.toAttribute }.map(toNamedExpression)
-    Project(remap.get().indices().asScala.map(i => projectExprs(i)).toSeq, plan)
+    Project(remapExpressions(plan.output, remap), plan)
+  }
+
+  private def remapExpressions(
+      expressions: Seq[NamedExpression],
+      remap: Optional[relation.Rel.Remap]): Seq[NamedExpression] = {
+    val selected = if (remap.isPresent) {
+      val indexed = expressions.toIndexedSeq
+      remap.get().indices().asScala.map(indexed(_)).toSeq
+    } else {
+      expressions
+    }
+    val seen = HashSet.empty[ExprId]
+    selected.map(expr => if (seen.add(expr.exprId)) expr else Alias(expr, expr.name)())
   }
 
   private def resolve(plan: LogicalPlan): LogicalPlan = {

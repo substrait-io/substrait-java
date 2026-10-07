@@ -95,8 +95,20 @@ class FunctionConversionTest extends PlanTestBase {
     RelDataType inferredType = observation.inferredType().orElseThrow();
     assertEquals(TypeConverter.DEFAULT.toCalcite(typeFactory, expectedInferredType), inferredType);
 
+    // The way back writes the type the declaration derives, which is the inferred one here, and
+    // casts to the supplied type where the two differ.
     Expression reverse = calciteExpr.accept(rexExpressionConverter);
-    assertEquals(expr, reverse);
+    Expression.ScalarFunctionInvocation declared =
+        Expression.ScalarFunctionInvocation.builder()
+            .from(expr)
+            .outputType(expectedInferredType)
+            .build();
+    assertEquals(
+        outputType.equals(expectedInferredType)
+            ? declared
+            : ExpressionCreator.cast(
+                outputType, declared, Expression.FailureBehavior.THROW_EXCEPTION),
+        reverse);
   }
 
   static Stream<Arguments> subtractDateIDayTypes() {

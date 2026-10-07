@@ -301,7 +301,7 @@ public class ExpressionRexConverter
       // A precision_time is a time of day. Without this an out-of-range value reaches
       // TimeString.fromMillisOfDay, which reports a corrupt time string rather than the value.
       throw new IllegalArgumentException(
-          String.format("Cannot handle PrecisionTime with out-of-range value %d.", value));
+          String.format("Cannot handle PrecisionTime with out-of-range value %s.", value));
     }
     return TimeString.fromMillisOfDay(
             (int) TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
@@ -355,8 +355,15 @@ public class ExpressionRexConverter
 
   private TimestampString getTimestampString(long value, int precision) {
     long unitsPerSecond = unitsPerSecond(precision, "PrecisionTimestamp");
-    return TimestampString.fromMillisSinceEpoch(
-            TimeUnit.SECONDS.toMillis(secondsOf(value, unitsPerSecond)))
+    long seconds = secondsOf(value, unitsPerSecond);
+    // A TimestampString spans 0000-01-01 00:00:00 to 9999-12-31 23:59:59. Without this an
+    // out-of-range value reaches DateTimeUtils, which renders the year modulo 10000, so the literal
+    // names a different instant rather than reporting the value.
+    if (seconds < -62_167_219_200L || seconds > 253_402_300_799L) {
+      throw new IllegalArgumentException(
+          String.format("Cannot handle PrecisionTimestamp with out-of-range value %s.", value));
+    }
+    return TimestampString.fromMillisSinceEpoch(TimeUnit.SECONDS.toMillis(seconds))
         .withNanos(nanosOf(value, unitsPerSecond));
   }
 
@@ -663,7 +670,14 @@ public class ExpressionRexConverter
         expr.sort().stream()
             .map(
                 sf -> {
-                  Set<SqlKind> direction = asSqlKind(sf.direction());
+                  Expression.SortDirection sortDirection =
+                      sf.direction()
+                          .orElseThrow(
+                              () ->
+                                  new UnsupportedOperationException(
+                                      "A sort field using a custom comparison function is not"
+                                          + " supported"));
+                  Set<SqlKind> direction = asSqlKind(sortDirection);
                   return new RexFieldCollation(sf.expr().accept(this, context), direction);
                 })
             .collect(ImmutableList.toImmutableList());
@@ -831,6 +845,10 @@ public class ExpressionRexConverter
 
       return rexInputRef;
     } else if (expr.isOuterReference()) {
+      if (expr.segments().size() > 1) {
+        throw new UnsupportedOperationException(
+            "Nested field access in outer references is not yet supported");
+      }
       final ReferenceSegment segment = expr.segments().get(0);
 
       if (segment instanceof FieldReference.StructField) {
@@ -852,6 +870,10 @@ public class ExpressionRexConverter
         throw new IllegalArgumentException("Unhandled type: " + segment);
       }
     } else if (expr.isLambdaParameterReference()) {
+      if (expr.segments().size() > 1) {
+        throw new UnsupportedOperationException(
+            "Nested field access in lambda parameters is not yet supported");
+      }
       // as of now calcite doesn't support nested lambda functions
       // https://github.com/substrait-io/substrait-java/issues/711
       int stepsOut = expr.lambdaParameterReferenceStepsOut().get();
