@@ -603,7 +603,7 @@ public abstract class FieldReference implements Expression {
         throw new IllegalArgumentException("Undefined struct type.");
       }
       Type field = expr.fields().get(index);
-      return field.withNullable(field.nullable() || expr.nullable());
+      return expr.nullable() ? field.withNullable(true) : field;
     }
 
     public static Type getReferencedType(Type type, int index) {
@@ -648,7 +648,7 @@ public abstract class FieldReference implements Expression {
                 "Key type %s of map does not matched expected type of %s.", expr.key(), keyType));
       }
       Type value = expr.value();
-      return value.withNullable(value.nullable() || expr.nullable());
+      return expr.nullable() ? value.withNullable(true) : value;
     }
 
     public static Type getReferencedType(Type typeToDereference, Type keyType) {

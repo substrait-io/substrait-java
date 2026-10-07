@@ -41,6 +41,17 @@ import org.junit.jupiter.api.Test;
  */
 class RelCopyOnWriteVisitorTest extends TestBase {
 
+  @Test
+  void identityVisitorPreservesUnboundColumn() {
+    Rel input = scan("t", Type.Unbound.builder().build());
+    Rel plan = sb.project(in -> Arrays.asList(sb.fieldReference(in, 0)), input);
+
+    assertEquals(
+        Optional.empty(),
+        plan.accept(
+            new RelCopyOnWriteVisitor<RuntimeException>() {}, EmptyVisitationContext.INSTANCE));
+  }
+
   private Rel scan(String table, Type... columnTypes) {
     return sb.namedScan(
         Arrays.asList(table),

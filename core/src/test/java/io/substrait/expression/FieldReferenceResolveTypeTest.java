@@ -47,6 +47,10 @@ class FieldReferenceResolveTypeTest extends TestBase {
         // struct field, single segment
         Arguments.of("struct field in range", R.struct(R.I64), segments(StructField.of(0))),
         Arguments.of(
+            "unbound struct field",
+            R.struct(Type.Unbound.builder().build()),
+            segments(StructField.of(0))),
+        Arguments.of(
             "struct field, second column", R.struct(R.I64, R.STRING), segments(StructField.of(1))),
         Arguments.of("struct field past the end", R.struct(R.I64), segments(StructField.of(2))),
         Arguments.of(
@@ -117,6 +121,10 @@ class FieldReferenceResolveTypeTest extends TestBase {
         Arguments.of(
             "nullable map parent",
             R.struct(N.map(R.STRING, R.I64)),
+            segments(key("k"), StructField.of(0))),
+        Arguments.of(
+            "unbound map value",
+            R.struct(R.map(R.STRING, Type.Unbound.builder().build())),
             segments(key("k"), StructField.of(0))),
         Arguments.of(
             "map key differing in nullability",

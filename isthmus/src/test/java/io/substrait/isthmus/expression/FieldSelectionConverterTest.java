@@ -122,6 +122,20 @@ class FieldSelectionConverterTest {
     assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
+  @Test
+  void untypedNullIndexIsNull() {
+    Expression converted =
+        rexBuilder
+            .makeCall(
+                SqlStdOperatorTable.ITEM,
+                array(),
+                rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.NULL)))
+            .accept(converter);
+    assertEquals(Integer.MAX_VALUE, listOffset(converted));
+    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
+    verifyRoundTrip(converted, TypeConverter.DEFAULT.toSubstrait(array().getType()));
+  }
+
   @ParameterizedTest
   @MethodSource("nullOrInvalidIndexes")
   void retainsThrowingArray(SqlOperator operator, Integer index) {
@@ -274,9 +288,11 @@ class FieldSelectionConverterTest {
 
   @ParameterizedTest
   @ValueSource(longs = {2147483649L, 4294967297L, Long.MAX_VALUE})
-  void unrepresentableOffsetsAreRejected(long index) {
+  void offsetsPastTheListLengthLimitAreNull(long index) {
     RexNode call = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, array(), integer(index));
-    assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+    Expression converted = call.accept(converter);
+    assertEquals(Integer.MAX_VALUE, listOffset(converted));
+    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @ParameterizedTest

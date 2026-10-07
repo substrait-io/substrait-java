@@ -73,13 +73,12 @@ public class FieldSelectionConverter implements CallConverter {
       return Optional.empty();
     }
 
-    Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
-
     Expression input = topLevelConverter.apply(toDereference);
 
     switch (toDereference.getType().getSqlTypeName()) {
       case ROW:
         {
+          Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
           Optional<Integer> index = toInt(literal);
           if (index.isEmpty()) {
             return Optional.empty();
@@ -102,7 +101,8 @@ public class FieldSelectionConverter implements CallConverter {
             return Optional.empty();
           }
           long offset = Integer.MAX_VALUE;
-          if (!(literal instanceof Expression.NullLiteral)) {
+          if (!((RexLiteral) reference).isNull()) {
+            Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
             Optional<Long> index = toLong(literal);
             if (index.isEmpty()) {
               return Optional.empty();
@@ -112,11 +112,8 @@ public class FieldSelectionConverter implements CallConverter {
             // zero-based offset cannot select an element. Keep the reference to evaluate the
             // array operand and preserve its element type, including for a null index.
             if (index.get() >= operator.offset) {
-              offset = index.get() - operator.offset;
+              offset = Math.min(index.get() - operator.offset, Integer.MAX_VALUE);
             }
-          }
-          if (offset > Integer.MAX_VALUE) {
-            return Optional.empty();
           }
 
           if (input instanceof FieldReference) {
@@ -128,6 +125,7 @@ public class FieldSelectionConverter implements CallConverter {
 
       case MAP:
         {
+          Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
           Optional<String> mapKey = toString(literal);
           if (mapKey.isEmpty()) {
             return Optional.empty();
