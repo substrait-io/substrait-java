@@ -473,6 +473,8 @@ class UpdateConversionTest {
   @CsvSource({
     "'SELECT intcol FROM src1 FETCH NEXT 1 ROWS ONLY', false",
     "'SELECT intcol FROM src1 ORDER BY intcol FETCH NEXT 1 ROWS ONLY', false",
+    "'SELECT n FROM (VALUES (-1), (1)) AS t(n) OFFSET 1 ROWS', false",
+    "'SELECT n FROM (VALUES (-1), (1)) AS t(n) ORDER BY n OFFSET 1 ROWS', true",
     "'SELECT n FROM (VALUES (1), (2)) AS t(n) ORDER BY n FETCH NEXT 1 ROWS ONLY', true"
   })
   void checksOrderingOfLimitedSubqueriesInMergedFilters(String sql, boolean deterministic)

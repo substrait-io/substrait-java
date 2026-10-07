@@ -1006,7 +1006,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           node.accept(DeterminismChecker.this);
           if (node instanceof org.apache.calcite.rel.core.Sort) {
             org.apache.calcite.rel.core.Sort sort = (org.apache.calcite.rel.core.Sort) node;
-            if (sort.fetch != null
+            if ((sort.fetch != null || sort.offset != null)
                 && !Boolean.TRUE.equals(
                     sort.getCluster()
                         .getMetadataQuery()
