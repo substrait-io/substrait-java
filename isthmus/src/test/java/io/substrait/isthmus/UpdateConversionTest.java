@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.protobuf.Message;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ImmutableSimpleExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -20,6 +22,7 @@ import io.substrait.relation.Filter;
 import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.TypeCreator;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,7 +34,9 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
@@ -41,14 +46,21 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.schema.ColumnStrategy;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -58,7 +70,9 @@ class UpdateConversionTest {
   private final ConverterProvider provider = ConverterProvider.DEFAULT;
   private final Prepare.CatalogReader catalog =
       SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-          provider, "CREATE TABLE src1 (intcol INT, charcol VARCHAR(10))");
+          provider,
+          "CREATE TABLE src1 (intcol INT, charcol VARCHAR(10))",
+          "CREATE TABLE src2 (intcol INT, charcol VARCHAR(10))");
 
   UpdateConversionTest() throws SqlParseException {}
 
@@ -127,7 +141,8 @@ class UpdateConversionTest {
     Project expected =
         assertInstanceOf(
             Project.class,
-            convert("SELECT (intcol + 1) + 2 FROM src1 WHERE intcol + 1 > 10 AND charcol = 'a'"));
+            // The lower filter comes first, so that it still guards the filter above it.
+            convert("SELECT (intcol + 1) + 2 FROM src1 WHERE charcol = 'a' AND intcol + 1 > 10"));
 
     assertEquals(
         assertInstanceOf(Filter.class, expected.getInput()).getCondition(), update.getCondition());
@@ -149,6 +164,23 @@ class UpdateConversionTest {
     assertThrows(
         UnsupportedOperationException.class,
         () -> SubstraitRelVisitor.convert(modification, provider));
+  }
+
+  @Test
+  void rejectsScanOfAnotherTable() throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    RelNode modification =
+        original.copy(
+            original.getTraitSet(),
+            List.of(modification("UPDATE src2 SET intcol = 10").getInput()));
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals(
+        "UPDATE requires a scan of its target table beneath projections and filters",
+        error.getMessage());
   }
 
   @ParameterizedTest
@@ -237,6 +269,40 @@ class UpdateConversionTest {
   }
 
   @Test
+  void keepsBindingOfSubqueryThatReusesTargetScan() throws SqlParseException {
+    org.apache.calcite.rel.core.Project correlated =
+        assertInstanceOf(
+            org.apache.calcite.rel.core.Project.class,
+            SubstraitSqlToCalcite.convertQuery(
+                    "SELECT 1 FROM src1 AS other WHERE EXISTS"
+                        + " (SELECT 1 FROM src1 AS inner_row WHERE inner_row.intcol = other.intcol)",
+                    catalog,
+                    provider)
+                .rel);
+    // The subquery binds its correlation to a scan that the UPDATE input also uses.
+    RelNode scan =
+        assertInstanceOf(org.apache.calcite.rel.core.Filter.class, correlated.getInput())
+            .getInput();
+    TableModify modification =
+        LogicalTableModify.create(
+            scan.getTable(),
+            catalog,
+            LogicalFilter.create(scan, RexSubQuery.exists(correlated)),
+            TableModify.Operation.UPDATE,
+            scan.getRowType().getFieldNames().subList(0, 1),
+            List.of(scan.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.TEN)),
+            false);
+
+    io.substrait.proto.UpdateRel update =
+        new RelProtoConverter(new ExtensionCollector())
+            .toProto(SubstraitRelVisitor.convert(modification, provider))
+            .getUpdate();
+
+    assertFalse(update.getCommon().hasRelAnchor());
+    assertEquals(1, outerReferences(update).size());
+  }
+
+  @Test
   void rejectsVirtualColumnScanWithDifferentSchema() throws SqlParseException {
     CalciteCatalogReader virtualCatalog =
         SubstraitCreateStatementParser.processCreateStatementsToCatalog(provider);
@@ -301,6 +367,35 @@ class UpdateConversionTest {
   }
 
   @Test
+  void preservesWindowAssignmentWithoutFilter() throws SqlParseException {
+    NamedUpdate update =
+        assertInstanceOf(
+            NamedUpdate.class,
+            convert("UPDATE src1 SET intcol = ROW_NUMBER() OVER (ORDER BY charcol)"));
+    Project expected =
+        assertInstanceOf(
+            Project.class,
+            convert("SELECT CAST(ROW_NUMBER() OVER (ORDER BY charcol) AS INT) FROM src1"));
+
+    assertEquals(ExpressionCreator.bool(false, true), update.getCondition());
+    assertEquals(
+        expected.getExpressions().get(0), update.getTransformations().get(0).getTransformation());
+    assertNotNull(new SubstraitToCalcite(provider, catalog).convert(update));
+  }
+
+  @Test
+  void rejectsWindowAssignmentOnFilteredRows() {
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                convert(
+                    "UPDATE src1 SET intcol = ROW_NUMBER() OVER (ORDER BY charcol)"
+                        + " WHERE intcol > 10"));
+    assertEquals("UPDATE cannot apply a window assignment to filtered rows", error.getMessage());
+  }
+
+  @Test
   void rejectsWindowProjection() throws SqlParseException {
     TableModify original = modification("UPDATE src1 SET intcol = 10");
     RelNode window =
@@ -320,9 +415,61 @@ class UpdateConversionTest {
             List.of(original.getCluster().getRexBuilder().makeInputRef(window, 2)),
             false);
 
-    assertThrows(
-        UnsupportedOperationException.class,
-        () -> SubstraitRelVisitor.convert(modification, provider));
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals("UPDATE cannot apply a window assignment to filtered rows", error.getMessage());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"filter above", "duplicated", "nested"})
+  void rejectsWindowProjectionThatIsNotOneAssignment(String use) throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    org.apache.calcite.rel.core.Project nested =
+        assertInstanceOf(
+            org.apache.calcite.rel.core.Project.class,
+            SubstraitSqlToCalcite.convertQuery(
+                    "SELECT MAX(rn) OVER () FROM (SELECT intcol, charcol,"
+                        + " ROW_NUMBER() OVER (ORDER BY intcol) AS rn FROM src1) AS numbered",
+                    catalog,
+                    provider)
+                .rel);
+    RelNode window = nested.getInput();
+    assertTrue(assertInstanceOf(org.apache.calcite.rel.core.Project.class, window).containsOver());
+    RexBuilder rexBuilder = window.getCluster().getRexBuilder();
+    RexNode rowNumber = rexBuilder.makeInputRef(window, window.getRowType().getFieldCount() - 1);
+    RelNode input = window;
+    RexNode assignment;
+    if ("filter above".equals(use)) {
+      input =
+          LogicalFilter.create(
+              window,
+              rexBuilder.makeCall(
+                  SqlStdOperatorTable.GREATER_THAN,
+                  rowNumber,
+                  rexBuilder.makeZeroLiteral(rowNumber.getType())));
+      assignment = rexBuilder.makeExactLiteral(BigDecimal.TEN);
+    } else if ("duplicated".equals(use)) {
+      assignment = rexBuilder.makeCall(SqlStdOperatorTable.PLUS, rowNumber, rowNumber);
+    } else {
+      assignment = nested.getProjects().get(0);
+    }
+    TableModify modification =
+        LogicalTableModify.create(
+            original.getTable(),
+            original.getCatalogReader(),
+            input,
+            TableModify.Operation.UPDATE,
+            original.getUpdateColumnList(),
+            List.of(assignment),
+            false);
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals("UPDATE cannot flatten a window projection", error.getMessage());
   }
 
   @Test
@@ -667,6 +814,92 @@ class UpdateConversionTest {
               NamedUpdate.class, SubstraitRelVisitor.convert(modification, customProvider));
       assertNotNull(new SubstraitToCalcite(customProvider, catalog).convert(update));
     }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"aggregate function", "aggregate argument", "window function"})
+  void checksDeterminismOfAggregateAndWindowFunctions(String nondeterministic)
+      throws SqlParseException {
+    TableModify original = modification("UPDATE src1 SET intcol = 10");
+    RelNode scan =
+        assertInstanceOf(org.apache.calcite.rel.core.Project.class, original.getInput()).getInput();
+    RexBuilder rexBuilder = scan.getCluster().getRexBuilder();
+    RexNode selected =
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.GREATER_THAN,
+            rexBuilder.makeInputRef(scan, 0),
+            rexBuilder.makeExactLiteral(BigDecimal.ZERO));
+    SqlAggFunction volatileCount =
+        new SqlAggFunction(
+            "VOLATILE_COUNT",
+            SqlKind.OTHER_FUNCTION,
+            ReturnTypes.BIGINT,
+            null,
+            OperandTypes.NILADIC,
+            SqlFunctionCategory.USER_DEFINED_FUNCTION) {
+          @Override
+          public boolean isDeterministic() {
+            return false;
+          }
+        };
+    RexNode value;
+    if ("window function".equals(nondeterministic)) {
+      RexNode count =
+          assertInstanceOf(
+                  org.apache.calcite.rel.core.Project.class,
+                  SubstraitSqlToCalcite.convertQuery(
+                          "SELECT COUNT(*) OVER () FROM src1", catalog, provider)
+                      .rel)
+              .getProjects()
+              .get(0);
+      value =
+          count.accept(
+              new RexShuttle() {
+                @Override
+                public SqlAggFunction visitOverAggFunction(SqlAggFunction function) {
+                  return volatileCount;
+                }
+              });
+    } else {
+      boolean function = "aggregate function".equals(nondeterministic);
+      value =
+          RexSubQuery.scalar(
+              LogicalAggregate.create(
+                  scan,
+                  List.of(),
+                  ImmutableBitSet.of(),
+                  null,
+                  List.of(
+                      AggregateCall.create(
+                          function ? volatileCount : SqlStdOperatorTable.COUNT,
+                          false,
+                          false,
+                          false,
+                          function
+                              ? List.of()
+                              : List.of(rexBuilder.makeCall(SqlStdOperatorTable.RAND)),
+                          List.of(),
+                          -1,
+                          null,
+                          RelCollations.EMPTY,
+                          0,
+                          scan,
+                          null,
+                          "c"))));
+    }
+    RexNode volatilePredicate =
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.GREATER_THAN, value, rexBuilder.makeZeroLiteral(value.getType()));
+    // The window is in the lower filter, where it ranges over the same rows after the merge.
+    LogicalFilter filtered =
+        LogicalFilter.create(LogicalFilter.create(scan, volatilePredicate), selected);
+    RelNode modification = original.copy(original.getTraitSet(), List.of(filtered));
+
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, provider));
+    assertEquals("UPDATE cannot merge nondeterministic filters", error.getMessage());
   }
 
   private RexNode wrapInScalarSubqueries(RelNode input, RexNode value, int depth) {

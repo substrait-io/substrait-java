@@ -806,6 +806,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    * @param modify Calcite table modify node
    * @return Substrait write/update relation
    * @throws IllegalStateException if an update column is not found in the table schema.
+   * @throws UnsupportedOperationException if an UPDATE input is not a chain of projections and
+   *     filters over a scan of the target table with the row type of that table, or if flattening
+   *     the chain into one condition and the assignments could change the result. That includes a
+   *     correlation bound above a projection, a window that would range over different rows, a
+   *     subquery or nondeterministic expression that would be duplicated or moved across a filter,
+   *     and expression growth over the complexity limit.
    */
   @Override
   public Rel visit(TableModify modify) {
@@ -839,25 +845,23 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           List<RelNode> correlationBindings = new ArrayList<>();
           List<RexNode> sourceExpressions =
               Optional.ofNullable(modify.getSourceExpressionList()).orElse(Collections.emptyList());
-          while (true) {
-            if (outerReferenceResolver != null
-                && outerReferenceResolver.anchorForTarget(input) != null) {
-              if (!(input instanceof org.apache.calcite.rel.core.TableScan)
-                  && !(input instanceof org.apache.calcite.rel.core.Filter
-                      && ((org.apache.calcite.rel.core.Filter) input).getInput()
+          while (input instanceof org.apache.calcite.rel.core.Project
+              || input instanceof org.apache.calcite.rel.core.Filter) {
+            if (outerReferenceResolver != null && !input.getVariablesSet().isEmpty()) {
+              // A Filter or Project that declares correlation variables binds them to its input.
+              RelNode binding = input.getInput(0);
+              if (!(binding instanceof org.apache.calcite.rel.core.TableScan)
+                  && !(binding instanceof org.apache.calcite.rel.core.Filter
+                      && ((org.apache.calcite.rel.core.Filter) binding).getInput()
                           instanceof org.apache.calcite.rel.core.TableScan)) {
                 throw new UnsupportedOperationException(
                     "UPDATE cannot remove an input that binds a correlated subquery");
               }
-              correlationBindings.add(input);
+              correlationBindings.add(binding);
             }
             if (input instanceof org.apache.calcite.rel.core.Project) {
               org.apache.calcite.rel.core.Project project =
                   (org.apache.calcite.rel.core.Project) input;
-              if (project.containsOver()) {
-                throw new UnsupportedOperationException(
-                    "UPDATE cannot flatten a window projection");
-              }
               List<RexNode> expressions = new ArrayList<>(sourceExpressions);
               expressions.addAll(conditions);
               int[] referenceCounts = new int[project.getProjects().size()];
@@ -870,6 +874,16 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
               }.apply(expressions);
               for (int i = 0; i < referenceCounts.length; i++) {
                 RexNode expression = project.getProjects().get(i);
+                // A window can only become the one assignment that references it. This check
+                // finds a filter above the window. The check after the walk finds one below it.
+                if (referenceCounts[i] > 0
+                    && RexOver.containsOver(expression)
+                    && (referenceCounts[i] > 1
+                        || !conditions.isEmpty()
+                        || RexOver.containsOver(expressions, null))) {
+                  throw new UnsupportedOperationException(
+                      "UPDATE cannot flatten a window projection");
+                }
                 if (referenceCounts[i] > 1 && RexUtil.SubQueryFinder.find(expression) != null) {
                   throw new UnsupportedOperationException(
                       "UPDATE cannot duplicate a projected subquery");
@@ -881,10 +895,13 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
                       "UPDATE cannot flatten a nondeterministic projection");
                 }
               }
-              List<RexNode> flattened =
-                  RelOptUtil.pushPastProjectUnlessBloat(
-                      expressions, project, RelOptUtil.DEFAULT_BLOAT);
-              if (flattened == null) {
+              // The size limit of RelOptUtil.pushPastProjectUnlessBloat, which also refuses every
+              // window expression above a Project that contains a window.
+              List<RexNode> flattened = RelOptUtil.pushPastProject(expressions, project);
+              if (RexUtil.nodeCount(flattened)
+                  > RexUtil.nodeCount(expressions)
+                      + RexUtil.nodeCount(project.getProjects())
+                      + RelOptUtil.DEFAULT_BLOAT) {
                 throw new UnsupportedOperationException(
                     "UPDATE projection flattening would exceed the expression complexity limit");
               }
@@ -892,17 +909,17 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
               sourceExpressions = flattened.subList(0, assignmentCount);
               conditions = new ArrayList<>(flattened.subList(assignmentCount, flattened.size()));
               input = project.getInput();
-            } else if (input instanceof org.apache.calcite.rel.core.Filter) {
+            } else {
               org.apache.calcite.rel.core.Filter filter =
                   (org.apache.calcite.rel.core.Filter) input;
               if (conditions.stream().anyMatch(RexOver::containsOver)) {
                 throw new UnsupportedOperationException(
                     "UPDATE cannot merge a window filter with a lower filter");
               }
-              conditions.add(filter.getCondition());
+              // A lower filter goes first, as in Calcite's FilterMergeRule, so that it still guards
+              // the conditions above it for a consumer that evaluates a conjunction in order.
+              conditions.add(0, filter.getCondition());
               input = filter.getInput();
-            } else {
-              break;
             }
           }
           if (!(input instanceof org.apache.calcite.rel.core.TableScan)
@@ -913,6 +930,12 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
           if (!input.getRowType().equals(table.getRowType())) {
             throw new UnsupportedOperationException(
                 "UPDATE target scan schema must match the target table schema");
+          }
+          if (!conditions.isEmpty() && RexOver.containsOver(sourceExpressions, null)) {
+            // The spec does not define the rows a window in an UpdateRel transformation ranges
+            // over, so only an unfiltered update, where it can only be every row, is converted.
+            throw new UnsupportedOperationException(
+                "UPDATE cannot apply a window assignment to filtered rows");
           }
           if (conditions.size() > 1
               && conditions.stream().anyMatch(expr -> !isDeterministic(expr))) {
