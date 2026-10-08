@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
@@ -142,6 +143,8 @@ public class ScalarFunctionConverter
   private Optional<Expression> defaultConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
     FunctionFinder finder = signatures.get(call.op);
+    if (finder == null && UnaryArithmeticOptions.checkedIntegerNegation(call))
+      finder = signatures.get(org.apache.calcite.sql.fun.SqlStdOperatorTable.UNARY_MINUS);
     WrappedScalarCall wrapped = new WrappedScalarCall(call);
 
     return attemptMatch(finder, wrapped, topLevelConverter);
@@ -183,7 +186,12 @@ public class ScalarFunctionConverter
       List<? extends FunctionArg> arguments,
       Type outputType) {
     if (!DefaultExtensionCatalog.FUNCTIONS_DATETIME.equals(function.getAnchor().urn())) {
-      return ExpressionCreator.scalarFunction(function, outputType, arguments);
+      return Expression.ScalarFunctionInvocation.builder()
+          .declaration(function)
+          .outputType(outputType)
+          .addAllArguments(arguments)
+          .options(UnaryArithmeticOptions.forCall(call.delegate, function))
+          .build();
     }
     // The datetime extension declares its results by parameter, where Calcite keeps an operand's
     // own type: add(date, interval_day<P>) is a precision_timestamp<P> there and a DATE here. The
@@ -374,6 +382,19 @@ public class ScalarFunctionConverter
     // If a mapping applies to this expression, use it to get the arguments; otherwise default
     // behavior.
     return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
+  }
+
+  /**
+   * Resolves the operator and validates unary arithmetic option preferences.
+   *
+   * @param expression the Substrait scalar invocation
+   * @return the selected Calcite operator, or empty when no mapping exists
+   * @throws UnsupportedOperationException when unary arithmetic options cannot be honored
+   */
+  public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+      Expression.ScalarFunctionInvocation expression) {
+    return getSqlOperatorFromSubstraitFunc(expression.declaration().key(), expression.outputType())
+        .map(operator -> UnaryArithmeticOptions.resolve(expression, operator));
   }
 
   private Optional<List<FunctionArg>> getMappedExpressionArguments(
