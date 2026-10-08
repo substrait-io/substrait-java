@@ -187,7 +187,7 @@ public class ScalarFunctionConverter
           .declaration(function)
           .outputType(outputType)
           .addAllArguments(arguments)
-          .options(ConcatFunctionMapper.optionsFor(call.delegate, function))
+          .options(StringFunctionOptions.forCall(call.delegate, function))
           .build();
     }
     // The datetime extension declares its results by parameter, where Calcite keeps an operand's
@@ -376,6 +376,7 @@ public class ScalarFunctionConverter
    * @return the argument list, possibly remapped; never {@code null}
    */
   public List<FunctionArg> getExpressionArguments(Expression.ScalarFunctionInvocation expression) {
+    StringFunctionOptions.validate(expression);
     // If a mapping applies to this expression, use it to get the arguments; otherwise default
     // behavior.
     return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
