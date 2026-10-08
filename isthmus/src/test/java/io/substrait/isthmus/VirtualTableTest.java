@@ -45,7 +45,7 @@ class VirtualTableTest extends PlanTestBase {
   private VirtualTableScan computedRows() {
     return virtualTable(
         schema,
-        List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5))),
+        List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5)))),
         List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
   }
 
@@ -198,7 +198,8 @@ class VirtualTableTest extends PlanTestBase {
     NamedStruct repeated = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.FP64));
     RelNode table =
         substraitToCalcite.convert(
-            virtualTable(repeated, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))));
+            virtualTable(
+                repeated, List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5))))));
     RelNode empty = VirtualTable.create(table.getCluster(), table.getRowType(), List.of());
 
     assertEquals(
@@ -387,7 +388,8 @@ class VirtualTableTest extends PlanTestBase {
     NamedStruct repeated = NamedStruct.of(List.of("c", "c"), R.struct(R.I32, R.FP64));
     RelNode table =
         substraitToCalcite.convert(
-            virtualTable(repeated, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))));
+            virtualTable(
+                repeated, List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5))))));
 
     assertEquals(List.of("c", "c"), table.getRowType().getFieldNames());
     assertEquals(

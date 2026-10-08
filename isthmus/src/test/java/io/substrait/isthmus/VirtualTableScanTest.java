@@ -58,7 +58,7 @@ class VirtualTableScanTest extends PlanTestBase {
     VirtualTableScan virtualTableScan =
         virtualTable(
             schema,
-            List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5))),
+            List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5)))),
             List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
 
     // Check the specific Calcite encoding
@@ -518,7 +518,9 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(virtualTable(schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
+            .from(
+                virtualTable(
+                    schema, List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5))))))
             .hint(Hint.builder().addOutputNames("x", "y").build())
             .build();
 
@@ -547,7 +549,9 @@ class VirtualTableScanTest extends PlanTestBase {
     NamedStruct schema = NamedStruct.of(List.of("col1", "col2"), R.struct(R.I32, R.FP64));
     VirtualTableScan table =
         VirtualTableScan.builder()
-            .from(virtualTable(schema, List.of(sb.i32(2), sb.add(sb.fp64(4.4), sb.fp64(4.5)))))
+            .from(
+                virtualTable(
+                    schema, List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5))))))
             .remap(Rel.Remap.of(List.of(1)))
             .hint(Hint.builder().addOutputNames("label").build())
             .build();

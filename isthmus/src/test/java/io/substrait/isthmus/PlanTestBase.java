@@ -8,6 +8,7 @@ import com.google.common.annotations.Beta;
 import com.google.common.io.Resources;
 import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
+import io.substrait.expression.FunctionOption;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
@@ -86,6 +87,14 @@ public class PlanTestBase {
     this.extensions = converterProvider.getExtensions();
     this.sb = new SubstraitBuilder(extensions);
     this.substraitToCalcite = new SubstraitToCalcite(converterProvider);
+  }
+
+  protected static Expression.ScalarFunctionInvocation withTieToEven(
+      Expression.ScalarFunctionInvocation expression) {
+    return Expression.ScalarFunctionInvocation.builder()
+        .from(expression)
+        .addOptions(FunctionOption.builder().name("rounding").addValues("TIE_TO_EVEN").build())
+        .build();
   }
 
   public static String asString(String resource) throws IOException {
