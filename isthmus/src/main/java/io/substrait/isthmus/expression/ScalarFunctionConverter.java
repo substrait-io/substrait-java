@@ -22,8 +22,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
@@ -374,6 +376,26 @@ public class ScalarFunctionConverter
     // If a mapping applies to this expression, use it to get the arguments; otherwise default
     // behavior.
     return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
+  }
+
+  /**
+   * Builds a Calcite call, applying a reverse mapping when the native operator is not executable.
+   *
+   * @param expression the Substrait invocation
+   * @param operator the selected Calcite operator
+   * @param arguments converted arguments
+   * @param returnType the declared result type
+   * @param rexBuilder builder for the target Calcite plan
+   * @return the converted call, including any cast needed to preserve its declared type
+   */
+  public RexNode createCall(
+      Expression.ScalarFunctionInvocation expression,
+      SqlOperator operator,
+      List<RexNode> arguments,
+      RelDataType returnType,
+      RexBuilder rexBuilder) {
+    return SqrtFunctionMapper.toCalcite(expression, operator, arguments, returnType, rexBuilder)
+        .orElseGet(() -> rexBuilder.makeCall(returnType, operator, arguments));
   }
 
   private Optional<List<FunctionArg>> getMappedExpressionArguments(

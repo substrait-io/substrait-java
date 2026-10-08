@@ -2,16 +2,21 @@ package io.substrait.isthmus.expression;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FunctionArg;
+import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension.ScalarFunctionVariant;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
  * Custom function mapper to represent power(x, 0.5) as sqrt(x) to ensure the float formats are
@@ -35,11 +40,61 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
     }
 
     if (isPowerOfHalf(call)) {
-      List<RexNode> operands = call.getOperands().subList(0, 1);
-      return Optional.of(new SubstraitFunctionMapping(sqrtFunctionName, operands, sqrtFunctions));
+      List<ScalarFunctionVariant> candidates = sqrtFunctions;
+      RexNode input = call.getOperands().get(0);
+      if (input.getKind() == SqlKind.CAST) {
+        RexNode uncast = ((RexCall) input).getOperands().get(0);
+        SqlTypeName source = uncast.getType().getSqlTypeName();
+        if (input.getType().getSqlTypeName() == SqlTypeName.DOUBLE
+            && (source == SqlTypeName.REAL || source == SqlTypeName.BIGINT)
+            && input.getType().isNullable() == uncast.getType().isNullable()
+            && sqrtFunctions.stream()
+                .anyMatch(
+                    function ->
+                        DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())
+                            && function
+                                .key()
+                                .equals(source == SqlTypeName.REAL ? "sqrt:fp32" : "sqrt:i64"))) {
+          // The reverse mapping restores this input promotion. Keep the original
+          // arithmetic variant when the executable expansion is exported again.
+          input = uncast;
+          candidates =
+              sqrtFunctions.stream()
+                  .filter(
+                      function ->
+                          DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn()))
+                  .collect(Collectors.toUnmodifiableList());
+        }
+      }
+      List<RexNode> operands = List.of(input);
+      return Optional.of(new SubstraitFunctionMapping(sqrtFunctionName, operands, candidates));
     }
 
     return Optional.empty();
+  }
+
+  static Optional<RexNode> toCalcite(
+      Expression.ScalarFunctionInvocation expression,
+      SqlOperator operator,
+      List<RexNode> arguments,
+      RelDataType returnType,
+      RexBuilder rexBuilder) {
+    if (operator != SqlStdOperatorTable.SQRT
+        || !expression.options().isEmpty()
+        || !DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(expression.declaration().urn())
+        || !List.of("sqrt:i64", "sqrt:fp32", "sqrt:fp64").contains(expression.declaration().key())
+        || arguments.size() != 1) return Optional.empty();
+    RexNode half = rexBuilder.makeApproxLiteral(BigDecimal.valueOf(0.5));
+    RexNode input = arguments.get(0);
+    // POWER has no float/double overload. Promote first to avoid Calcite selecting
+    // a BigDecimal overload, which cannot carry NaN or infinity.
+    RelDataType doubleType =
+        rexBuilder
+            .getTypeFactory()
+            .createTypeWithNullability(half.getType(), input.getType().isNullable());
+    RexNode promoted = rexBuilder.makeCast(doubleType, input);
+    RexNode power = rexBuilder.makeCall(SqlStdOperatorTable.POWER, promoted, half);
+    return Optional.of(rexBuilder.makeCast(returnType, power));
   }
 
   private static boolean isPowerOfHalf(final RexCall call) {
@@ -49,6 +104,13 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
 
     RexNode exponent = call.getOperands().get(1);
     while (exponent.getKind() == SqlKind.CAST) {
+      SqlTypeName target = exponent.getType().getSqlTypeName();
+      if (target != SqlTypeName.DOUBLE
+          && target != SqlTypeName.FLOAT
+          && target != SqlTypeName.REAL
+          && !(target == SqlTypeName.DECIMAL && exponent.getType().getScale() >= 1)) {
+        return false;
+      }
       exponent = ((RexCall) exponent).getOperands().get(0);
     }
 
@@ -63,7 +125,7 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
       case REAL:
         {
           final Double digit = literal.getValueAs(Double.class);
-          return digit != null && Math.abs(digit - 0.5d) < 1e-15;
+          return digit != null && digit == 0.5d;
         }
 
       case DECIMAL:
