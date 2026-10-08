@@ -1,6 +1,7 @@
 package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
@@ -146,6 +147,7 @@ class SqrtImportTest extends PlanTestBase {
       assertEquals(3.0, ((Number) execute(plan)).doubleValue());
       Expression exported = export(plan);
       assertEquals(outputType(tag, false), exported.getType());
+      assertSqrtSignature(exported, tag, false);
       RexNode imported =
           exported.accept(
               converter(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)),
@@ -168,6 +170,54 @@ class SqrtImportTest extends PlanTestBase {
       RuntimePlan plan = plan(tag, null);
       assertEquals(outputType(tag, true), TypeConverter.DEFAULT.toSubstrait(plan.call().getType()));
       assertEquals(null, execute(plan));
+      assertSqrtSignature(export(plan), tag, true);
+    }
+  }
+
+  private void assertSqrtSignature(Expression expression, String inputTag, boolean nullable) {
+    while (expression instanceof Expression.Cast) {
+      Expression.Cast result = assertInstanceOf(Expression.Cast.class, expression);
+      assertEquals(outputType(inputTag, nullable), result.getType());
+      expression = result.input();
+    }
+    Expression.ScalarFunctionInvocation sqrt =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, expression);
+    assertEquals(inputTag.equals("i64") ? "sqrt:i64" : "sqrt:fp64", sqrt.declaration().key());
+    assertEquals(outputType("fp64", nullable), sqrt.getType());
+    if (inputTag.equals("fp32")) {
+      Expression.Cast input = assertInstanceOf(Expression.Cast.class, sqrt.arguments().get(0));
+      assertEquals(outputType("fp64", nullable), input.getType());
+      assertEquals(inputType("fp32", nullable), input.input().getType());
+    } else {
+      assertEquals(
+          inputType(inputTag, nullable),
+          assertInstanceOf(Expression.class, sqrt.arguments().get(0)).getType());
+    }
+  }
+
+  @Test
+  void realInputWithDoublePowerResultUsesTheFp64Signature() {
+    for (boolean nullable : List.of(false, true)) {
+      RexNode input =
+          builder
+              .getRexBuilder()
+              .makeInputRef(
+                  TypeConverter.DEFAULT.toCalcite(typeFactory, inputType("fp32", nullable)), 0);
+      RexNode call =
+          builder
+              .getRexBuilder()
+              .makeCall(
+                  SqlStdOperatorTable.POWER,
+                  input,
+                  builder.getRexBuilder().makeApproxLiteral(BigDecimal.valueOf(0.5)));
+      Expression.ScalarFunctionInvocation sqrt =
+          assertInstanceOf(
+              Expression.ScalarFunctionInvocation.class, export(new RuntimePlan(call, null)));
+      assertEquals("sqrt:fp64", sqrt.declaration().key());
+      assertEquals(outputType("fp64", nullable), sqrt.getType());
+      Expression.Cast promoted = assertInstanceOf(Expression.Cast.class, sqrt.arguments().get(0));
+      assertEquals(outputType("fp64", nullable), promoted.getType());
+      assertEquals(inputType("fp32", nullable), promoted.input().getType());
     }
   }
 

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -25,8 +26,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 final class SqrtFunctionMapper implements ScalarFunctionMapper {
   private static final String sqrtFunctionName = "sqrt";
   private final List<ScalarFunctionVariant> sqrtFunctions;
+  private final RexBuilder rexBuilder;
 
-  public SqrtFunctionMapper(List<ScalarFunctionVariant> functions) {
+  public SqrtFunctionMapper(List<ScalarFunctionVariant> functions, RelDataTypeFactory typeFactory) {
+    this.rexBuilder = new RexBuilder(typeFactory);
     this.sqrtFunctions =
         functions.stream()
             .filter(f -> sqrtFunctionName.equalsIgnoreCase(f.name()))
@@ -46,15 +49,14 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
         RexNode uncast = ((RexCall) input).getOperands().get(0);
         SqlTypeName source = uncast.getType().getSqlTypeName();
         if (input.getType().getSqlTypeName() == SqlTypeName.DOUBLE
-            && (source == SqlTypeName.REAL || source == SqlTypeName.BIGINT)
+            && source == SqlTypeName.BIGINT
+            && call.getType().getSqlTypeName() == SqlTypeName.DOUBLE
             && input.getType().isNullable() == uncast.getType().isNullable()
             && sqrtFunctions.stream()
                 .anyMatch(
                     function ->
                         DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())
-                            && function
-                                .key()
-                                .equals(source == SqlTypeName.REAL ? "sqrt:fp32" : "sqrt:i64"))) {
+                            && function.key().equals("sqrt:i64"))) {
           // The reverse mapping restores this input promotion. Keep the original
           // arithmetic variant when the executable expansion is exported again.
           input = uncast;
@@ -65,6 +67,18 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
                           DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn()))
                   .collect(Collectors.toUnmodifiableList());
         }
+      }
+      if (input.getType().getSqlTypeName() == SqlTypeName.REAL
+          && call.getType().getSqlTypeName() == SqlTypeName.DOUBLE) {
+        // Calcite POWER returns DOUBLE even for REAL input. Match sqrt:fp64
+        // rather than declaring an FP64 result for the FP32 signature.
+        RelDataType promotedType =
+            rexBuilder
+                .getTypeFactory()
+                .createTypeWithNullability(
+                    rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DOUBLE),
+                    input.getType().isNullable());
+        input = rexBuilder.makeCast(promotedType, input);
       }
       List<RexNode> operands = List.of(input);
       return Optional.of(new SubstraitFunctionMapping(sqrtFunctionName, operands, candidates));

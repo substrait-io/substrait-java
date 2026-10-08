@@ -79,7 +79,7 @@ public class ScalarFunctionConverter
             new DatetimeSubtractionFunctionMapper(functions),
             new ConcatFunctionMapper(functions),
             new TrimFunctionMapper(functions),
-            new SqrtFunctionMapper(functions),
+            new SqrtFunctionMapper(functions, typeFactory),
             new ExtractDateFunctionMapper(functions),
             new PositionFunctionMapper(functions),
             new StrptimeDateFunctionMapper(functions),
