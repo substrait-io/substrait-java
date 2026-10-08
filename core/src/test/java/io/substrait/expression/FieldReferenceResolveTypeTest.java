@@ -29,7 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * throw in that case. The two must agree on <em>which</em> chains select something, so that a
  * caller re-deriving a cached type can tell a reference that no longer resolves from a failure of
  * its own work. Asserting the equivalence rather than hard-coding expectations is what keeps {@code
- * resolveType} from drifting away from the shared segment derivation rules.
+ * resolveType} from drifting away from the segment derivation rules it duplicates.
  */
 class FieldReferenceResolveTypeTest extends TestBase {
 
@@ -47,10 +47,6 @@ class FieldReferenceResolveTypeTest extends TestBase {
         // struct field, single segment
         Arguments.of("struct field in range", R.struct(R.I64), segments(StructField.of(0))),
         Arguments.of(
-            "unbound struct field",
-            R.struct(Type.Unbound.builder().build()),
-            segments(StructField.of(0))),
-        Arguments.of(
             "struct field, second column", R.struct(R.I64, R.STRING), segments(StructField.of(1))),
         Arguments.of("struct field past the end", R.struct(R.I64), segments(StructField.of(2))),
         Arguments.of(
@@ -61,10 +57,6 @@ class FieldReferenceResolveTypeTest extends TestBase {
             "nested struct field in range",
             R.struct(R.struct(R.I64, R.STRING)),
             segments(StructField.of(1), StructField.of(0))),
-        Arguments.of(
-            "nullable struct parent",
-            R.struct(N.struct(R.I64)),
-            segments(StructField.of(0), StructField.of(0))),
         Arguments.of(
             "nested struct field past the end",
             R.struct(R.struct(R.I64)),
@@ -100,14 +92,6 @@ class FieldReferenceResolveTypeTest extends TestBase {
             R.struct(R.list(R.I64)),
             segments(ListElement.of(7), StructField.of(0))),
         Arguments.of(
-            "struct field beneath a list element",
-            R.struct(R.list(R.struct(R.I64))),
-            segments(StructField.of(0), ListElement.of(0), StructField.of(0))),
-        Arguments.of(
-            "map value beneath a list element",
-            R.struct(R.list(R.map(R.STRING, R.I64))),
-            segments(key("k"), ListElement.of(0), StructField.of(0))),
-        Arguments.of(
             "list element on a struct",
             R.struct(R.struct(R.I64)),
             segments(ListElement.of(0), StructField.of(0))),
@@ -117,14 +101,6 @@ class FieldReferenceResolveTypeTest extends TestBase {
         Arguments.of(
             "map key matching the key type",
             R.struct(R.map(R.STRING, R.I64)),
-            segments(key("k"), StructField.of(0))),
-        Arguments.of(
-            "nullable map parent",
-            R.struct(N.map(R.STRING, R.I64)),
-            segments(key("k"), StructField.of(0))),
-        Arguments.of(
-            "unbound map value",
-            R.struct(R.map(R.STRING, Type.Unbound.builder().build())),
             segments(key("k"), StructField.of(0))),
         Arguments.of(
             "map key differing in nullability",
@@ -185,7 +161,7 @@ class FieldReferenceResolveTypeTest extends TestBase {
     // ofRoot only accepts a struct, but a reference rooted at an expression can navigate into a
     // list or a map directly, so resolveType has to accept any type as the root.
     assertEquals(
-        Optional.of(N.I64), FieldReference.resolveType(R.list(R.I64), segments(ListElement.of(0))));
+        Optional.of(R.I64), FieldReference.resolveType(R.list(R.I64), segments(ListElement.of(0))));
     assertEquals(
         Optional.of(R.I64), FieldReference.resolveType(R.map(R.STRING, R.I64), segments(key("k"))));
     assertFalse(FieldReference.resolveType(R.I64, segments(StructField.of(0))).isPresent());

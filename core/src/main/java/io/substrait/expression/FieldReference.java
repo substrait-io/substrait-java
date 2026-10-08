@@ -558,29 +558,28 @@ public abstract class FieldReference implements Expression {
    * nothing out of it.
    *
    * <p>This mirrors the type each segment derives when it is applied: a struct field selects the
-   * field at its offset, a list element selects the nullable element type whatever its offset, as
-   * the length of a list is not part of its type, and a map key selects the value type of a map
-   * whose key type it matches, nullability included. A segment applied to a type that is not the
-   * container it navigates into, and any other kind of segment, select nothing.
+   * field at its offset, a list element selects the element type whatever its offset, as the length
+   * of a list is not part of its type, and a map key selects the value type of a map whose key type
+   * it matches, nullability included. A segment applied to a type that is not the container it
+   * navigates into, and any other kind of segment, select nothing.
    */
   private static Optional<Type> resolveSegmentType(ReferenceSegment segment, Type type) {
     if (segment instanceof StructField && type instanceof Type.Struct) {
       int offset = ((StructField) segment).offset();
       List<Type> fields = ((Type.Struct) type).fields();
       return offset >= 0 && offset < fields.size()
-          ? Optional.of(StructFieldFinder.getReferencedType(type, offset))
+          ? Optional.of(fields.get(offset))
           : Optional.empty();
     }
     if (segment instanceof ListElement && type instanceof Type.ListType) {
-      return Optional.of(ListIndexFinder.getReferencedType(type, ((ListElement) segment).offset()));
+      return Optional.of(((Type.ListType) type).elementType());
     }
     if (segment instanceof MapKey && type instanceof Type.Map) {
       // The type of the key literal is only read once the type is known to be a map, which is also
       // the only case in which applying the segment reads it.
       Type.Map map = (Type.Map) type;
-      Type keyType = ((MapKey) segment).key().getType();
-      return map.key().equals(keyType)
-          ? Optional.of(MapKeyFinder.getReferencedType(type, keyType))
+      return map.key().equals(((MapKey) segment).key().getType())
+          ? Optional.of(map.value())
           : Optional.empty();
     }
     return Optional.empty();
@@ -602,8 +601,7 @@ public abstract class FieldReference implements Expression {
       if (expr.fields().size() < index) {
         throw new IllegalArgumentException("Undefined struct type.");
       }
-      Type field = expr.fields().get(index);
-      return expr.nullable() ? field.withNullable(true) : field;
+      return expr.fields().get(index);
     }
 
     public static Type getReferencedType(Type type, int index) {
@@ -620,8 +618,7 @@ public abstract class FieldReference implements Expression {
 
     @Override
     public Type visit(Type.ListType expr) throws RuntimeException {
-      // An out-of-range offset returns null even when the list's elements are required.
-      return expr.elementType().withNullable(true);
+      return expr.elementType();
     }
 
     public static Type getReferencedType(Type type, int index) {
@@ -647,8 +644,7 @@ public abstract class FieldReference implements Expression {
             String.format(
                 "Key type %s of map does not matched expected type of %s.", expr.key(), keyType));
       }
-      Type value = expr.value();
-      return expr.nullable() ? value.withNullable(true) : value;
+      return expr.value();
     }
 
     public static Type getReferencedType(Type typeToDereference, Type keyType) {
