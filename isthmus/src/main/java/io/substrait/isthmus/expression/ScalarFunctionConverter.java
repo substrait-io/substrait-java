@@ -183,7 +183,12 @@ public class ScalarFunctionConverter
       List<? extends FunctionArg> arguments,
       Type outputType) {
     if (!DefaultExtensionCatalog.FUNCTIONS_DATETIME.equals(function.getAnchor().urn())) {
-      return ExpressionCreator.scalarFunction(function, outputType, arguments);
+      return Expression.ScalarFunctionInvocation.builder()
+          .declaration(function)
+          .outputType(outputType)
+          .addAllArguments(arguments)
+          .options(ConcatFunctionMapper.optionsFor(call.delegate, function))
+          .build();
     }
     // The datetime extension declares its results by parameter, where Calcite keeps an operand's
     // own type: add(date, interval_day<P>) is a precision_timestamp<P> there and a DATE here. The
