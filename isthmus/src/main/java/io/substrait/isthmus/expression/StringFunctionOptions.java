@@ -55,10 +55,14 @@ final class StringFunctionOptions {
         FunctionOption.builder().name(binding.name()).addValues(binding.value()).build());
   }
 
-  static void validate(Expression.ScalarFunctionInvocation expression) {
+  static void validate(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
     Binding binding = binding(expression.declaration());
     if (binding == null) {
       return;
+    }
+    if (!expression.options().isEmpty() && !binding.operators().contains(operator)) {
+      throw new UnsupportedOperationException(
+          "No string option policy for Calcite operator " + operator.getName());
     }
     for (FunctionOption option : expression.options()) {
       if (!binding.name().equalsIgnoreCase(option.getName())) {

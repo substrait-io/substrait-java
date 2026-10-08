@@ -20,11 +20,15 @@ import io.substrait.relation.Project;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.calcite.DataContexts;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -208,5 +212,24 @@ class StringFunctionOptionsTest extends PlanTestBase {
     assertThrows(
         UnsupportedOperationException.class,
         () -> call(c, List.of(option(c, c.unsupported))).accept(toRex, Context.newContext()));
+  }
+
+  @Test
+  void validatesOptionsAgainstTheOperatorChosenByACustomConverter() {
+    ScalarFunctionConverter custom =
+        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory) {
+          @Override
+          public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+              String key, Type outputType) {
+            return Optional.of(SqlLibraryOperators.ILIKE);
+          }
+        };
+    ExpressionRexConverter converter =
+        new ExpressionRexConverter(typeFactory, custom, window, TypeConverter.DEFAULT);
+    Case c = cases().filter(sample -> sample.name.equals("like")).findFirst().orElseThrow();
+    assertThrows(
+        UnsupportedOperationException.class,
+        () ->
+            call(c, List.of(option(c, "CASE_SENSITIVE"))).accept(converter, Context.newContext()));
   }
 }

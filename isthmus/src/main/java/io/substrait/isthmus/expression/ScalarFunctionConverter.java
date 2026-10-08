@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
@@ -376,10 +377,24 @@ public class ScalarFunctionConverter
    * @return the argument list, possibly remapped; never {@code null}
    */
   public List<FunctionArg> getExpressionArguments(Expression.ScalarFunctionInvocation expression) {
-    StringFunctionOptions.validate(expression);
     // If a mapping applies to this expression, use it to get the arguments; otherwise default
     // behavior.
     return getMappedExpressionArguments(expression).orElseGet(expression::arguments);
+  }
+
+  /**
+   * Checks that the selected Calcite operator can honor the invocation's options.
+   *
+   * <p>Custom converters selecting other operators can override this policy when they implement the
+   * corresponding option semantics.
+   *
+   * @param expression the Substrait invocation
+   * @param operator the selected Calcite operator
+   * @throws UnsupportedOperationException if the selected operator cannot honor the options
+   */
+  public void validateOptions(
+      Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
+    StringFunctionOptions.validate(expression, operator);
   }
 
   private Optional<List<FunctionArg>> getMappedExpressionArguments(

@@ -599,6 +599,7 @@ public class ExpressionRexConverter
                         callConversionFailureMessage(
                             "scalar", expr.declaration().name(), expr.arguments())));
 
+    scalarFunctionConverter.validateOptions(expr, operator);
     List<FunctionArg> eArgs = scalarFunctionConverter.getExpressionArguments(expr);
     List<RexNode> args =
         IntStream.range(0, eArgs.size())
