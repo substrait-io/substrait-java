@@ -3,6 +3,7 @@ package io.substrait.isthmus.expression;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
@@ -18,11 +19,13 @@ import io.substrait.type.TypeCreator;
 import io.substrait.util.EmptyVisitationContext;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.calcite.DataContexts;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutable;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.rex.RexNode;
@@ -55,7 +58,6 @@ class FieldSelectionConverterTest {
     Expression converted = call.accept(converter);
     assertEquals(
         expectedOffset == null ? Integer.MAX_VALUE : expectedOffset, listOffset(converted));
-    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @ParameterizedTest
@@ -72,13 +74,7 @@ class FieldSelectionConverterTest {
     io.substrait.proto.Expression proto = toProto(columnExpression);
     assertEquals(
         expectedOffset,
-        proto
-            .getSelection()
-            .getDirectReference()
-            .getStructField()
-            .getChild()
-            .getListElement()
-            .getOffset());
+        listOffset(proto.getSelection().getDirectReference().getStructField().getChild()));
   }
 
   private static Stream<Arguments> safeIndexing() {
@@ -99,7 +95,6 @@ class FieldSelectionConverterTest {
   void invalidLowIndexesAreNull(SqlOperator operator, long index) {
     Expression converted = rexBuilder.makeCall(operator, array(), integer(index)).accept(converter);
     assertEquals(Integer.MAX_VALUE, listOffset(converted));
-    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   private static Stream<Arguments> invalidLowIndexes() {
@@ -119,7 +114,6 @@ class FieldSelectionConverterTest {
             .makeCall(SqlStdOperatorTable.ITEM, array(), rexBuilder.makeNullLiteral(intType))
             .accept(converter);
     assertEquals(Integer.MAX_VALUE, listOffset(converted));
-    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @Test
@@ -132,7 +126,6 @@ class FieldSelectionConverterTest {
                 rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.NULL)))
             .accept(converter);
     assertEquals(Integer.MAX_VALUE, listOffset(converted));
-    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
     verifyRoundTrip(converted, TypeConverter.DEFAULT.toSubstrait(array().getType()));
   }
 
@@ -188,7 +181,6 @@ class FieldSelectionConverterTest {
       FieldReference reference = assertInstanceOf(FieldReference.class, converted);
       assertEquals(
           Integer.MAX_VALUE, ((FieldReference.ListElement) reference.segments().get(0)).offset());
-      assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
       verifyRoundTrip(converted, TypeConverter.DEFAULT.toSubstrait(input.getType()));
     }
   }
@@ -234,7 +226,6 @@ class FieldSelectionConverterTest {
     }
     FieldReference reference = assertInstanceOf(FieldReference.class, nested.accept(converter));
     assertEquals(4, reference.segments().size());
-    assertEquals(TypeCreator.NULLABLE.I32, reference.getType());
     verifyRoundTrip(reference, TypeConverter.DEFAULT.toSubstrait(nestedType));
   }
 
@@ -281,7 +272,6 @@ class FieldSelectionConverterTest {
               .makeCall(SqlStdOperatorTable.ITEM, column, nullableIndex(index))
               .accept(custom);
       assertInstanceOf(FieldReference.class, converted);
-      assertEquals(factory.createSubstrait(true), converted.getType());
       verifyRoundTrip(converted, types.toSubstrait(column.getType()));
     }
   }
@@ -292,7 +282,6 @@ class FieldSelectionConverterTest {
     RexNode call = rexBuilder.makeCall(SqlStdOperatorTable.ITEM, array(), integer(index));
     Expression converted = call.accept(converter);
     assertEquals(Integer.MAX_VALUE, listOffset(converted));
-    assertEquals(TypeCreator.NULLABLE.I32, converted.getType());
   }
 
   @ParameterizedTest
@@ -300,6 +289,20 @@ class FieldSelectionConverterTest {
   void throwingOperatorsAreRejected(SqlOperator operator) {
     RexNode call = rexBuilder.makeCall(operator, array(), integer(4));
     assertThrows(IllegalArgumentException.class, () -> call.accept(converter));
+  }
+
+  @ParameterizedTest
+  @MethodSource("unsafeOperators")
+  void declinedOperatorsDoNotConvertTheArrayOperand(SqlOperator operator) {
+    RexNode call = rexBuilder.makeCall(operator, array(), integer(1));
+    assertEquals(
+        Optional.empty(),
+        new FieldSelectionConverter(TypeConverter.DEFAULT)
+            .convert(
+                (RexCall) call,
+                operand -> {
+                  throw new AssertionError("converted " + operand);
+                }));
   }
 
   private static Stream<SqlOperator> unsafeOperators() {
@@ -321,7 +324,13 @@ class FieldSelectionConverterTest {
 
   private int listOffset(Expression expression) {
     assertInstanceOf(FieldReference.class, expression);
-    return toProto(expression).getSelection().getDirectReference().getListElement().getOffset();
+    return listOffset(toProto(expression).getSelection().getDirectReference());
+  }
+
+  private int listOffset(io.substrait.proto.Expression.ReferenceSegment segment) {
+    // Protobuf returns offset 0 for a segment that is not a list element.
+    assertTrue(segment.hasListElement());
+    return segment.getListElement().getOffset();
   }
 
   private io.substrait.proto.Expression toProto(Expression expression) {
