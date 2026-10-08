@@ -29,8 +29,10 @@ import org.junit.jupiter.api.Test;
 class NestedExpressionsTest extends PlanTestBase {
 
   Expression literalExpression = Expression.BoolLiteral.builder().value(true).build();
-  Expression.ScalarFunctionInvocation nonLiteralExpression = sb.add(sb.i32(7), sb.i32(42));
-  Expression.ScalarFunctionInvocation nonLiteralExpression2 = sb.add(sb.i32(3), sb.i32(4));
+  Expression.ScalarFunctionInvocation nonLiteralExpression =
+      withSilentOverflow(sb.add(sb.i32(7), sb.i32(42)));
+  Expression.ScalarFunctionInvocation nonLiteralExpression2 =
+      withSilentOverflow(sb.add(sb.i32(3), sb.i32(4)));
 
   final List<Type> tableType = List.of(R.I32, R.FP32, N.STRING, N.BOOLEAN, N.STRING);
   final Rel commonTable =
