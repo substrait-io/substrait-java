@@ -13,7 +13,7 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /** The spec v0.103.0 string options supported by the corresponding Calcite operators. */
-final class StringFunctionOptions {
+final class StringFunctionOptions implements ScalarFunctionOptionPolicy {
   private static final Map<String, Binding> BINDINGS =
       Map.of(
           "concat",
@@ -42,9 +42,8 @@ final class StringFunctionOptions {
           "upper", new Binding("char_set", "UTF8", Set.of(SqlStdOperatorTable.UPPER)),
           "initcap", new Binding("char_set", "ASCII_ONLY", Set.of(SqlStdOperatorTable.INITCAP)));
 
-  private StringFunctionOptions() {}
-
-  static List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
+  @Override
+  public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     Binding binding = binding(function);
     if (binding == null || !binding.operators().contains(call.getOperator())) {
       return List.of();
@@ -55,10 +54,11 @@ final class StringFunctionOptions {
         FunctionOption.builder().name(binding.name()).addValues(binding.value()).build());
   }
 
-  static void validate(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
+  @Override
+  public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
     Binding binding = binding(expression.declaration());
     if (binding == null) {
-      return;
+      return operator;
     }
     if (!expression.options().isEmpty() && !binding.operators().contains(operator)) {
       throw new UnsupportedOperationException(
@@ -83,6 +83,7 @@ final class StringFunctionOptions {
                 + option.values());
       }
     }
+    return operator;
   }
 
   private static Binding binding(ScalarFunctionVariant function) {

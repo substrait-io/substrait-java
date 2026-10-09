@@ -592,14 +592,13 @@ public class ExpressionRexConverter
       throws RuntimeException {
     SqlOperator operator =
         scalarFunctionConverter
-            .getSqlOperatorFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+            .getSqlOperatorFromSubstraitFunc(expr)
             .orElseThrow(
                 () ->
                     new IllegalArgumentException(
                         callConversionFailureMessage(
                             "scalar", expr.declaration().name(), expr.arguments())));
 
-    scalarFunctionConverter.validateOptions(expr, operator);
     List<FunctionArg> eArgs = scalarFunctionConverter.getExpressionArguments(expr);
     List<RexNode> args =
         IntStream.range(0, eArgs.size())

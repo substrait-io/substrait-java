@@ -9,9 +9,11 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.extension.DefaultExtensionCatalog;
+import io.substrait.extension.SimpleExtension.ScalarFunctionVariant;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.ExpressionRexConverter;
+import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.calcite.DataContexts;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -231,5 +234,70 @@ class StringFunctionOptionsTest extends PlanTestBase {
         UnsupportedOperationException.class,
         () ->
             call(c, List.of(option(c, "CASE_SENSITIVE"))).accept(converter, Context.newContext()));
+  }
+
+  @Test
+  void customOptionPolicyPreservesCaseInsensitiveLikeInBothDirections() {
+    Case c = cases().filter(sample -> sample.name.equals("like")).findFirst().orElseThrow();
+    FunctionOption insensitive = option(c, "CASE_INSENSITIVE");
+    ScalarFunctionConverter custom =
+        new ScalarFunctionConverter(
+            extensions.scalarFunctions(),
+            List.of(new FunctionMappings.Sig(SqlLibraryOperators.ILIKE, "like")),
+            typeFactory,
+            TypeConverter.DEFAULT) {
+          @Override
+          public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
+              String key, Type outputType) {
+            if (key.equals("like:str_str")) return Optional.of(SqlLibraryOperators.ILIKE);
+            return super.getSqlOperatorFromSubstraitFunc(key, outputType);
+          }
+
+          @Override
+          protected SqlOperator resolveOptions(
+              Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
+            if (operator == SqlLibraryOperators.ILIKE
+                && expression.options().stream()
+                    .allMatch(
+                        o ->
+                            o.getName().equalsIgnoreCase("case_sensitivity")
+                                && o.values().stream()
+                                    .anyMatch("CASE_INSENSITIVE"::equalsIgnoreCase))) {
+              return operator;
+            }
+            return super.resolveOptions(expression, operator);
+          }
+
+          @Override
+          protected List<FunctionOption> options(RexCall call, ScalarFunctionVariant function) {
+            if (DefaultExtensionCatalog.FUNCTIONS_STRING.equals(function.urn())
+                && function.key().equals("like:str_str")
+                && call.getOperator() == SqlLibraryOperators.ILIKE) return List.of(insensitive);
+            return super.options(call, function);
+          }
+        };
+    ExpressionRexConverter importer =
+        new ExpressionRexConverter(typeFactory, custom, window, TypeConverter.DEFAULT);
+    RexExpressionConverter exporter =
+        new RexExpressionConverter(
+            null,
+            Stream.concat(
+                    CallConverters.defaults(TypeConverter.DEFAULT).stream(), Stream.of(custom))
+                .toList(),
+            window,
+            TypeConverter.DEFAULT);
+    RexNode imported = call(c, List.of(insensitive)).accept(importer, Context.newContext());
+    assertEquals(
+        SqlLibraryOperators.ILIKE, assertInstanceOf(RexCall.class, imported).getOperator());
+    Expression.ScalarFunctionInvocation exported =
+        assertInstanceOf(Expression.ScalarFunctionInvocation.class, imported.accept(exporter));
+    assertEquals(List.of(insensitive), exported.options());
+    List<RexNode> reduced = new ArrayList<>();
+    new RexExecutorImpl(DataContexts.EMPTY).reduce(creator.rex(), List.of(imported), reduced);
+    assertEquals(
+        true, assertInstanceOf(RexLiteral.class, reduced.get(0)).getValueAs(Boolean.class));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> call(c, List.of(option(c, "CASE_SENSITIVE"))).accept(importer, Context.newContext()));
   }
 }
