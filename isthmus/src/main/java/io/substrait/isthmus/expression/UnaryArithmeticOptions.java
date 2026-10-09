@@ -12,7 +12,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-/** Unary arithmetic option policies from spec v0.103.0. */
+/** Unary arithmetic option policies. */
 final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
   private static final Set<String> NAMES =
       Set.of(
@@ -38,9 +38,14 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
 
   private static String name(ScalarFunctionVariant function) {
     if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())
-        || !NAMES.contains(function.name())) return null;
-    for (String tag : List.of("i8", "i16", "i32", "i64", "fp32", "fp64"))
-      if (function.key().equals(function.name() + ":" + tag)) return function.name();
+        || !NAMES.contains(function.name())) {
+      return null;
+    }
+    for (String tag : List.of("i8", "i16", "i32", "i64", "fp32", "fp64")) {
+      if (function.key().equals(function.name() + ":" + tag)) {
+        return function.name();
+      }
+    }
     return null;
   }
 
@@ -66,10 +71,7 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
     return call.getOperator() == SqlStdOperatorTable.CHECKED_UNARY_MINUS
         && call.getOperands().size() == 1
         && call.getOperands().get(0).getType().getSqlTypeName() == type
-        && (type == SqlTypeName.TINYINT
-            || type == SqlTypeName.SMALLINT
-            || type == SqlTypeName.INTEGER
-            || type == SqlTypeName.BIGINT);
+        && SqlTypeName.INT_TYPES.contains(type);
   }
 
   private static FunctionOption option(String name, String value) {
@@ -79,15 +81,22 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
   @Override
   public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     String name = name(function);
-    if (name == null || call.getOperands().size() != 1) return List.of();
-    if (name.equals("negate") && integer(function) && checkedIntegerNegation(call))
+    if (name == null || call.getOperands().size() != 1) {
+      return List.of();
+    }
+    if (name.equals("negate") && integer(function) && checkedIntegerNegation(call)) {
       return List.of(option("overflow", "ERROR"));
-    if (call.getOperator() != nativeOperator(name)) return List.of();
-    if ((name.equals("negate") || name.equals("abs")) && integer(function))
+    }
+    if (call.getOperator() != nativeOperator(name)) {
+      return List.of();
+    }
+    if ((name.equals("negate") || name.equals("abs")) && integer(function)) {
       return List.of(option("overflow", "SILENT"));
+    }
     // Calcite's FP32 unary conversion path cannot carry a NaN result.
-    if ((name.equals("acos") || name.equals("asin")) && function.key().endsWith(":fp64"))
+    if ((name.equals("acos") || name.equals("asin")) && function.key().endsWith(":fp64")) {
       return List.of(option("on_domain_error", "NAN"));
+    }
     // Java's transcendental functions need not be correctly rounded. SQL SQRT is
     // represented as POWER(x, 0.5), without a verified explicit option policy.
     return List.of();
@@ -96,23 +105,30 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
   @Override
   public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
     String name = name(expression.declaration());
-    if (name == null || expression.options().isEmpty()) return selected;
+    if (name == null || expression.options().isEmpty()) {
+      return selected;
+    }
     SqlOperator nativeOperator = nativeOperator(name);
     boolean negate = name.equals("negate") && integer(expression.declaration());
     if (selected != nativeOperator
-        && !(negate && selected == SqlStdOperatorTable.CHECKED_UNARY_MINUS))
+        && !(negate && selected == SqlStdOperatorTable.CHECKED_UNARY_MINUS)) {
       throw new UnsupportedOperationException(
           "No unary arithmetic option policy for Calcite operator " + selected.getName());
+    }
     String overflow = null;
     for (FunctionOption option : expression.options()) {
+      ScalarFunctionOptionPolicy.requireDeclaredValues(expression, option);
       String optionName = option.getName().toLowerCase(Locale.ROOT);
       List<String> supported;
-      if (optionName.equals("overflow") && integer(expression.declaration()))
+      if (optionName.equals("overflow") && integer(expression.declaration())) {
         supported = negate ? List.of("SILENT", "ERROR") : List.of("SILENT");
-      else if (optionName.equals("on_domain_error")
+      } else if (optionName.equals("on_domain_error")
           && (name.equals("acos") || name.equals("asin"))
-          && expression.declaration().key().endsWith(":fp64")) supported = List.of("NAN");
-      else supported = List.of();
+          && expression.declaration().key().endsWith(":fp64")) {
+        supported = List.of("NAN");
+      } else {
+        supported = List.of();
+      }
       String value =
           option.values().stream()
               .map(v -> v.toUpperCase(Locale.ROOT))
@@ -128,12 +144,15 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
                               + " preferences: "
                               + option.values()));
       if (optionName.equals("overflow")) {
-        if (overflow != null && !overflow.equals(value))
+        if (overflow != null && !overflow.equals(value)) {
           throw new UnsupportedOperationException("Conflicting unary arithmetic option: overflow");
+        }
         overflow = value;
       }
     }
-    if (!negate || overflow == null) return selected;
+    if (!negate || overflow == null) {
+      return selected;
+    }
     return overflow.equals("ERROR")
         ? SqlStdOperatorTable.CHECKED_UNARY_MINUS
         : SqlStdOperatorTable.UNARY_MINUS;

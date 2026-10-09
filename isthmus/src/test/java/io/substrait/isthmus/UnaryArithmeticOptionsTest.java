@@ -179,7 +179,9 @@ class UnaryArithmeticOptionsTest extends PlanTestBase {
   private void assertOverflow(RexNode rex, Number value) {
     Exception failure = assertThrows(Exception.class, () -> execute(rex, value));
     Throwable root = failure;
-    while (root.getCause() != null) root = root.getCause();
+    while (root.getCause() != null) {
+      root = root.getCause();
+    }
     assertTrue(root instanceof ArithmeticException, root.toString());
   }
 
@@ -292,37 +294,44 @@ class UnaryArithmeticOptionsTest extends PlanTestBase {
         }
       }
     }
-    for (String name : List.of("sqrt", "exp"))
+    for (String name : List.of("sqrt", "exp")) {
       assertThrows(
           UnsupportedOperationException.class,
           () ->
               invocation(name, "i64", List.of(option("rounding", "TIE_TO_EVEN")))
                   .accept(toRex, Context.newContext()));
+    }
   }
 
   @Test
   void unimplementedDomainAndFactorialPoliciesAreRejected() {
-    for (String name : List.of("asin", "acos"))
-      for (String domain : List.of("NAN", "ERROR"))
+    for (String name : List.of("asin", "acos")) {
+      for (String domain : List.of("NAN", "ERROR")) {
         assertThrows(
             UnsupportedOperationException.class,
             () ->
                 invocation(name, "fp32", List.of(option("on_domain_error", domain)))
                     .accept(toRex, Context.newContext()));
-    for (String name : List.of("sqrt", "acosh", "atanh"))
-      for (String domain : List.of("NAN", "ERROR"))
+      }
+    }
+    for (String name : List.of("sqrt", "acosh", "atanh")) {
+      for (String domain : List.of("NAN", "ERROR")) {
         assertThrows(
             UnsupportedOperationException.class,
             () ->
                 invocation(name, "fp64", List.of(option("on_domain_error", domain)))
                     .accept(toRex, Context.newContext()));
-    for (String tag : List.of("i32", "i64"))
-      for (String overflow : List.of("SILENT", "SATURATE", "ERROR"))
+      }
+    }
+    for (String tag : List.of("i32", "i64")) {
+      for (String overflow : List.of("SILENT", "SATURATE", "ERROR")) {
         assertThrows(
             UnsupportedOperationException.class,
             () ->
                 invocation("factorial", tag, List.of(option("overflow", overflow)))
                     .accept(toRex, Context.newContext()));
+      }
+    }
   }
 
   @Test
@@ -331,10 +340,11 @@ class UnaryArithmeticOptionsTest extends PlanTestBase {
         List.of(
             List.of(option("overflow")),
             List.of(option("unknown", "SILENT")),
-            List.of(option("overflow", "SILENT"), option("overflow", "ERROR"))))
+            List.of(option("overflow", "SILENT"), option("overflow", "ERROR")))) {
       assertThrows(
           UnsupportedOperationException.class,
           () -> invocation("negate", "i32", options).accept(toRex, Context.newContext()));
+    }
   }
 
   @Test
@@ -394,11 +404,33 @@ class UnaryArithmeticOptionsTest extends PlanTestBase {
       Expression.ScalarFunctionInvocation function =
           (Expression.ScalarFunctionInvocation) expression;
       String name = function.declaration().name();
-      if (name.equals("negate") || name.equals("abs"))
+      if (name.equals("negate") || name.equals("abs")) {
         assertEquals(List.of(option("overflow", "SILENT")), function.options());
-      else if (name.equals("asin") || name.equals("acos"))
+      } else if (name.equals("asin") || name.equals("acos")) {
         assertEquals(List.of(option("on_domain_error", "NAN")), function.options());
-      else assertTrue(function.options().isEmpty(), name);
+      } else {
+        assertTrue(function.options().isEmpty(), name);
+      }
     }
+  }
+
+  @Test
+  void undeclaredPreferencesCannotHideBehindASupportedFallback() {
+    for (String[] values :
+        List.of(new String[] {"WRAP", "SILENT"}, new String[] {"SILENT", "WRAP"})) {
+      UnsupportedOperationException failure =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () ->
+                  invocation("negate", "i32", List.of(option("overflow", values)))
+                      .accept(toRex, Context.newContext()));
+      assertTrue(failure.getMessage().contains("does not declare value WRAP"));
+    }
+    assertTrue(
+        export(
+                invocation("negate", "i32", List.of(option("overflow", "silent")))
+                    .accept(toRex, Context.newContext()))
+            .options()
+            .contains(option("overflow", "SILENT")));
   }
 }
