@@ -54,7 +54,8 @@ public class ScalarFunctionConverter
           new StringFunctionOptions(),
           new IntegerFunctionOptions(),
           new DecimalFunctionOptions(),
-          new FloatingPointFunctionOptions());
+          new FloatingPointFunctionOptions(),
+          new UnaryArithmeticOptions());
 
   /**
    * Creates a converter with the given functions and type factory.
