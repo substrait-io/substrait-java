@@ -32,12 +32,11 @@ public final class AggregateConversion {
      *
      * <p>Type derivation is fail-closed: a function whose return expression the derivation does not
      * yet support is rejected rather than assumed valid, so this mode is not adoptable for plans
-     * that use such functions. Among the standard aggregates that means {@code quantile}, whose
-     * declared return {@code LIST?<any>} uses a plain {@code any} carrying no identity to bind.
-     * {@code avg} over a decimal is rejected too, in every phase that consumes the intermediate
-     * state, an unspecified phase among them: its intermediate {@code STRUCT<DECIMAL<38,S>,i64>}
-     * derives from the initial arguments, but such a phase binds it from the state it receives, and
-     * a struct cannot bind the declared {@code DECIMAL<P,S>} argument.
+     * that use such functions. Among the standard aggregates that means {@code avg} over a decimal,
+     * which is rejected in every phase that consumes the intermediate state, an unspecified phase
+     * among them: its intermediate {@code STRUCT<DECIMAL<38,S>,i64>} derives from the initial
+     * arguments, but such a phase binds it from the state it receives, and a struct cannot bind the
+     * declared {@code DECIMAL<P,S>} argument.
      */
     EXTENSION_DECLARATION
   }
