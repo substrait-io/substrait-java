@@ -275,16 +275,22 @@ class ContainerReturnTypeTest {
   }
 
   @Test
-  void catalogQuantileStillHasAnUnboundElementType() {
+  void catalogQuantileBindsItsElementTypeToTheDistribution() {
     SimpleExtension.Function quantile =
         DefaultExtensionCatalog.DEFAULT_COLLECTION.aggregateFunctions().stream()
             .filter(f -> f.key().equals("quantile:req_req_i64_any"))
             .findFirst()
             .orElseThrow();
-    UnsupportedOperationException error =
-        assertThrows(
-            UnsupportedOperationException.class, () -> quantile.resolveType(List.of(R.I64, R.I32)));
-    assertTrue(error.getMessage().contains("Unbound type parameter 'any'"), error.getMessage());
+    // The declared return LIST?<any1> takes its element type from the distribution argument.
+    assertEquals(N.list(R.I32), quantile.resolveType(List.of(R.I64, R.I32)));
+    List<ResolvedArgument> arguments =
+        List.of(
+            ResolvedArgument.enumOption("BOTH"),
+            ResolvedArgument.enumOption("EXACT"),
+            ResolvedArgument.value(R.I64),
+            ResolvedArgument.value(R.I32));
+    assertEquals(N.list(R.I32), FunctionBindingResolver.deriveOutputType(quantile, arguments));
+    FunctionBindingResolver.resolveAndValidate(quantile, arguments, List.of(), N.list(R.I32));
   }
 
   @Test

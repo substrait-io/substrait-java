@@ -89,7 +89,7 @@ final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
     if ((name.equals("acos") || name.equals("asin")) && function.key().endsWith(":fp64"))
       return List.of(option("on_domain_error", "NAN"));
     // Java's transcendental functions need not be correctly rounded. SQL SQRT is
-    // represented as POWER(x, 0.5), and native SQRT has no enumerable implementation.
+    // represented as POWER(x, 0.5), without a verified explicit option policy.
     return List.of();
   }
 

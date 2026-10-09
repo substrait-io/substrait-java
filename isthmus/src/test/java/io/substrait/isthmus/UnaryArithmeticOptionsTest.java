@@ -351,7 +351,7 @@ class UnaryArithmeticOptionsTest extends PlanTestBase {
               .findFirst()
               .orElseThrow()
               .operator();
-      assertEquals(expected, rex.getOperator());
+      assertEquals(name.equals("sqrt") ? SqlStdOperatorTable.POWER : expected, rex.getOperator());
     }
   }
 
