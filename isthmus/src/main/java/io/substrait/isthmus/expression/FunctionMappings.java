@@ -182,7 +182,6 @@ public class FunctionMappings {
               s(RIGHTSHIFT, "shift_right"),
               s(SqlLibraryOperators.STARTS_WITH, "starts_with"),
               s(SqlLibraryOperators.ENDS_WITH, "ends_with"),
-              s(SqlLibraryOperators.CONTAINS_SUBSTR, "contains"),
               s(SqlStdOperatorTable.POSITION, "strpos"),
               s(SqlLibraryOperators.LEFT, "left"),
               s(SqlLibraryOperators.RIGHT, "right"),
