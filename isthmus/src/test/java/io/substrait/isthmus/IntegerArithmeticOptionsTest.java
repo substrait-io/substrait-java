@@ -30,12 +30,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelRunners;
 import org.junit.jupiter.api.Test;
@@ -72,7 +74,9 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
       return "VALUE=" + result.getObject(1);
     } catch (Exception | LinkageError failure) {
       Throwable root = failure;
-      while (root.getCause() != null) root = root.getCause();
+      while (root.getCause() != null) {
+        root = root.getCause();
+      }
       if (root instanceof NullPointerException) {
         throw new IllegalStateException("Probe execution failed", failure);
       }
@@ -218,8 +222,11 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
                   .build();
           RexNode call = plain.accept(toRex, Context.newContext());
           String result = execute(call);
-          if (nullable) assertEquals("VALUE=" + wrapped[i], result, names[i]);
-          else assertTrue(result.startsWith("ERROR=ArithmeticException"), result);
+          if (nullable) {
+            assertEquals("VALUE=" + wrapped[i], result, names[i]);
+          } else {
+            assertTrue(result.startsWith("ERROR=ArithmeticException"), result);
+          }
           assertTrue(
               export(call).options().stream().noneMatch(o -> o.getName().equals("overflow")));
           Expression.ScalarFunctionInvocation checked =
@@ -249,8 +256,11 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
                   List.of(FunctionOption.builder().name("OVERFLOW").values(preferences).build()))
               .accept(toRex, Context.newContext());
       String result = execute(rex);
-      if (preferences.get(0).equals("SILENT")) assertEquals("VALUE=" + Integer.MIN_VALUE, result);
-      else assertTrue(result.startsWith("ERROR=ArithmeticException"));
+      if (preferences.get(0).equals("SILENT")) {
+        assertEquals("VALUE=" + Integer.MIN_VALUE, result);
+      } else {
+        assertTrue(result.startsWith("ERROR=ArithmeticException"));
+      }
     }
     RexNode rex =
         invocation("add", 32, 1, 2, List.of(option("overflow", "error")))
@@ -389,6 +399,81 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
         }
       }
       assertFullRoundTrip(query, creates);
+    }
+  }
+
+  @Test
+  void undeclaredPreferencesCannotHideBehindASupportedFallback() {
+    for (String[] values :
+        List.of(new String[] {"WRAP", "SILENT"}, new String[] {"SILENT", "WRAP"})) {
+      UnsupportedOperationException failure =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () ->
+                  invocation("add", 32, 1, 2, List.of(option("overflow", values)))
+                      .accept(toRex, Context.newContext()));
+      assertTrue(failure.getMessage().contains("does not declare value WRAP"));
+    }
+    assertTrue(
+        export(
+                invocation("add", 32, 1, 2, List.of(option("overflow", "silent")))
+                    .accept(toRex, Context.newContext()))
+            .options()
+            .contains(option("overflow", "SILENT")));
+  }
+
+  @Test
+  void mixedWidthCheckedCallsExportTheBoundVariantsOptions() {
+    RexBuilder rexBuilder = new RexBuilder(typeFactory);
+    RexNode left =
+        rexBuilder.makeExactLiteral(
+            BigDecimal.ONE, TypeConverter.DEFAULT.toCalcite(typeFactory, R.I32));
+    RexNode right =
+        rexBuilder.makeExactLiteral(
+            BigDecimal.valueOf(2), TypeConverter.DEFAULT.toCalcite(typeFactory, R.I64));
+    for (org.apache.calcite.sql.SqlOperator operator :
+        List.of(
+            SqlStdOperatorTable.CHECKED_PLUS,
+            SqlStdOperatorTable.CHECKED_MINUS,
+            SqlStdOperatorTable.CHECKED_MULTIPLY,
+            SqlStdOperatorTable.CHECKED_DIVIDE)) {
+      RexNode call =
+          rexBuilder.makeCall(
+              TypeConverter.DEFAULT.toCalcite(typeFactory, R.I64), operator, List.of(left, right));
+      Expression.ScalarFunctionInvocation exported = export(call);
+      assertTrue(exported.declaration().key().endsWith(":i64_i64"));
+      assertTrue(exported.options().contains(option("overflow", "ERROR")));
+      RexCall imported = (RexCall) exported.accept(toRex, Context.newContext());
+      assertEquals(operator, imported.getOperator());
+    }
+  }
+
+  @Test
+  void parserConformanceDoesNotChangeTheRexOperatorExportPolicy() throws Exception {
+    for (SqlConformanceEnum conformance :
+        List.of(
+            SqlConformanceEnum.LENIENT,
+            SqlConformanceEnum.BIG_QUERY,
+            SqlConformanceEnum.SQL_SERVER_2008,
+            SqlConformanceEnum.MYSQL_5)) {
+      ConverterProvider provider =
+          ConverterProvider.builder()
+              .sqlParserConfig(
+                  ConverterProvider.DEFAULT_SQL_PARSER_CONFIG.withConformance(conformance))
+              .build();
+      Project project =
+          (Project)
+              new SqlToSubstrait(provider)
+                  .convert(
+                      "SELECT a+b FROM numbers",
+                      SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                          "CREATE TABLE numbers (a BIGINT, b BIGINT)"))
+                  .getRoots()
+                  .get(0)
+                  .getInput();
+      Expression.ScalarFunctionInvocation function =
+          (Expression.ScalarFunctionInvocation) project.getExpressions().get(0);
+      assertEquals(List.of(option("overflow", "SILENT")), function.options(), conformance.name());
     }
   }
 }

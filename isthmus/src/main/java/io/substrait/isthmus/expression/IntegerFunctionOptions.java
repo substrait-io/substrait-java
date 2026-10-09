@@ -11,8 +11,9 @@ import java.util.Map;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 
-/** Signed integer arithmetic options from spec v0.103.0 supported by Calcite. */
+/** Signed integer arithmetic options supported by Calcite. */
 final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
   @Override
   public SqlOperator signatureOperator(RexCall call) {
@@ -20,31 +21,36 @@ final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
   }
 
   static SqlOperator unchecked(SqlOperator operator) {
-    if (operator == SqlStdOperatorTable.CHECKED_PLUS) return SqlStdOperatorTable.PLUS;
-    if (operator == SqlStdOperatorTable.CHECKED_MINUS) return SqlStdOperatorTable.MINUS;
-    if (operator == SqlStdOperatorTable.CHECKED_MULTIPLY) return SqlStdOperatorTable.MULTIPLY;
-    if (operator == SqlStdOperatorTable.CHECKED_DIVIDE) return SqlStdOperatorTable.DIVIDE;
+    if (operator == SqlStdOperatorTable.CHECKED_PLUS) {
+      return SqlStdOperatorTable.PLUS;
+    }
+    if (operator == SqlStdOperatorTable.CHECKED_MINUS) {
+      return SqlStdOperatorTable.MINUS;
+    }
+    if (operator == SqlStdOperatorTable.CHECKED_MULTIPLY) {
+      return SqlStdOperatorTable.MULTIPLY;
+    }
+    if (operator == SqlStdOperatorTable.CHECKED_DIVIDE) {
+      return SqlStdOperatorTable.DIVIDE;
+    }
     return operator;
   }
 
   static boolean integerCall(RexCall call) {
-    switch (call.getType().getSqlTypeName()) {
-      case TINYINT:
-      case SMALLINT:
-      case INTEGER:
-      case BIGINT:
-        return call.getOperands().stream()
-            .allMatch(arg -> arg.getType().getSqlTypeName() == call.getType().getSqlTypeName());
-      default:
-        return false;
-    }
+    return SqlTypeName.INT_TYPES.contains(call.getType().getSqlTypeName())
+        && call.getOperands().stream()
+            .allMatch(arg -> SqlTypeName.INT_TYPES.contains(arg.getType().getSqlTypeName()));
   }
 
   private static Binding binding(ScalarFunctionVariant function) {
-    if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())) return null;
+    if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())) {
+      return null;
+    }
     String name = function.name();
     for (String type : List.of("i8", "i16", "i32", "i64")) {
-      if (!function.key().equals(name + ":" + type + "_" + type)) continue;
+      if (!function.key().equals(name + ":" + type + "_" + type)) {
+        continue;
+      }
       boolean narrow = type.equals("i8") || type.equals("i16");
       switch (name) {
         case "add":
@@ -80,6 +86,8 @@ final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
       return List.of();
     }
     List<FunctionOption> options = new ArrayList<>();
+    // Export follows the actual Rex operator. Conformance-specific preparation may
+    // replace a plain operator with a checked equivalent before execution.
     // Plain narrow arithmetic range-checks required results but wraps nullable ones.
     // Planner nullability inference can change that choice, so do not promise a policy.
     if (!binding.narrow || call.getOperator() == binding.checked) {
@@ -105,15 +113,19 @@ final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
   @Override
   public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
     Binding binding = binding(expression.declaration());
-    if (binding == null) return operator;
+    if (binding == null) {
+      return operator;
+    }
     if (operator != binding.normal && operator != binding.checked) {
-      if (!expression.options().isEmpty())
+      if (!expression.options().isEmpty()) {
         throw new UnsupportedOperationException(
             "No integer option policy for Calcite operator " + operator.getName());
+      }
       return operator;
     }
     Map<String, String> selected = new LinkedHashMap<>();
     for (FunctionOption option : expression.options()) {
+      ScalarFunctionOptionPolicy.requireDeclaredValues(expression, option);
       String name = option.getName().toLowerCase(java.util.Locale.ROOT);
       List<String> supported;
       if (name.equals("overflow")) {
@@ -140,11 +152,14 @@ final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
                               + " preferences: "
                               + option.values()));
       String previous = selected.putIfAbsent(name, value);
-      if (previous != null && !previous.equals(value))
+      if (previous != null && !previous.equals(value)) {
         throw new UnsupportedOperationException("Conflicting integer arithmetic option: " + name);
+      }
     }
     String overflow = selected.get("overflow");
-    if (overflow == null) return operator;
+    if (overflow == null) {
+      return operator;
+    }
     return overflow.equals("ERROR") ? binding.checked : binding.normal;
   }
 

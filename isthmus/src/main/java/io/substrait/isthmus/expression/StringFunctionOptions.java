@@ -71,21 +71,7 @@ final class StringFunctionOptions implements ScalarFunctionOptionPolicy {
         throw new UnsupportedOperationException(
             "Unsupported " + expression.declaration().name() + " option: " + option.getName());
       }
-      for (String value : option.values()) {
-        boolean declared =
-            expression.declaration().options().entrySet().stream()
-                .filter(entry -> entry.getKey().equalsIgnoreCase(option.getName()))
-                .flatMap(entry -> entry.getValue().getValues().stream())
-                .anyMatch(value::equalsIgnoreCase);
-        if (!declared) {
-          throw new UnsupportedOperationException(
-              expression.declaration().name()
-                  + " option "
-                  + option.getName()
-                  + " does not declare value "
-                  + value);
-        }
-      }
+      ScalarFunctionOptionPolicy.requireDeclaredValues(expression, option);
       if (binding.value() == null) {
         // The spec lists initcap's charsets without defining ASCII word boundaries.
         throw new UnsupportedOperationException(
