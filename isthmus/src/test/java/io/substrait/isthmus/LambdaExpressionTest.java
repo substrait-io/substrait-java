@@ -81,7 +81,9 @@ class LambdaExpressionTest extends PlanTestBase {
     Expression.Lambda lambda =
         lb.lambda(
             List.of(R.I64),
-            params -> sb.scalarFn(ARITH, "add:i64_i64", R.I64, params.ref(0), params.ref(0)));
+            params ->
+                withSilentOverflow(
+                    sb.scalarFn(ARITH, "add:i64_i64", R.I64, params.ref(0), params.ref(0))));
 
     List<Expression> exprs = new ArrayList<>();
     exprs.add(lambda);
