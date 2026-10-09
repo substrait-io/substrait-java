@@ -249,7 +249,9 @@ class StringFunctionOptionsTest extends PlanTestBase {
           @Override
           public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
               String key, Type outputType) {
-            if (key.equals("like:str_str")) return Optional.of(SqlLibraryOperators.ILIKE);
+            if (key.equals("like:str_str")) {
+              return Optional.of(SqlLibraryOperators.ILIKE);
+            }
             return super.getSqlOperatorFromSubstraitFunc(key, outputType);
           }
 
@@ -272,7 +274,9 @@ class StringFunctionOptionsTest extends PlanTestBase {
           protected List<FunctionOption> options(RexCall call, ScalarFunctionVariant function) {
             if (DefaultExtensionCatalog.FUNCTIONS_STRING.equals(function.urn())
                 && function.key().equals("like:str_str")
-                && call.getOperator() == SqlLibraryOperators.ILIKE) return List.of(insensitive);
+                && call.getOperator() == SqlLibraryOperators.ILIKE) {
+              return List.of(insensitive);
+            }
             return super.options(call, function);
           }
         };

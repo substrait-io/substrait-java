@@ -150,7 +150,9 @@ public class ScalarFunctionConverter
     if (finder == null) {
       for (ScalarFunctionOptionPolicy policy : optionPolicies) {
         finder = signatures.get(policy.signatureOperator(call));
-        if (finder != null) break;
+        if (finder != null) {
+          break;
+        }
       }
     }
     WrappedScalarCall wrapped = new WrappedScalarCall(call);
