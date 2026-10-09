@@ -53,6 +53,7 @@ public class ScalarFunctionConverter
       List.of(
           new StringFunctionOptions(),
           new IntegerFunctionOptions(),
+          new DecimalFunctionOptions(),
           new FloatingPointFunctionOptions());
 
   /**
