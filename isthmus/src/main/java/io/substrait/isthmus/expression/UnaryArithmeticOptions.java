@@ -13,7 +13,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /** Unary arithmetic option policies from spec v0.103.0. */
-final class UnaryArithmeticOptions {
+final class UnaryArithmeticOptions implements ScalarFunctionOptionPolicy {
   private static final Set<String> NAMES =
       Set.of(
           "negate",
@@ -36,8 +36,6 @@ final class UnaryArithmeticOptions {
           "degrees",
           "factorial");
 
-  private UnaryArithmeticOptions() {}
-
   private static String name(ScalarFunctionVariant function) {
     if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())
         || !NAMES.contains(function.name())) return null;
@@ -58,6 +56,11 @@ final class UnaryArithmeticOptions {
         .orElseThrow();
   }
 
+  @Override
+  public SqlOperator signatureOperator(RexCall call) {
+    return checkedIntegerNegation(call) ? SqlStdOperatorTable.UNARY_MINUS : call.getOperator();
+  }
+
   static boolean checkedIntegerNegation(RexCall call) {
     SqlTypeName type = call.getType().getSqlTypeName();
     return call.getOperator() == SqlStdOperatorTable.CHECKED_UNARY_MINUS
@@ -73,7 +76,8 @@ final class UnaryArithmeticOptions {
     return FunctionOption.builder().name(name).addValues(value).build();
   }
 
-  static List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
+  @Override
+  public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     String name = name(function);
     if (name == null || call.getOperands().size() != 1) return List.of();
     if (name.equals("negate") && integer(function) && checkedIntegerNegation(call))
@@ -89,7 +93,8 @@ final class UnaryArithmeticOptions {
     return List.of();
   }
 
-  static SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
+  @Override
+  public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
     String name = name(expression.declaration());
     if (name == null || expression.options().isEmpty()) return selected;
     SqlOperator nativeOperator = nativeOperator(name);
