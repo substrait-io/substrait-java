@@ -59,7 +59,7 @@ class VirtualTableScanTest extends PlanTestBase {
         virtualTable(
             schema,
             List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5)))),
-            List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
+            List.of(withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2))), sb.fp64(8.8)));
 
     // Check the specific Calcite encoding
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
@@ -242,7 +242,7 @@ class VirtualTableScanTest extends PlanTestBase {
             schema,
             List.of(
                 ExpressionCreator.nestedStruct(
-                    false, sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(2.0))));
+                    false, withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2))), sb.fp64(2.0))));
 
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
     assertEquals(
@@ -414,7 +414,8 @@ class VirtualTableScanTest extends PlanTestBase {
             schema,
             List.of(
                 ExpressionCreator.nestedStruct(
-                    true, List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(2.0)))));
+                    true,
+                    List.of(withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2))), sb.fp64(2.0)))));
     RelNode relNode = substraitToCalcite.convert(virtualTableScan);
 
     assertEquals(

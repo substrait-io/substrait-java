@@ -46,7 +46,7 @@ class VirtualTableTest extends PlanTestBase {
     return virtualTable(
         schema,
         List.of(sb.i32(2), withTieToEven(sb.add(sb.fp64(4.4), sb.fp64(4.5)))),
-        List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)));
+        List.of(withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2))), sb.fp64(8.8)));
   }
 
   @Test
@@ -74,7 +74,9 @@ class VirtualTableTest extends PlanTestBase {
     RelNode expanded =
         plan(
             substraitToCalcite.convert(
-                virtualTable(schema, List.of(sb.multiply(sb.i32(6), sb.i32(2)), sb.fp64(8.8)))),
+                virtualTable(
+                    schema,
+                    List.of(withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2))), sb.fp64(8.8)))),
             VirtualTableExpansionRule.instance());
 
     assertEquals(
@@ -319,7 +321,7 @@ class VirtualTableTest extends PlanTestBase {
     VirtualTableScan oneRow =
         virtualTable(
             NamedStruct.of(List.of("col1"), R.struct(R.I32)),
-            List.of(sb.multiply(sb.i32(6), sb.i32(2))));
+            List.of(withSilentOverflow(sb.multiply(sb.i32(6), sb.i32(2)))));
     Rel root =
         sb.project(
             input -> List.of(sb.scalarSubquery(oneRow, R.I32)),

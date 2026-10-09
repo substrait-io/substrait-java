@@ -314,8 +314,8 @@ class DdlRoundtripTest extends PlanTestBase {
         .input(scan)
         .remap(Rel.Remap.offset(2, 2))
         .addExpressions(
-            sb.add(sb.fieldReference(scan, 0), sb.i32(1)),
-            sb.add(sb.fieldReference(scan, 0), sb.i32(2)))
+            withSilentOverflow(sb.add(sb.fieldReference(scan, 0), sb.i32(1))),
+            withSilentOverflow(sb.add(sb.fieldReference(scan, 0), sb.i32(2))))
         .build();
   }
 }

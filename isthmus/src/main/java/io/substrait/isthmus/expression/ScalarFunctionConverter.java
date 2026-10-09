@@ -50,7 +50,10 @@ public class ScalarFunctionConverter
   private final List<ScalarFunctionMapper> mappers;
 
   private final List<ScalarFunctionOptionPolicy> optionPolicies =
-      List.of(new StringFunctionOptions(), new FloatingPointFunctionOptions());
+      List.of(
+          new StringFunctionOptions(),
+          new IntegerFunctionOptions(),
+          new FloatingPointFunctionOptions());
 
   /**
    * Creates a converter with the given functions and type factory.

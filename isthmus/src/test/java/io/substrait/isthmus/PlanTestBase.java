@@ -97,6 +97,14 @@ public class PlanTestBase {
         .build();
   }
 
+  protected static Expression.ScalarFunctionInvocation withSilentOverflow(
+      Expression.ScalarFunctionInvocation expression) {
+    return Expression.ScalarFunctionInvocation.builder()
+        .from(expression)
+        .addOptions(FunctionOption.builder().name("overflow").addValues("SILENT").build())
+        .build();
+  }
+
   public static String asString(String resource) throws IOException {
     return Resources.toString(Resources.getResource(resource), StandardCharsets.UTF_8);
   }
