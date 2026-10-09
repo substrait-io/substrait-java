@@ -16,9 +16,6 @@ import io.substrait.isthmus.expression.ExpressionRexConverter;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
-import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
-import io.substrait.plan.Plan;
-import io.substrait.relation.Project;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -63,15 +60,11 @@ class ConcatFunctionOptionsTest extends PlanTestBase {
   @ParameterizedTest
   @ValueSource(strings = {"concat(a, b)", "a || b", "concat(a, b, a)"})
   void sqlExportNamesItsNullHandling(String expression) throws Exception {
-    Plan plan =
-        new SqlToSubstrait()
-            .convert(
-                "SELECT " + expression + " FROM strings",
-                SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-                    "CREATE TABLE strings (a VARCHAR, b VARCHAR)"));
     Expression.ScalarFunctionInvocation call =
         (Expression.ScalarFunctionInvocation)
-            ((Project) plan.getRoots().get(0).getInput()).getExpressions().get(0);
+            firstExpression(
+                "SELECT " + expression + " FROM strings",
+                "CREATE TABLE strings (a VARCHAR, b VARCHAR)");
     assertEquals(List.of(nullHandling("ACCEPT_NULLS")), call.options());
   }
 
@@ -148,6 +141,25 @@ class ConcatFunctionOptionsTest extends PlanTestBase {
   }
 
   @Test
+  void rejectsUndeclaredValuesEvenWithASupportedFallback() {
+    for (List<String> values :
+        List.of(List.of("BOGUS", "ACCEPT_NULLS"), List.of("ACCEPT_NULLS", "BOGUS"))) {
+      UnsupportedOperationException failure =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () ->
+                  concat(
+                          List.of(
+                              FunctionOption.builder()
+                                  .name("null_handling")
+                                  .values(values)
+                                  .build()))
+                      .accept(toRex, Context.newContext()));
+      assertTrue(failure.getMessage().contains("does not declare value BOGUS"));
+    }
+  }
+
+  @Test
   void leavesAnotherExtensionsConcatOptionsToItsMapper() {
     Expression.ScalarFunctionInvocation original = concat(List.of(nullHandling("IGNORE_NULLS")));
     SimpleExtension.ScalarFunctionVariant custom =
@@ -157,6 +169,6 @@ class ConcatFunctionOptionsTest extends PlanTestBase {
             .build();
     Expression.ScalarFunctionInvocation call =
         Expression.ScalarFunctionInvocation.builder().from(original).declaration(custom).build();
-    assertEquals(call.arguments(), scalar.getExpressionArguments(call));
+    call.accept(toRex, Context.newContext());
   }
 }

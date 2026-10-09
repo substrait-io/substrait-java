@@ -40,12 +40,14 @@ final class StringFunctionOptions implements ScalarFunctionOptionPolicy {
                   "negative_start", "LEFT_OF_BEGINNING", Set.of(SqlStdOperatorTable.SUBSTRING)),
           "lower", new Binding("char_set", "UTF8", Set.of(SqlStdOperatorTable.LOWER)),
           "upper", new Binding("char_set", "UTF8", Set.of(SqlStdOperatorTable.UPPER)),
-          "initcap", new Binding("char_set", "ASCII_ONLY", Set.of(SqlStdOperatorTable.INITCAP)));
+          "initcap", new Binding("char_set", null, Set.of(SqlStdOperatorTable.INITCAP)));
 
   @Override
   public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     Binding binding = binding(function);
-    if (binding == null || !binding.operators().contains(call.getOperator())) {
+    if (binding == null
+        || binding.value() == null
+        || !binding.operators().contains(call.getOperator())) {
       return List.of();
     }
     // An omitted option lets a consumer choose any supported behavior. Emit the one
@@ -68,6 +70,26 @@ final class StringFunctionOptions implements ScalarFunctionOptionPolicy {
       if (!binding.name().equalsIgnoreCase(option.getName())) {
         throw new UnsupportedOperationException(
             "Unsupported " + expression.declaration().name() + " option: " + option.getName());
+      }
+      for (String value : option.values()) {
+        boolean declared =
+            expression.declaration().options().entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase(option.getName()))
+                .flatMap(entry -> entry.getValue().getValues().stream())
+                .anyMatch(value::equalsIgnoreCase);
+        if (!declared) {
+          throw new UnsupportedOperationException(
+              expression.declaration().name()
+                  + " option "
+                  + option.getName()
+                  + " does not declare value "
+                  + value);
+        }
+      }
+      if (binding.value() == null) {
+        // The spec lists initcap's charsets without defining ASCII word boundaries.
+        throw new UnsupportedOperationException(
+            "No established Calcite initcap charset option policy");
       }
       // Preferences name acceptable behaviors, in order. These operators implement one
       // behavior each, so skip other preferences and reject when none is supported.
