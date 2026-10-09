@@ -17,8 +17,6 @@ import io.substrait.isthmus.expression.FunctionMappings;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.isthmus.expression.ScalarFunctionConverter;
 import io.substrait.isthmus.expression.WindowFunctionConverter;
-import io.substrait.isthmus.sql.SubstraitCreateStatementParser;
-import io.substrait.relation.Project;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,8 +112,7 @@ class StringFunctionOptionsTest extends PlanTestBase {
             "WRAP_FROM_END",
             "ab"),
         new Case("lower", "lower(a)", "char_set", "UTF8", "ASCII_ONLY", "école"),
-        new Case("upper", "upper(a)", "char_set", "UTF8", "ASCII_ONLY", "ÉCOLE"),
-        new Case("initcap", "initcap(a)", "char_set", "ASCII_ONLY", "UTF8", "éCole"));
+        new Case("upper", "upper(a)", "char_set", "UTF8", "ASCII_ONLY", "ÉCOLE"));
   }
 
   private FunctionOption option(Case c, String... values) {
@@ -173,19 +170,12 @@ class StringFunctionOptionsTest extends PlanTestBase {
   @ParameterizedTest
   @MethodSource("cases")
   void exportPinsTheOperatorsBehavior(Case c) throws Exception {
-    Project project =
-        (Project)
-            new SqlToSubstrait()
-                .convert(
-                    "SELECT " + c.query + " FROM strings",
-                    SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-                        "CREATE TABLE strings (a VARCHAR, b VARCHAR)"))
-                .getRoots()
-                .get(0)
-                .getInput();
     Expression.ScalarFunctionInvocation expression =
         assertInstanceOf(
-            Expression.ScalarFunctionInvocation.class, project.getExpressions().get(0));
+            Expression.ScalarFunctionInvocation.class,
+            firstExpression(
+                "SELECT " + c.query + " FROM strings",
+                "CREATE TABLE strings (a VARCHAR, b VARCHAR)"));
     assertEquals(List.of(option(c, c.supported)), expression.options());
   }
 
@@ -215,6 +205,42 @@ class StringFunctionOptionsTest extends PlanTestBase {
     assertThrows(
         UnsupportedOperationException.class,
         () -> call(c, List.of(option(c, c.unsupported))).accept(toRex, Context.newContext()));
+  }
+
+  @Test
+  void initcapDoesNotPromiseAnUndefinedCharsetPolicy() throws Exception {
+    Expression.ScalarFunctionInvocation exported =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class,
+            firstExpression("SELECT initcap(a) FROM strings", "CREATE TABLE strings (a VARCHAR)"));
+    assertEquals(List.of(), exported.options());
+    RexNode imported = exported.accept(toRex, Context.newContext());
+    assertEquals(
+        org.apache.calcite.sql.fun.SqlStdOperatorTable.INITCAP,
+        assertInstanceOf(RexCall.class, imported).getOperator());
+    for (String charset : List.of("ASCII_ONLY", "UTF8")) {
+      Expression withOption =
+          Expression.ScalarFunctionInvocation.builder()
+              .from(exported)
+              .addOptions(FunctionOption.builder().name("char_set").addValues(charset).build())
+              .build();
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> withOption.accept(toRex, Context.newContext()));
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("cases")
+  void rejectsUndeclaredPreferenceValuesEvenWithASupportedFallback(Case c) {
+    for (List<String> values :
+        List.of(List.of("BOGUS", c.supported), List.of(c.supported, "BOGUS"))) {
+      assertThrows(
+          UnsupportedOperationException.class,
+          () ->
+              call(c, List.of(FunctionOption.builder().name(c.option).values(values).build()))
+                  .accept(toRex, Context.newContext()));
+    }
   }
 
   @Test
