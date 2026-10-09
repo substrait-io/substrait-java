@@ -51,7 +51,11 @@ public class ScalarFunctionConverter
 
   private final List<ScalarFunctionOptionPolicy> optionPolicies =
       List.of(
-          new StringFunctionOptions(), new IntegerFunctionOptions(), new UnaryArithmeticOptions());
+          new StringFunctionOptions(),
+          new IntegerFunctionOptions(),
+          new DecimalFunctionOptions(),
+          new FloatingPointFunctionOptions(),
+          new UnaryArithmeticOptions());
 
   /**
    * Creates a converter with the given functions and type factory.

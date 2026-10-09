@@ -89,6 +89,14 @@ public class PlanTestBase {
     this.substraitToCalcite = new SubstraitToCalcite(converterProvider);
   }
 
+  protected static Expression.ScalarFunctionInvocation withTieToEven(
+      Expression.ScalarFunctionInvocation expression) {
+    return Expression.ScalarFunctionInvocation.builder()
+        .from(expression)
+        .addOptions(FunctionOption.builder().name("rounding").addValues("TIE_TO_EVEN").build())
+        .build();
+  }
+
   protected static Expression.ScalarFunctionInvocation withSilentOverflow(
       Expression.ScalarFunctionInvocation expression) {
     return Expression.ScalarFunctionInvocation.builder()
