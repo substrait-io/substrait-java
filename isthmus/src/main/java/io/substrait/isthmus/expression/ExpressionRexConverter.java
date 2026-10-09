@@ -592,7 +592,7 @@ public class ExpressionRexConverter
       throws RuntimeException {
     SqlOperator operator =
         scalarFunctionConverter
-            .getSqlOperatorFromSubstraitFunc(expr.declaration().key(), expr.outputType())
+            .getSqlOperatorFromSubstraitFunc(expr)
             .orElseThrow(
                 () ->
                     new IllegalArgumentException(
