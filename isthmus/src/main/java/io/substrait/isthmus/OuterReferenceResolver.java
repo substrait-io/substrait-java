@@ -79,6 +79,14 @@ public class OuterReferenceResolver extends RelNodeVisitor<RelNode, RuntimeExcep
     return anchorByTarget.get(rel);
   }
 
+  /** Moves a binding to a replacement with equivalent field coordinates, merging its anchors. */
+  void rebindTarget(RelNode source, RelNode replacement) {
+    int sourceAnchor = anchorByTarget.remove(source);
+    int replacementAnchor = anchorByTarget.computeIfAbsent(replacement, rel -> sourceAnchor);
+    anchorByCorrelationId.replaceAll(
+        (id, anchor) -> anchor == sourceAnchor ? replacementAnchor : anchor);
+  }
+
   /** Binds {@code id} to {@code target}, allocating {@code target}'s anchor on first use. */
   private void bind(CorrelationId id, RelNode target) {
     int anchor = anchorByTarget.computeIfAbsent(target, t -> nextAnchor++);

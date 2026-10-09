@@ -1,6 +1,6 @@
 package io.substrait.isthmus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,7 +57,7 @@ class ContainsFunctionMappingTest extends PlanTestBase {
     // input string, not the parsed object's values.
     String input = "{\"key\":\"value\"}";
     assertTrue(input.contains("key"));
-    assertEquals(false, SqlFunctions.containsSubstr(input, "key"));
+    assertFalse(SqlFunctions.containsSubstr(input, "key"));
   }
 
   @Test
