@@ -88,6 +88,20 @@ class TestTypeParser {
     assertPrecedence("a and b or c", "((a and b) or c)");
   }
 
+  @Test
+  void notAndConditionalPrecedence() {
+    // '!' binds tighter than every binary operator, and both conditional forms associate to the
+    // right, with '? :' binding looser than 'if then else' (spec v0.104.0 grammar fix).
+    assertPrecedence("!a and b", "(!a and b)");
+    assertPrecedence("!a or b", "(!a or b)");
+    assertPrecedence("!(a and b)", "!(a and b)");
+    assertPrecedence("a ? 1 : b ? 2 : 3", "(a ? 1 : (b ? 2 : 3))");
+    assertPrecedence("a ? b ? 1 : 2 : 3", "(a ? (b ? 1 : 2) : 3)");
+    assertPrecedence("if a then 1 else if b then 2 else 3", "(a ? 1 : (b ? 2 : 3))");
+    assertPrecedence("if a then 1 else b ? 2 : 3", "((a ? 1 : b) ? 2 : 3)");
+    assertPrecedence("if a then 1 else b and c", "(a ? 1 : (b and c))");
+  }
+
   private static void assertPrecedence(String toParse, String expected) {
     TypeExpression parsed = TypeStringParser.parse(toParse, ParseToPojo.Visitor.expression(URN));
     assertEquals(expected, render(parsed), toParse);
@@ -98,6 +112,19 @@ class TestTypeParser {
     if (e instanceof TypeExpression.BinaryOperation) {
       TypeExpression.BinaryOperation op = (TypeExpression.BinaryOperation) e;
       return "(" + render(op.left()) + " " + symbol(op.opType()) + " " + render(op.right()) + ")";
+    }
+    if (e instanceof TypeExpression.NotOperation) {
+      return "!" + render(((TypeExpression.NotOperation) e).inner());
+    }
+    if (e instanceof TypeExpression.IfOperation) {
+      TypeExpression.IfOperation op = (TypeExpression.IfOperation) e;
+      return "("
+          + render(op.ifCondition())
+          + " ? "
+          + render(op.thenExpr())
+          + " : "
+          + render(op.elseExpr())
+          + ")";
     }
     if (e instanceof TypeExpression.IntegerLiteral) {
       return Integer.toString(((TypeExpression.IntegerLiteral) e).value());
