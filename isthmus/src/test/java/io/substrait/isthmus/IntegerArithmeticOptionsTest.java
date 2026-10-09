@@ -352,4 +352,43 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
       }
     }
   }
+
+  @Test
+  void mixedIntegerWidthsExportTheBoundVariantsOptions() throws Exception {
+    for (String[] types :
+        List.of(
+            new String[] {"INTEGER", "SMALLINT", "i32"},
+            new String[] {"BIGINT", "INTEGER", "i64"})) {
+      String query = "SELECT a+b, a-b, a*b, a/b, mod(a,b) FROM numbers";
+      String creates = "CREATE TABLE numbers (a " + types[0] + ", b " + types[1] + ")";
+      Project project =
+          (Project)
+              new SqlToSubstrait()
+                  .convert(
+                      query,
+                      SubstraitCreateStatementParser.processCreateStatementsToCatalog(creates))
+                  .getRoots()
+                  .get(0)
+                  .getInput();
+      for (Expression expression : project.getExpressions()) {
+        Expression.ScalarFunctionInvocation function =
+            (Expression.ScalarFunctionInvocation) expression;
+        assertTrue(
+            function.declaration().key().endsWith(":" + types[2] + "_" + types[2]),
+            function.declaration().key());
+        assertTrue(
+            function.options().contains(option("overflow", "SILENT")),
+            function.declaration().key() + " " + function.options());
+        if (function.declaration().name().equals("divide")) {
+          assertTrue(function.options().contains(option("on_domain_error", "ERROR")));
+          assertTrue(function.options().contains(option("on_division_by_zero", "ERROR")));
+        }
+        if (function.declaration().name().equals("modulus")) {
+          assertTrue(function.options().contains(option("division_type", "TRUNCATE")));
+          assertTrue(function.options().contains(option("on_domain_error", "ERROR")));
+        }
+      }
+      assertFullRoundTrip(query, creates);
+    }
+  }
 }

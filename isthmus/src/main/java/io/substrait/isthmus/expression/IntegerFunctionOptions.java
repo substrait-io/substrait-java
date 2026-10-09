@@ -76,9 +76,9 @@ final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
   public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     Binding binding = binding(function);
     if (binding == null
-        || !integerCall(call)
-        || (call.getOperator() != binding.normal && call.getOperator() != binding.checked))
+        || (call.getOperator() != binding.normal && call.getOperator() != binding.checked)) {
       return List.of();
+    }
     List<FunctionOption> options = new ArrayList<>();
     // Plain narrow arithmetic range-checks required results but wraps nullable ones.
     // Planner nullability inference can change that choice, so do not promise a policy.
