@@ -5,6 +5,7 @@ import com.google.common.math.LongMath;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.FunctionOption;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.isthmus.CallConverter;
@@ -46,6 +47,9 @@ public class ScalarFunctionConverter
    * arguments.
    */
   private final List<ScalarFunctionMapper> mappers;
+
+  private final List<ScalarFunctionOptionPolicy> optionPolicies =
+      List.of(new StringFunctionOptions(), new IntegerFunctionOptions());
 
   /**
    * Creates a converter with the given functions and type factory.
@@ -143,8 +147,11 @@ public class ScalarFunctionConverter
   private Optional<Expression> defaultConvert(
       RexCall call, Function<RexNode, Expression> topLevelConverter) {
     FunctionFinder finder = signatures.get(call.op);
-    if (finder == null && IntegerFunctionOptions.integerCall(call)) {
-      finder = signatures.get(IntegerFunctionOptions.unchecked(call.op));
+    if (finder == null) {
+      for (ScalarFunctionOptionPolicy policy : optionPolicies) {
+        finder = signatures.get(policy.signatureOperator(call));
+        if (finder != null) break;
+      }
     }
     WrappedScalarCall wrapped = new WrappedScalarCall(call);
 
@@ -191,7 +198,7 @@ public class ScalarFunctionConverter
           .declaration(function)
           .outputType(outputType)
           .addAllArguments(arguments)
-          .options(IntegerFunctionOptions.forCall(call.delegate, function))
+          .options(options(call.delegate, function))
           .build();
     }
     // The datetime extension declares its results by parameter, where Calcite keeps an operand's
@@ -386,16 +393,46 @@ public class ScalarFunctionConverter
   }
 
   /**
-   * Resolves the operator and the signed integer option preferences of an invocation.
+   * Resolves an invocation through the existing operator mapping and its option policy.
    *
    * @param expression the Substrait scalar invocation
-   * @return the selected Calcite operator, or empty when no mapping exists
-   * @throws UnsupportedOperationException when integer options cannot be honored
+   * @return the selected operator, or empty when no mapping exists
    */
   public Optional<SqlOperator> getSqlOperatorFromSubstraitFunc(
       Expression.ScalarFunctionInvocation expression) {
     return getSqlOperatorFromSubstraitFunc(expression.declaration().key(), expression.outputType())
-        .map(operator -> IntegerFunctionOptions.resolve(expression, operator));
+        .map(operator -> resolveOptions(expression, operator));
+  }
+
+  /**
+   * Selects an operator that honors the requested options. Custom converters can override this
+   * together with {@link #options} to supply their own semantics in both directions.
+   *
+   * @param expression the Substrait invocation
+   * @param operator the selected Calcite operator
+   * @return the operator implementing a supported preference
+   * @throws UnsupportedOperationException if no requested preference is supported
+   */
+  protected SqlOperator resolveOptions(
+      Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
+    for (ScalarFunctionOptionPolicy policy : optionPolicies) {
+      operator = policy.resolve(expression, operator);
+    }
+    return operator;
+  }
+
+  /**
+   * Returns the option preferences implemented by the matched Calcite call.
+   *
+   * @param call the Calcite call
+   * @param function the bound Substrait variant
+   * @return the preferences to export
+   */
+  protected List<FunctionOption> options(
+      RexCall call, SimpleExtension.ScalarFunctionVariant function) {
+    return optionPolicies.stream()
+        .flatMap(policy -> policy.forCall(call, function).stream())
+        .collect(Collectors.toList());
   }
 
   private Optional<List<FunctionArg>> getMappedExpressionArguments(

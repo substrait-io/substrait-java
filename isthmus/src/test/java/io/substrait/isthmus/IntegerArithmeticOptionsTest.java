@@ -91,8 +91,14 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
     public RelDataType getRowType(RelDataTypeFactory factory) {
       return factory
           .builder()
-          .add("a", call.getOperands().get(0).getType())
-          .add("b", call.getOperands().get(1).getType())
+          .add(
+              "a",
+              factory.createTypeWithNullability(
+                  call.getOperands().get(0).getType(), call.getType().isNullable()))
+          .add(
+              "b",
+              factory.createTypeWithNullability(
+                  call.getOperands().get(1).getType(), call.getType().isNullable()))
           .build();
     }
 
@@ -187,6 +193,43 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
               () -> silent.accept(toRex, Context.newContext()));
         } else {
           assertEquals("VALUE=" + wrapped[i], execute(silent.accept(toRex, Context.newContext())));
+        }
+      }
+    }
+  }
+
+  @Test
+  void narrowOverflowDependsOnResultNullabilityUnlessTheOperatorIsChecked() {
+    for (int width : List.of(8, 16)) {
+      long max = (1L << (width - 1)) - 1;
+      long min = -(1L << (width - 1));
+      String[] names = {"add", "subtract", "multiply", "divide"};
+      long[] left = {max, min, max, min};
+      long[] right = {1, 1, 2, -1};
+      long[] wrapped = {min, max, -2, min};
+      for (int i = 0; i < names.length; i++) {
+        for (boolean nullable : List.of(false, true)) {
+          Type type =
+              width == 8 ? Type.withNullability(nullable).I8 : Type.withNullability(nullable).I16;
+          Expression.ScalarFunctionInvocation plain =
+              Expression.ScalarFunctionInvocation.builder()
+                  .from(invocation(names[i], width, left[i], right[i], List.of()))
+                  .outputType(type)
+                  .build();
+          RexNode call = plain.accept(toRex, Context.newContext());
+          String result = execute(call);
+          if (nullable) assertEquals("VALUE=" + wrapped[i], result, names[i]);
+          else assertTrue(result.startsWith("ERROR=ArithmeticException"), result);
+          assertTrue(
+              export(call).options().stream().noneMatch(o -> o.getName().equals("overflow")));
+          Expression.ScalarFunctionInvocation checked =
+              Expression.ScalarFunctionInvocation.builder()
+                  .from(plain)
+                  .addOptions(option("overflow", "ERROR"))
+                  .build();
+          RexNode checkedCall = checked.accept(toRex, Context.newContext());
+          assertTrue(execute(checkedCall).startsWith("ERROR=ArithmeticException"), names[i]);
+          assertTrue(export(checkedCall).options().contains(option("overflow", "ERROR")));
         }
       }
     }
@@ -298,9 +341,11 @@ class IntegerArithmeticOptionsTest extends PlanTestBase {
       for (Expression expression : project.getExpressions()) {
         Expression.ScalarFunctionInvocation function =
             (Expression.ScalarFunctionInvocation) expression;
-        String overflow =
-            width <= 16 && !function.declaration().name().equals("modulus") ? "ERROR" : "SILENT";
-        assertTrue(function.options().contains(option("overflow", overflow)));
+        if (width <= 16 && !function.declaration().name().equals("modulus")) {
+          assertTrue(function.options().stream().noneMatch(o -> o.getName().equals("overflow")));
+        } else {
+          assertTrue(function.options().contains(option("overflow", "SILENT")));
+        }
         if (function.declaration().name().equals("divide")) {
           assertTrue(function.options().contains(option("on_division_by_zero", "ERROR")));
         }

@@ -13,8 +13,11 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /** Signed integer arithmetic options from spec v0.103.0 supported by Calcite. */
-final class IntegerFunctionOptions {
-  private IntegerFunctionOptions() {}
+final class IntegerFunctionOptions implements ScalarFunctionOptionPolicy {
+  @Override
+  public SqlOperator signatureOperator(RexCall call) {
+    return integerCall(call) ? unchecked(call.getOperator()) : call.getOperator();
+  }
 
   static SqlOperator unchecked(SqlOperator operator) {
     if (operator == SqlStdOperatorTable.CHECKED_PLUS) return SqlStdOperatorTable.PLUS;
@@ -69,18 +72,21 @@ final class IntegerFunctionOptions {
     return null;
   }
 
-  static List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
+  @Override
+  public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     Binding binding = binding(function);
     if (binding == null
         || !integerCall(call)
         || (call.getOperator() != binding.normal && call.getOperator() != binding.checked))
       return List.of();
-    String overflow =
-        binding.narrow || (call.getOperator() == binding.checked && !binding.modulus)
-            ? "ERROR"
-            : "SILENT";
     List<FunctionOption> options = new ArrayList<>();
-    options.add(option("overflow", overflow));
+    // Plain narrow arithmetic range-checks required results but wraps nullable ones.
+    // Planner nullability inference can change that choice, so do not promise a policy.
+    if (!binding.narrow || call.getOperator() == binding.checked) {
+      String overflow =
+          call.getOperator() == binding.checked && !binding.modulus ? "ERROR" : "SILENT";
+      options.add(option("overflow", overflow));
+    }
     if (binding.divide) {
       options.add(option("on_domain_error", "ERROR"));
       options.add(option("on_division_by_zero", "ERROR"));
@@ -96,7 +102,8 @@ final class IntegerFunctionOptions {
     return FunctionOption.builder().name(name).addValues(value).build();
   }
 
-  static SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
+  @Override
+  public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator operator) {
     Binding binding = binding(expression.declaration());
     if (binding == null) return operator;
     if (operator != binding.normal && operator != binding.checked) {
