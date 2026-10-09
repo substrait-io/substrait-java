@@ -20,8 +20,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
- * Custom function mapper to represent power(x, 0.5) as sqrt(x) to ensure the float formats are
- * supported as defined in substrait/extensions/functions_arithmetic
+ * Maps exact half powers to Substrait sqrt variants and imports optionless arithmetic sqrt as
+ * executable Calcite POWER expressions, preserving the declared result type.
  */
 final class SqrtFunctionMapper implements ScalarFunctionMapper {
   private static final String sqrtFunctionName = "sqrt";
@@ -87,7 +87,8 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
     return Optional.empty();
   }
 
-  static Optional<RexNode> toCalcite(
+  @Override
+  public Optional<RexNode> toCalcite(
       Expression.ScalarFunctionInvocation expression,
       SqlOperator operator,
       List<RexNode> arguments,
@@ -106,9 +107,9 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
         rexBuilder
             .getTypeFactory()
             .createTypeWithNullability(half.getType(), input.getType().isNullable());
-    RexNode promoted = rexBuilder.makeCast(doubleType, input);
+    RexNode promoted = rexBuilder.ensureType(doubleType, input, true);
     RexNode power = rexBuilder.makeCall(SqlStdOperatorTable.POWER, promoted, half);
-    return Optional.of(rexBuilder.makeCast(returnType, power));
+    return Optional.of(rexBuilder.ensureType(returnType, power, true));
   }
 
   private static boolean isPowerOfHalf(final RexCall call) {

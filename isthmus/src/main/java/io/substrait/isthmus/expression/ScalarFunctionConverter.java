@@ -388,13 +388,16 @@ public class ScalarFunctionConverter
    * @param rexBuilder builder for the target Calcite plan
    * @return the converted call, including any cast needed to preserve its declared type
    */
-  public RexNode createCall(
+  RexNode createCall(
       Expression.ScalarFunctionInvocation expression,
       SqlOperator operator,
       List<RexNode> arguments,
       RelDataType returnType,
       RexBuilder rexBuilder) {
-    return SqrtFunctionMapper.toCalcite(expression, operator, arguments, returnType, rexBuilder)
+    return mappers.stream()
+        .map(mapper -> mapper.toCalcite(expression, operator, arguments, returnType, rexBuilder))
+        .flatMap(Optional::stream)
+        .findFirst()
         .orElseGet(() -> rexBuilder.makeCall(returnType, operator, arguments));
   }
 

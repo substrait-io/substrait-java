@@ -2,6 +2,7 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
@@ -175,6 +176,7 @@ class SqrtImportTest extends PlanTestBase {
   }
 
   private void assertSqrtSignature(Expression expression, String inputTag, boolean nullable) {
+    assertNoRedundantCasts(expression);
     while (expression instanceof Expression.Cast) {
       Expression.Cast result = assertInstanceOf(Expression.Cast.class, expression);
       assertEquals(outputType(inputTag, nullable), result.getType());
@@ -192,6 +194,39 @@ class SqrtImportTest extends PlanTestBase {
       assertEquals(
           inputType(inputTag, nullable),
           assertInstanceOf(Expression.class, sqrt.arguments().get(0)).getType());
+    }
+  }
+
+  private void assertNoRedundantCasts(Expression expression) {
+    if (expression instanceof Expression.Cast) {
+      Expression.Cast cast = (Expression.Cast) expression;
+      assertNotEquals(cast.getType(), cast.input().getType(), "Cast must change the type");
+      assertNoRedundantCasts(cast.input());
+    } else if (expression instanceof Expression.ScalarFunctionInvocation) {
+      for (Object argument : ((Expression.ScalarFunctionInvocation) expression).arguments()) {
+        if (argument instanceof Expression) assertNoRedundantCasts((Expression) argument);
+      }
+    }
+  }
+
+  @Test
+  void directExpressionRoundTripsDoNotAccumulateCasts() {
+    for (String tag : List.of("i64", "fp32", "fp64")) {
+      for (boolean nullable : List.of(false, true)) {
+        ExpressionRexConverter importer =
+            converter(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory));
+        RexNode imported = expression(tag, nullable).accept(importer, Context.newContext());
+        Expression baseline = export(new RuntimePlan(imported, null));
+        assertSqrtSignature(baseline, tag, nullable);
+        Expression current = baseline;
+        for (int round = 0; round < 5; round++) {
+          imported = current.accept(importer, Context.newContext());
+          Expression exported = export(new RuntimePlan(imported, null));
+          assertSqrtSignature(exported, tag, nullable);
+          assertEquals(baseline, exported);
+          current = exported;
+        }
+      }
     }
   }
 
