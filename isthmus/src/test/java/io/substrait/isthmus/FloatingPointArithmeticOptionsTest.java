@@ -281,4 +281,28 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
       }
     }
   }
+
+  @Test
+  void sqlExportNamesNativeOptionsAfterOperandPromotion() throws Exception {
+    String query = "SELECT a*2, a+1.5, a+r, a/r FROM numbers";
+    Project project =
+        (Project)
+            new SqlToSubstrait()
+                .convert(
+                    query,
+                    SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                        "CREATE TABLE numbers (a DOUBLE, r REAL)"))
+                .getRoots()
+                .get(0)
+                .getInput();
+    for (Expression expression : project.getExpressions()) {
+      Expression.ScalarFunctionInvocation function =
+          (Expression.ScalarFunctionInvocation) expression;
+      assertTrue(function.declaration().key().endsWith(":fp64_fp64"));
+      assertTrue(function.options().contains(option("rounding", "TIE_TO_EVEN")));
+      if (function.declaration().name().equals("divide")) {
+        assertTrue(function.options().contains(option("on_domain_error", "NAN")));
+      }
+    }
+  }
 }

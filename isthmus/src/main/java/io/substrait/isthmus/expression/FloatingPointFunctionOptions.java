@@ -9,11 +9,9 @@ import java.util.Locale;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.SqlTypeName;
 
 /** Floating-point arithmetic options from spec v0.103.0 supported by Calcite. */
-final class FloatingPointFunctionOptions {
-  private FloatingPointFunctionOptions() {}
+final class FloatingPointFunctionOptions implements ScalarFunctionOptionPolicy {
 
   private static SqlOperator operator(ScalarFunctionVariant function) {
     if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC.equals(function.urn())) return null;
@@ -34,20 +32,10 @@ final class FloatingPointFunctionOptions {
     }
   }
 
-  private static int width(SqlTypeName type) {
-    if (type == SqlTypeName.REAL) return 32;
-    if (type == SqlTypeName.FLOAT || type == SqlTypeName.DOUBLE) return 64;
-    return 0;
-  }
-
-  static List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
+  @Override
+  public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     SqlOperator operator = operator(function);
-    int width = width(call.getType().getSqlTypeName());
-    if (operator == null
-        || call.getOperator() != operator
-        || width == 0
-        || call.getOperands().stream()
-            .anyMatch(arg -> width(arg.getType().getSqlTypeName()) != width)) return List.of();
+    if (operator == null || call.getOperator() != operator) return List.of();
     if (operator == SqlStdOperatorTable.DIVIDE)
       return List.of(option("rounding", "TIE_TO_EVEN"), option("on_domain_error", "NAN"));
     return List.of(option("rounding", "TIE_TO_EVEN"));
@@ -57,7 +45,8 @@ final class FloatingPointFunctionOptions {
     return FunctionOption.builder().name(name).addValues(value).build();
   }
 
-  static SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
+  @Override
+  public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
     SqlOperator nativeOperator = operator(expression.declaration());
     if (nativeOperator == null || expression.options().isEmpty()) return selected;
     if (selected != nativeOperator)
