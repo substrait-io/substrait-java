@@ -263,4 +263,26 @@ class DecimalArithmeticOptionsTest extends PlanTestBase {
       }
     }
   }
+
+  @Test
+  void integerOperandsDoNotLoseDecimalOverflowOptions() throws Exception {
+    String query = "SELECT a+b, a-b, a*b, a/b, mod(a,b) FROM numbers";
+    String creates = "CREATE TABLE numbers (a DECIMAL(38,2), b INTEGER)";
+    Project project =
+        (Project)
+            new SqlToSubstrait()
+                .convert(
+                    query, SubstraitCreateStatementParser.processCreateStatementsToCatalog(creates))
+                .getRoots()
+                .get(0)
+                .getInput();
+    for (Expression expression : project.getExpressions()) {
+      Expression.ScalarFunctionInvocation function =
+          (Expression.ScalarFunctionInvocation) expression;
+      assertEquals(
+          DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, function.declaration().urn());
+      assertEquals(List.of(option("overflow", "SILENT")), function.options());
+    }
+    assertFullRoundTrip(query, creates);
+  }
 }

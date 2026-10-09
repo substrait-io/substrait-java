@@ -38,10 +38,9 @@ final class DecimalFunctionOptions implements ScalarFunctionOptionPolicy {
     SqlOperator operator = operator(function);
     if (operator == null
         || call.getOperator() != operator
-        || call.getType().getSqlTypeName() != SqlTypeName.DECIMAL
-        || call.getOperands().stream()
-            .anyMatch(arg -> arg.getType().getSqlTypeName() != SqlTypeName.DECIMAL))
+        || call.getType().getSqlTypeName() != SqlTypeName.DECIMAL) {
       return List.of();
+    }
     // Calcite's BigDecimal arithmetic does not enforce the declared result precision.
     return List.of(FunctionOption.builder().name("overflow").addValues("SILENT").build());
   }
