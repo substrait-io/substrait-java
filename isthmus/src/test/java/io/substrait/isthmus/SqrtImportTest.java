@@ -297,6 +297,48 @@ class SqrtImportTest extends PlanTestBase {
   }
 
   @Test
+  void aCatalogWithoutFp64SqrtFallsBackToPowerForRealInput() {
+    ScalarFunctionConverter scalar =
+        new ScalarFunctionConverter(
+            extensions.scalarFunctions().stream()
+                .filter(
+                    function ->
+                        !function.name().equals("sqrt") || function.key().equals("sqrt:fp32"))
+                .toList(),
+            typeFactory);
+    for (boolean nullable : List.of(false, true)) {
+      RexNode input =
+          builder
+              .getRexBuilder()
+              .makeInputRef(
+                  TypeConverter.DEFAULT.toCalcite(typeFactory, inputType("fp32", nullable)), 0);
+      for (boolean widened : List.of(false, true)) {
+        RexNode operand =
+            widened
+                ? builder
+                    .getRexBuilder()
+                    .makeCast(
+                        TypeConverter.DEFAULT.toCalcite(typeFactory, outputType("fp64", nullable)),
+                        input)
+                : input;
+        RexNode call =
+            builder
+                .getRexBuilder()
+                .makeCall(
+                    SqlStdOperatorTable.POWER,
+                    operand,
+                    builder.getRexBuilder().makeApproxLiteral(BigDecimal.valueOf(0.5)));
+        Expression.ScalarFunctionInvocation exported =
+            assertInstanceOf(
+                Expression.ScalarFunctionInvocation.class,
+                export(new RuntimePlan(call, null), scalar));
+        assertEquals("power", exported.declaration().name());
+        assertEquals(outputType("fp64", nullable), exported.getType());
+      }
+    }
+  }
+
+  @Test
   void aLimitedCatalogKeepsAnExplicitWideningCast() {
     ScalarFunctionConverter scalar =
         new ScalarFunctionConverter(

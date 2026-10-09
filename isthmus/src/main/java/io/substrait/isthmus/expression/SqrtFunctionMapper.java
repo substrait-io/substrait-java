@@ -68,6 +68,12 @@ final class SqrtFunctionMapper implements ScalarFunctionMapper {
                   .collect(Collectors.toUnmodifiableList());
         }
       }
+      if (call.getType().getSqlTypeName() == SqlTypeName.DOUBLE
+          && List.of(SqlTypeName.REAL, SqlTypeName.FLOAT, SqlTypeName.DOUBLE)
+              .contains(input.getType().getSqlTypeName())
+          && sqrtFunctions.stream().noneMatch(function -> function.key().equals("sqrt:fp64"))) {
+        return Optional.empty();
+      }
       if (input.getType().getSqlTypeName() == SqlTypeName.REAL
           && call.getType().getSqlTypeName() == SqlTypeName.DOUBLE) {
         // Calcite POWER returns DOUBLE even for REAL input. Match sqrt:fp64
