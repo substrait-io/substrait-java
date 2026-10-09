@@ -13,7 +13,6 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class DynamicFunctionNameQuotingTest extends PlanTestBase {
   private SimpleExtension.ExtensionCollection declaration(String family, String name) {
@@ -33,6 +32,7 @@ class DynamicFunctionNameQuotingTest extends PlanTestBase {
   @ParameterizedTest
   @CsvSource({
     "scalar, select",
+    "scalar, date_trunc",
     "scalar, has space",
     "scalar, x.y",
     "aggregate, order",
@@ -87,13 +87,13 @@ class DynamicFunctionNameQuotingTest extends PlanTestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"", "DISTINCT "})
-  void reservedAggregatePreservesItsInvocation(String quantifier) throws Exception {
+  @CsvSource({"order, false", "order, true", "my_function, false", "my_function, true"})
+  void aggregatePreservesItsInvocation(String name, boolean distinct) throws Exception {
     ConverterProvider provider =
         new AutomaticDynamicFunctionMappingConverterProvider(
-            ConverterProvider.builder().extensions(declaration("aggregate", "order")));
+            ConverterProvider.builder().extensions(declaration("aggregate", name)));
     PlanTestBase harness = new PlanTestBase(provider);
-    String query = "SELECT \"order\"(" + quantifier + "a) FROM numbers";
+    String query = "SELECT \"" + name + "\"(" + (distinct ? "DISTINCT " : "") + "a) FROM numbers";
     String creates = "CREATE TABLE numbers (a INTEGER)";
     Plan plan =
         new SqlToSubstrait(provider)

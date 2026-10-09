@@ -20,7 +20,6 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
-import org.apache.calcite.sql.fun.SqlBasicAggFunction;
 import org.apache.calcite.sql.parser.SqlAbstractParserImpl;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -29,6 +28,7 @@ import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Optionality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,7 +174,7 @@ public final class SimpleExtensionToSqlOperator {
 
   private static SqlIdentifier functionIdentifier(String name) {
     // A function name is one identifier, even when it contains punctuation.
-    return PARSER_METADATA.isReservedWord(name.toUpperCase(Locale.ROOT))
+    return PARSER_METADATA.isKeyword(name.toUpperCase(Locale.ROOT))
             || !name.matches("[A-Za-z_][A-Za-z0-9_$]*")
         ? new SqlIdentifier(name, SqlParserPos.ZERO.withQuoting(true))
         : null;
@@ -188,24 +188,17 @@ public final class SimpleExtensionToSqlOperator {
     SqlReturnTypeInference returnTypeInference =
         new AggregateReturnTypeInference(function, typeFactory, typeConverter);
 
-    SqlIdentifier identifier = functionIdentifier(function.name());
-    if (identifier != null) {
-      return new SqlAggFunction(
-          function.name(),
-          identifier,
-          SqlKind.OTHER_FUNCTION,
-          returnTypeInference,
-          null,
-          createOperandTypeChecker(function),
-          SqlFunctionCategory.NUMERIC,
-          false,
-          false) {};
-    }
-    return SqlBasicAggFunction.create(
+    return new SqlAggFunction(
         function.name(),
+        functionIdentifier(function.name()),
         SqlKind.OTHER_FUNCTION,
         returnTypeInference,
-        createOperandTypeChecker(function));
+        null,
+        createOperandTypeChecker(function),
+        SqlFunctionCategory.NUMERIC,
+        false,
+        false,
+        Optionality.FORBIDDEN) {};
   }
 
   private static SqlFunction toWindowSqlFunction(
