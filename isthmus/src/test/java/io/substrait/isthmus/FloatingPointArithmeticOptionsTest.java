@@ -79,9 +79,11 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
 
     private RuntimeInputs(RexCall call, double a, double b) {
       this.call = call;
-      if (call.getType().getSqlTypeName() == org.apache.calcite.sql.type.SqlTypeName.REAL)
+      if (call.getType().getSqlTypeName() == org.apache.calcite.sql.type.SqlTypeName.REAL) {
         values = new Object[] {(float) a, (float) b};
-      else values = new Object[] {a, b};
+      } else {
+        values = new Object[] {a, b};
+      }
     }
 
     @Override
@@ -181,8 +183,9 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
           List.of(
               new double[] {Double.NaN, 1},
               new double[] {1, Double.NaN},
-              new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY}))
+              new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY})) {
         assertTrue(Double.isNaN(execute(rex, pair[0], pair[1])));
+      }
       assertTrue(export(rex).options().contains(option("on_domain_error", "NAN")));
       for (String unsupported : List.of("NULL", "ERROR")) {
         assertThrows(
@@ -201,12 +204,13 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
   @Test
   void divisionByZeroHasNoUnambiguousOptionInThePinnedSpec() throws Exception {
     for (int width : List.of(32, 64)) {
-      for (String preference : List.of("IEEE", "LIMIT", "NULL", "ERROR"))
+      for (String preference : List.of("IEEE", "LIMIT", "NULL", "ERROR")) {
         assertThrows(
             UnsupportedOperationException.class,
             () ->
                 invocation("divide", width, List.of(option("on_division_by_zero", preference)))
                     .accept(toRex, Context.newContext()));
+      }
       RexNode rex = invocation("divide", width, List.of()).accept(toRex, Context.newContext());
       assertEquals(Double.POSITIVE_INFINITY, execute(rex, 1, 0));
       assertEquals(Double.NEGATIVE_INFINITY, execute(rex, -1, 0));
@@ -223,10 +227,11 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
         List.of(
             List.of(option("rounding")),
             List.of(option("overflow", "SILENT")),
-            List.of(option("unknown", "TIE_TO_EVEN"))))
+            List.of(option("unknown", "TIE_TO_EVEN")))) {
       assertThrows(
           UnsupportedOperationException.class,
           () -> invocation("add", 64, options).accept(toRex, Context.newContext()));
+    }
   }
 
   @Test
@@ -250,7 +255,7 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
   }
 
   @Test
-  void sqlRoundtripPreservesNativeOptions() throws Exception {
+  void sqlRoundtripHasStableExport() throws Exception {
     for (String sqlType : List.of("REAL", "DOUBLE")) {
       assertFullRoundTrip(
           "SELECT a+b, a-b, a*b, a/b FROM numbers",
@@ -304,5 +309,25 @@ class FloatingPointArithmeticOptionsTest extends PlanTestBase {
         assertTrue(function.options().contains(option("on_domain_error", "NAN")));
       }
     }
+  }
+
+  @Test
+  void undeclaredPreferencesCannotHideBehindASupportedFallback() {
+    for (String[] values :
+        List.of(new String[] {"WRAP", "TIE_TO_EVEN"}, new String[] {"TIE_TO_EVEN", "WRAP"})) {
+      UnsupportedOperationException failure =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () ->
+                  invocation("add", 64, List.of(option("rounding", values)))
+                      .accept(toRex, Context.newContext()));
+      assertTrue(failure.getMessage().contains("does not declare value WRAP"));
+    }
+    assertTrue(
+        export(
+                invocation("add", 64, List.of(option("rounding", "tie_to_even")))
+                    .accept(toRex, Context.newContext()))
+            .options()
+            .contains(option("rounding", "TIE_TO_EVEN")));
   }
 }
