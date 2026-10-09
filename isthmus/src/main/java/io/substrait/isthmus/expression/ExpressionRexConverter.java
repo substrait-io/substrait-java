@@ -606,7 +606,8 @@ public class ExpressionRexConverter
             .collect(Collectors.toList());
 
     RelDataType returnType = typeConverter.toCalcite(typeFactory, expr.outputType());
-    RexNode rexCall = rexBuilder.makeCall(returnType, operator, args);
+    RexNode rexCall =
+        scalarFunctionConverter.createCall(expr, operator, args, returnType, rexBuilder);
     observeType(
         expr,
         TypeObservation.Source.SCALAR_FUNCTION,
