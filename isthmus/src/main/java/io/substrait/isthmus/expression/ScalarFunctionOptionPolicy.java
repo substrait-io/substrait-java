@@ -17,4 +17,24 @@ interface ScalarFunctionOptionPolicy {
   default SqlOperator signatureOperator(RexCall call) {
     return call.getOperator();
   }
+
+  /** Rejects undeclared values while comparing option names and values without regard to case. */
+  static void requireDeclaredValues(
+      Expression.ScalarFunctionInvocation expression, FunctionOption option) {
+    for (String value : option.values()) {
+      boolean declared =
+          expression.declaration().options().entrySet().stream()
+              .filter(entry -> entry.getKey().equalsIgnoreCase(option.getName()))
+              .flatMap(entry -> entry.getValue().getValues().stream())
+              .anyMatch(value::equalsIgnoreCase);
+      if (!declared) {
+        throw new UnsupportedOperationException(
+            expression.declaration().name()
+                + " option "
+                + option.getName()
+                + " does not declare value "
+                + value);
+      }
+    }
+  }
 }

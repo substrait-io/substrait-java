@@ -285,4 +285,24 @@ class DecimalArithmeticOptionsTest extends PlanTestBase {
     }
     assertFullRoundTrip(query, creates);
   }
+
+  @Test
+  void undeclaredPreferencesCannotHideBehindASupportedFallback() {
+    for (String[] values :
+        List.of(new String[] {"WRAP", "SILENT"}, new String[] {"SILENT", "WRAP"})) {
+      UnsupportedOperationException failure =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () ->
+                  invocation("add", "1", "2", List.of(option("overflow", values)))
+                      .accept(toRex, Context.newContext()));
+      assertTrue(failure.getMessage().contains("does not declare value WRAP"));
+    }
+    assertTrue(
+        export(
+                invocation("add", "1", "2", List.of(option("overflow", "silent")))
+                    .accept(toRex, Context.newContext()))
+            .options()
+            .contains(option("overflow", "SILENT")));
+  }
 }
