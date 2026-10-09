@@ -53,8 +53,8 @@ class ContainsFunctionMappingTest extends PlanTestBase {
   @Test
   void jsonInterpretationCannotBeExpressedByCaseSensitivity() {
     // The key is literally present regardless of case sensitivity, but Calcite treats this
-    // string as a JSON object and searches only its values. Spec v0.103.0 contains searches
-    // the input string, not the parsed object's values.
+    // string as a JSON object and searches only its values. Substrait contains searches the
+    // input string, not the parsed object's values.
     String input = "{\"key\":\"value\"}";
     assertTrue(input.contains("key"));
     assertEquals(false, SqlFunctions.containsSubstr(input, "key"));
@@ -64,13 +64,15 @@ class ContainsFunctionMappingTest extends PlanTestBase {
   void automaticMappingsDoNotRestoreTheContainsSubstrBinding() throws Exception {
     ConverterProvider provider =
         new AutomaticDynamicFunctionMappingConverterProvider(ConverterProvider.builder());
-    assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            new SqlToSubstrait(provider)
-                .convert(
-                    "SELECT contains_substr(a, 'key') FROM strings",
-                    SubstraitCreateStatementParser.processCreateStatementsToCatalog(
-                        "CREATE TABLE strings (a VARCHAR)")));
+    IllegalArgumentException failure =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new SqlToSubstrait(provider)
+                    .convert(
+                        "SELECT contains_substr(a, 'key') FROM strings",
+                        SubstraitCreateStatementParser.processCreateStatementsToCatalog(
+                            "CREATE TABLE strings (a VARCHAR)")));
+    assertTrue(failure.getMessage().contains("CONTAINS_SUBSTR"));
   }
 }
