@@ -12,8 +12,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /** Decimal arithmetic overflow options from spec v0.103.0 supported by Calcite. */
-final class DecimalFunctionOptions {
-  private DecimalFunctionOptions() {}
+final class DecimalFunctionOptions implements ScalarFunctionOptionPolicy {
 
   private static SqlOperator operator(ScalarFunctionVariant function) {
     if (!DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL.equals(function.urn())
@@ -34,7 +33,8 @@ final class DecimalFunctionOptions {
     }
   }
 
-  static List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
+  @Override
+  public List<FunctionOption> forCall(RexCall call, ScalarFunctionVariant function) {
     SqlOperator operator = operator(function);
     if (operator == null
         || call.getOperator() != operator
@@ -46,7 +46,8 @@ final class DecimalFunctionOptions {
     return List.of(FunctionOption.builder().name("overflow").addValues("SILENT").build());
   }
 
-  static SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
+  @Override
+  public SqlOperator resolve(Expression.ScalarFunctionInvocation expression, SqlOperator selected) {
     SqlOperator nativeOperator = operator(expression.declaration());
     if (nativeOperator == null || expression.options().isEmpty()) return selected;
     if (selected != nativeOperator)
