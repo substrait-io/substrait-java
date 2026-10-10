@@ -46,7 +46,7 @@ public class FieldSelectionConverter implements CallConverter {
    *
    * <ul>
    *   <li>ROW dereference by integer index
-   *   <li>ARRAY dereference by integer index, preserving the safe operator's indexing base
+   *   <li>ARRAY dereference by integer index, translated to Substrait's zero-based offset
    *   <li>MAP dereference by string key
    * </ul>
    *

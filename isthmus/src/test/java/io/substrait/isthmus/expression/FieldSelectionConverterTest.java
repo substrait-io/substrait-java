@@ -226,6 +226,15 @@ class FieldSelectionConverterTest {
     }
     FieldReference reference = assertInstanceOf(FieldReference.class, nested.accept(converter));
     assertEquals(4, reference.segments().size());
+    assertEquals(
+        Integer.MAX_VALUE,
+        assertInstanceOf(FieldReference.ListElement.class, reference.segments().get(0)).offset());
+    assertEquals(
+        0,
+        assertInstanceOf(FieldReference.ListElement.class, reference.segments().get(1)).offset());
+    assertEquals(
+        Integer.MAX_VALUE,
+        assertInstanceOf(FieldReference.ListElement.class, reference.segments().get(2)).offset());
     verifyRoundTrip(reference, TypeConverter.DEFAULT.toSubstrait(nestedType));
   }
 
