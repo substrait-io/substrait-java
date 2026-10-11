@@ -1,6 +1,116 @@
 Release Notes
 ---
 
+## [0.106.0](https://github.com/substrait-io/substrait-java/compare/v0.105.0...v0.106.0) (2026-10-11)
+
+### ⚠ BREAKING CHANGES
+
+* **isthmus:** Unsupported unary preferences are rejected. Export
+names SILENT for integer negate/abs and NAN for FP64 asin/acos.
+Consumers without those policies must reject these plans. Undeclared
+values fail even with a supported fallback.
+* **isthmus:** Unsupported floating-point preferences are rejected.
+Exported arithmetic calls gain rounding=TIE_TO_EVEN; divide also gains
+on_domain_error=NAN. Consumers without those policies must reject these
+plans. Undeclared values fail even with a supported fallback.
+* **isthmus:** Unsupported decimal preferences are rejected. Export
+names SILENT explicitly, so consumers supporting only ERROR must reject
+these plans. Undeclared values fail even with a supported fallback.
+* **isthmus:** Unsupported integer preferences are rejected. Export
+adds single-value arithmetic options, except overflow on plain i8/i16
+operators. Consumers without those policies must reject these plans.
+Undeclared values fail even with a supported fallback.
+* **isthmus:** Default SQL-to-Substrait conversion rejects
+CONTAINS_SUBSTR, and default Substrait-to-Calcite conversion rejects
+contains. Provide a semantics-preserving custom mapping if these
+functions are needed.
+* **isthmus:** Unsupported preferences, including INITCAP charsets,
+fail import. Explicit export options may require consumers to reject the
+invocation.
+* **isthmus:** UPDATE conversion now throws
+UnsupportedOperationException for input pipelines it cannot preserve,
+including target scans with incompatible row types or correlation
+bindings that cannot be transferred safely. Callers must handle the
+unsupported conversion instead of relying on the previous output, which
+could discard selection conditions, retain unresolved outer references,
+or change how often nondeterministic expressions run.
+* Mandatory read and post-join filters are now enforced
+by Calcite and Spark conversion. Post-join field references are decoded
+against the join's direct output before emit, rather than concatenated
+inputs. Regenerate plans that reference removed semi/anti input columns
+or use concatenated-input indices for right-oriented joins; outer-join
+references now retain their nullable output types.
+* **core:** All five helpers (min, max, avg, sum, and sum0) now
+derive output types from the supplied extension catalog, so custom
+catalog return declarations can change the result schema. With the
+default catalog, SUM over i8/i16/i32 or fp32 now reports the wider type,
+and floating-point SUM0 reports fp64 instead of i64. Callers that depend
+on the previous output schemas must use the returned types. The
+sum0(Rel, int) overload now emits sum0 with its required result type
+instead of sum with a nullable result. The Spark module currently lacks
+a sum0 mapping, so plans using this overload cannot be converted to
+Spark until that mapping is added.
+* **core:** CustomComparison.of(int), getCustomFunctionReference(),
+the generated customFunctionReference(int) builder method, and
+withCustomFunctionReference(int) are replaced by
+of(ScalarFunctionVariant), getDeclaration(),
+declaration(ScalarFunctionVariant), and
+withDeclaration(ScalarFunctionVariant). Supply the comparator
+declaration from your extension collection instead of a plan-local
+integer anchor. Input comparator anchors must resolve through the plan's
+extension declarations to a scalar function in the configured extension
+collection. Earlier output could omit or misassign comparison
+declarations; affected plans must be repaired or regenerated. Invalid
+comparator arity and non-boolean returns now fail during construction.
+* **spark:** Spark 3.4 conversion rejects partition predicates on
+differently cased overlapping file and partition columns when Spark can
+prune using partition values that differ from its output values. Full
+reads and safe projections remain supported. Resolve the schema
+collision before converting affected filters.
+* **core:** `ExpandFieldType.CONSTANT_FIELD` is renamed to
+`CONSISTENT_FIELD`, and building a `SupportedRelation` for an extension
+relation without message types now throws `IllegalArgumentException`.
+* **isthmus:** Plain CREATE TABLE AS SELECT now emits ERROR_IF_EXISTS
+and CREATE TABLE IF NOT EXISTS emits IGNORE_IF_EXISTS instead of
+REPLACE_IF_EXISTS. Older Isthmus readers that accept only
+replacement-mode CTAS cannot read these plans. CREATE OR REPLACE TABLE
+IF NOT EXISTS is now rejected. Callers requiring replacement must
+request it explicitly.
+* **spark:** Spark write conversion now rejects partitioned or
+bucketed V1 file/Hive commands, non-append filesystem save modes,
+incoming file UPDATE, MODIFIED_RECORDS output, and legacy filesystem
+INSERT plans with non-append create modes. Execute unsupported writes
+directly in Spark. Replay legacy APPEND_IF_EXISTS payloads only when
+their targets are known to be unpartitioned and unbucketed.
+
+### Features
+
+* **core:** bump substrait to v0.103.0 ([#1351](https://github.com/substrait-io/substrait-java/issues/1351)) ([2a8c9b0](https://github.com/substrait-io/substrait-java/commit/2a8c9b04ea360eb7c7686fbe9309f63ef6f252e9))
+* **core:** bump substrait to v0.103.1 ([#1387](https://github.com/substrait-io/substrait-java/issues/1387)) ([81a9dee](https://github.com/substrait-io/substrait-java/commit/81a9dee06772b4e7ec30f4eba028761d02b7d661)), closes [#1307](https://github.com/substrait-io/substrait-java/issues/1307)
+
+### Bug Fixes
+
+* **core:** correct SUM and SUM0 helper results ([#1262](https://github.com/substrait-io/substrait-java/issues/1262)) ([8d91988](https://github.com/substrait-io/substrait-java/commit/8d919885ea20dd59f02c6e90da33858ad791f1db))
+* **core:** make Util.memoize thread-safe ([#1406](https://github.com/substrait-io/substrait-java/issues/1406)) ([9042fea](https://github.com/substrait-io/substrait-java/commit/9042fea295dd2c420717759688a7c269b5a65d43)), closes [#1389](https://github.com/substrait-io/substrait-java/issues/1389)
+* **core:** preserve custom comparison function identity ([#1267](https://github.com/substrait-io/substrait-java/issues/1267)) ([c1e3767](https://github.com/substrait-io/substrait-java/commit/c1e37674ad321484975841f962b0d753680fa720))
+* **core:** preserve extended aggregate sorts and options ([#1264](https://github.com/substrait-io/substrait-java/issues/1264)) ([fc6588c](https://github.com/substrait-io/substrait-java/commit/fc6588cf43233000962d32680d388ac63d8aa7c2))
+* **core:** retain reference scope during dereference ([#1268](https://github.com/substrait-io/substrait-java/issues/1268)) ([ca8315b](https://github.com/substrait-io/substrait-java/commit/ca8315b5efb17846ec1b6541855ccbdf344bcd7f))
+* **isthmus:** honor decimal arithmetic overflow options ([#1393](https://github.com/substrait-io/substrait-java/issues/1393)) ([c9be8a4](https://github.com/substrait-io/substrait-java/commit/c9be8a42c39c2783470b6ff8bd130cab90a5f4d0))
+* **isthmus:** honor floating-point arithmetic options ([#1394](https://github.com/substrait-io/substrait-java/issues/1394)) ([73232c3](https://github.com/substrait-io/substrait-java/commit/73232c344730624cedb462ba528319a76dcb2fb3))
+* **isthmus:** honor signed integer arithmetic options ([#1392](https://github.com/substrait-io/substrait-java/issues/1392)) ([bc9ad04](https://github.com/substrait-io/substrait-java/commit/bc9ad04d91e0b264d15a12c00974d28915056a6b))
+* **isthmus:** preserve CTAS creation policies ([#1266](https://github.com/substrait-io/substrait-java/issues/1266)) ([d05cd6b](https://github.com/substrait-io/substrait-java/commit/d05cd6bcaaaa23ea78112d4af25ab8866187c96f))
+* **isthmus:** preserve supported string function options ([#1390](https://github.com/substrait-io/substrait-java/issues/1390)) ([0d3f1a1](https://github.com/substrait-io/substrait-java/commit/0d3f1a1b7188ab40c2c0000c77d6f0d2c76e20c8))
+* **isthmus:** preserve UPDATE predicates ([#1259](https://github.com/substrait-io/substrait-java/issues/1259)) ([eb8d3f7](https://github.com/substrait-io/substrait-java/commit/eb8d3f73dfa70f47b6fe8fa9958a762eceabe93e))
+* **isthmus:** preserve update targets in nested schemas ([#1265](https://github.com/substrait-io/substrait-java/issues/1265)) ([c130b20](https://github.com/substrait-io/substrait-java/commit/c130b200fd8c5a3fab059a4489ead7938fa0f965))
+* **isthmus:** quote dynamic function identifiers when needed ([#1403](https://github.com/substrait-io/substrait-java/issues/1403)) ([5277678](https://github.com/substrait-io/substrait-java/commit/52776789b544a00ddb98e392d1c0a054461015fb))
+* **isthmus:** remove the lossy contains mapping ([#1391](https://github.com/substrait-io/substrait-java/issues/1391)) ([aeba8e0](https://github.com/substrait-io/substrait-java/commit/aeba8e052400f1e11e4b152c2ae25f6ce6af9de4))
+* **isthmus:** restore bidirectional sqrt mapping ([#1396](https://github.com/substrait-io/substrait-java/issues/1396)) ([2df13ea](https://github.com/substrait-io/substrait-java/commit/2df13eaed19264e0a0767e84a607fb56c03fe2ca))
+* **isthmus:** validate unary arithmetic option preferences ([#1395](https://github.com/substrait-io/substrait-java/issues/1395)) ([c3def2c](https://github.com/substrait-io/substrait-java/commit/c3def2ca61f45cbce84530b329a11da22381f177))
+* preserve mandatory read and post-join filters ([#1260](https://github.com/substrait-io/substrait-java/issues/1260)) ([b7fcde5](https://github.com/substrait-io/substrait-java/commit/b7fcde5ca5742b8d6384117769ec3d51f1d05fe7))
+* **spark:** preserve aggregate outputs in projections ([#1263](https://github.com/substrait-io/substrait-java/issues/1263)) ([2ce688f](https://github.com/substrait-io/substrait-java/commit/2ce688f2d902521e40727f7dc40379de20be1105))
+* **spark:** preserve partition values in file scans ([#1270](https://github.com/substrait-io/substrait-java/issues/1270)) ([c51fd20](https://github.com/substrait-io/substrait-java/commit/c51fd2045ec93a26b339cac6f4eb34a0eecbf3b3))
+* **spark:** reject lossy write conversions ([#1269](https://github.com/substrait-io/substrait-java/issues/1269)) ([72e902e](https://github.com/substrait-io/substrait-java/commit/72e902e0f3d75fd8a449c11870ab6a5303150274))
+
 ## [0.105.0](https://github.com/substrait-io/substrait-java/compare/v0.104.0...v0.105.0) (2026-10-04)
 
 ### ⚠ BREAKING CHANGES
