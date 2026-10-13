@@ -96,7 +96,7 @@ public class ProtoPlanConverter {
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
       io.substrait.proto.RelRoot root = planRel.getRoot();
-      Rel rel = relConverter.from(root.getInput());
+      Rel rel = relConverter.from(root.getInput(), planRel.getDetachedExpressionsList());
       roots.add(Plan.Root.builder().input(rel).names(root.getNamesList()).build());
     }
 

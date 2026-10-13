@@ -1,5 +1,6 @@
 package io.substrait.plan;
 
+import io.substrait.expression.proto.ExpressionDetacher;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionProtoConverter;
@@ -20,6 +21,8 @@ public class PlanProtoConverter {
   @NonNull protected final ExtensionProtoConverter<?, ?> extensionProtoConverter;
 
   @NonNull private final ExtensionCollection extensionCollection;
+
+  @NonNull private final ExpressionDetacher expressionDetacher;
 
   /** Default constructor. */
   public PlanProtoConverter() {
@@ -53,6 +56,27 @@ public class PlanProtoConverter {
   public PlanProtoConverter(
       @NonNull final ExtensionCollection extensionCollection,
       @NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter) {
+    this(extensionCollection, extensionProtoConverter, ExpressionDetacher.defaultDetacher());
+  }
+
+  /**
+   * Constructor with custom {@link ExtensionCollection}, {@link ExtensionProtoConverter} and {@link
+   * ExpressionDetacher}.
+   *
+   * <p>The other constructors use {@link ExpressionDetacher#defaultDetacher()}, which leaves a plan
+   * unchanged unless its expressions nest too deeply for protobuf parsers with default limits.
+   *
+   * @param extensionCollection custom {@link ExtensionCollection} to use, must not be null
+   * @param extensionProtoConverter custom {@link ExtensionProtoConverter} to use, must not be null
+   * @param expressionDetacher bounds the nesting depth of each {@link PlanRel}, must not be null
+   */
+  public PlanProtoConverter(
+      @NonNull final ExtensionCollection extensionCollection,
+      @NonNull final ExtensionProtoConverter<?, ?> extensionProtoConverter,
+      @NonNull final ExpressionDetacher expressionDetacher) {
+    if (expressionDetacher == null) {
+      throw new IllegalArgumentException("ExpressionDetacher is required");
+    }
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
@@ -61,6 +85,7 @@ public class PlanProtoConverter {
     }
     this.extensionCollection = extensionCollection;
     this.extensionProtoConverter = extensionProtoConverter;
+    this.expressionDetacher = expressionDetacher;
   }
 
   /**
@@ -78,12 +103,13 @@ public class PlanProtoConverter {
           new RelProtoConverter(functionCollector, extensionProtoConverter)
               .toProto(root.getInput());
       planRels.add(
-          PlanRel.newBuilder()
-              .setRoot(
-                  io.substrait.proto.RelRoot.newBuilder()
-                      .setInput(input)
-                      .addAllNames(root.getNames()))
-              .build());
+          expressionDetacher.detach(
+              PlanRel.newBuilder()
+                  .setRoot(
+                      io.substrait.proto.RelRoot.newBuilder()
+                          .setInput(input)
+                          .addAllNames(root.getNames()))
+                  .build()));
     }
     final Plan.Builder builder =
         Plan.newBuilder()

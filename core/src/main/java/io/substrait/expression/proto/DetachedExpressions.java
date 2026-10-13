@@ -1,0 +1,107 @@
+package io.substrait.expression.proto;
+
+import io.substrait.proto.Expression.RexTypeCase;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+
+/**
+ * The {@code detached_expressions} of one {@code PlanRel} or {@code ExtendedExpression}, resolving
+ * the {@code Expression.detached_expression_ordinal} references in it (spec v0.105.0).
+ *
+ * <p>Detachment is an encoding of the expression tree, so an ordinal is resolved by converting its
+ * entry in place of the reference: the entry binds to the input schema and correlation scope of the
+ * referencing site. Resolution enforces the rules the spec places on the portion of the table
+ * reachable from the container: an ordinal is in range, refers to an entry that is not itself an
+ * ordinal, is referenced at most once, and is not part of a cycle. Entries that nothing references
+ * are neither converted nor validated.
+ *
+ * <p>An instance records which entries it has resolved, so it serves one conversion of one
+ * container. The converted model inlines every resolved entry and keeps no table, so an ordinal
+ * inside a {@code google.protobuf.Any} payload that a converter retains without interpreting loses
+ * its target.
+ */
+public final class DetachedExpressions {
+  private static final DetachedExpressions NONE =
+      new DetachedExpressions(Collections.emptyList(), false);
+
+  private final List<io.substrait.proto.Expression> entries;
+  private final boolean inContainer;
+  private final BitSet referenced = new BitSet();
+  private final BitSet resolving = new BitSet();
+
+  private DetachedExpressions(List<io.substrait.proto.Expression> entries, boolean inContainer) {
+    this.entries = entries;
+    this.inContainer = inContainer;
+  }
+
+  /**
+   * Returns the resolver for expressions converted outside any {@code PlanRel} or {@code
+   * ExtendedExpression}, where every detached expression ordinal is invalid.
+   *
+   * @return a resolver that rejects every ordinal
+   */
+  public static DetachedExpressions none() {
+    return NONE;
+  }
+
+  /**
+   * Creates a resolver over the {@code detached_expressions} of one container.
+   *
+   * @param entries the container's detached expressions, indexed by ordinal
+   * @return a resolver for that container
+   */
+  public static DetachedExpressions of(List<io.substrait.proto.Expression> entries) {
+    return new DetachedExpressions(
+        Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(entries, "entries"))),
+        true);
+  }
+
+  /**
+   * Converts the entry an ordinal refers to.
+   *
+   * @param ordinal the {@code detached_expression_ordinal}, an unsigned 32-bit value
+   * @param converter converts the entry, resolving any ordinals within it through this resolver
+   * @param <T> the converted type
+   * @return the converted entry
+   * @throws IllegalArgumentException if the reference breaks one of the spec's rules
+   */
+  public <T> T resolve(int ordinal, Function<io.substrait.proto.Expression, T> converter) {
+    long index = Integer.toUnsignedLong(ordinal);
+    if (!inContainer) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Detached expression ordinal %d is outside a PlanRel or ExtendedExpression", index));
+    }
+    if (index >= entries.size()) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Detached expression ordinal %d is out of range for %d detached expressions",
+              index, entries.size()));
+    }
+    int i = (int) index;
+    if (resolving.get(i)) {
+      throw new IllegalArgumentException(
+          String.format("Detached expression %d references itself through a cycle", i));
+    }
+    if (referenced.get(i)) {
+      throw new IllegalArgumentException(
+          String.format("Detached expression %d is referenced more than once", i));
+    }
+    io.substrait.proto.Expression entry = entries.get(i);
+    if (entry.getRexTypeCase() == RexTypeCase.DETACHED_EXPRESSION_ORDINAL) {
+      throw new IllegalArgumentException(
+          String.format("Detached expression %d is itself a detached expression ordinal", i));
+    }
+    referenced.set(i);
+    resolving.set(i);
+    try {
+      return converter.apply(entry);
+    } finally {
+      resolving.clear(i);
+    }
+  }
+}

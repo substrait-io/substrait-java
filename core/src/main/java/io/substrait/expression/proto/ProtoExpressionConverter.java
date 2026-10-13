@@ -40,9 +40,13 @@ public class ProtoExpressionConverter {
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
   private final LambdaBuilder lambdaBuilder = new LambdaBuilder();
+  private final DetachedExpressions detachedExpressions;
 
   /**
    * Creates a converter resolving functions and types against the given extensions.
+   *
+   * <p>Detached expression ordinals resolve against {@link ProtoRelConverter#detachedExpressions()}
+   * of {@code relConverter}, and are rejected when it is {@code null}.
    *
    * @param lookup used to resolve function and type references
    * @param extensions the extension collection providing definitions
@@ -54,11 +58,37 @@ public class ProtoExpressionConverter {
       SimpleExtension.ExtensionCollection extensions,
       Type.Struct rootType,
       ProtoRelConverter relConverter) {
+    this(
+        lookup,
+        extensions,
+        rootType,
+        relConverter,
+        relConverter == null ? DetachedExpressions.none() : relConverter.detachedExpressions());
+  }
+
+  /**
+   * Creates a converter resolving functions and types against the given extensions, and detached
+   * expression ordinals against the given container.
+   *
+   * @param lookup used to resolve function and type references
+   * @param extensions the extension collection providing definitions
+   * @param rootType the root struct type that field references are resolved against
+   * @param relConverter converter for nested relations (e.g. subqueries)
+   * @param detachedExpressions the detached expressions of the containing {@code PlanRel} or {@code
+   *     ExtendedExpression}
+   */
+  public ProtoExpressionConverter(
+      ExtensionLookup lookup,
+      SimpleExtension.ExtensionCollection extensions,
+      Type.Struct rootType,
+      ProtoRelConverter relConverter,
+      DetachedExpressions detachedExpressions) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
     this.protoRelConverter = relConverter;
+    this.detachedExpressions = Objects.requireNonNull(detachedExpressions, "detachedExpressions");
   }
 
   /**
@@ -364,6 +394,8 @@ public class ProtoExpressionConverter {
                       + ecv.getExecutionContextVariableTypeCase());
           }
         }
+      case DETACHED_EXPRESSION_ORDINAL:
+        return detachedExpressions.resolve(expr.getDetachedExpressionOrdinal(), this::from);
       default:
         throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     }
