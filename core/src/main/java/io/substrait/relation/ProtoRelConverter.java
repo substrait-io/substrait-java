@@ -3,7 +3,7 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.MaskExpression;
-import io.substrait.expression.proto.DetachedExpressions;
+import io.substrait.expression.proto.DetachedSubtrees;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.expression.proto.ProtoMaskExpressionConverter;
 import io.substrait.extension.AdvancedExtension;
@@ -103,8 +103,8 @@ public class ProtoRelConverter {
    */
   private final Map<Integer, Type.Struct> anchorScopes = new HashMap<>();
 
-  /** The detached expressions of the {@code PlanRel} being converted, if any. */
-  private DetachedExpressions detachedExpressions = DetachedExpressions.none();
+  /** The detached subtrees of the {@code PlanRel} being converted, if any. */
+  private DetachedSubtrees detachedSubtrees = DetachedSubtrees.none();
 
   /**
    * Constructor with custom {@link ExtensionLookup}.
@@ -193,34 +193,37 @@ public class ProtoRelConverter {
   }
 
   /**
-   * Converts a relation of a {@code PlanRel}, resolving the detached expression ordinals in it
-   * against that {@code PlanRel}'s {@code detached_expressions}.
+   * Converts the root of a {@code PlanRel}, resolving the detached ordinals in it against that
+   * {@code PlanRel}'s detached subtrees.
    *
-   * @param rel the protobuf relation to convert
-   * @param detachedExpressions the {@code detached_expressions} of the containing {@code PlanRel}
-   * @return the converted result
+   * @param planRel the protobuf {@code PlanRel} to convert, which must hold a root
+   * @return the converted root
+   * @throws IllegalArgumentException if {@code planRel} holds a bare relation rather than a root
    */
-  public Rel from(
-      io.substrait.proto.Rel rel, List<io.substrait.proto.Expression> detachedExpressions) {
-    DetachedExpressions enclosing = this.detachedExpressions;
-    this.detachedExpressions = DetachedExpressions.of(detachedExpressions);
+  public Plan.Root from(io.substrait.proto.PlanRel planRel) {
+    if (!planRel.hasRoot()) {
+      throw new IllegalArgumentException(
+          "Only PlanRel roots are supported, got " + planRel.getRelTypeCase());
+    }
+    DetachedSubtrees enclosing = this.detachedSubtrees;
+    this.detachedSubtrees = DetachedSubtrees.of(planRel);
     try {
-      return from(rel);
+      return from(planRel.getRoot());
     } finally {
-      this.detachedExpressions = enclosing;
+      this.detachedSubtrees = enclosing;
     }
   }
 
   /**
-   * Returns the detached expressions that expressions converted for the current relation resolve
-   * their ordinals against: those of the {@code PlanRel} passed to {@link
-   * #from(io.substrait.proto.Rel, List)}, or a resolver that rejects every ordinal outside such a
+   * Returns the detached subtrees that expressions converted for the current relation resolve their
+   * ordinals against: those of the {@code PlanRel} passed to {@link
+   * #from(io.substrait.proto.PlanRel)}, or a resolver that rejects every ordinal outside such a
    * conversion.
    *
-   * @return the current detached expressions
+   * @return the current detached subtrees
    */
-  public DetachedExpressions detachedExpressions() {
-    return detachedExpressions;
+  public DetachedSubtrees detachedSubtrees() {
+    return detachedSubtrees;
   }
 
   private Rel dispatch(io.substrait.proto.Rel rel) {

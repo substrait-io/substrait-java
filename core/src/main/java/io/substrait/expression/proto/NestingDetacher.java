@@ -32,12 +32,12 @@ import java.util.stream.Collectors;
  * type, or inside a {@code google.protobuf.Any} payload is left as is, so the result may still
  * exceed the limit.
  */
-public final class ExpressionDetacher {
+public final class NestingDetacher {
   /** The default parse recursion limit of protobuf-java, and of the C++ and upb runtimes. */
   public static final int DEFAULT_MAX_DEPTH = 100;
 
-  private static final ExpressionDetacher DEFAULT = new ExpressionDetacher(DEFAULT_MAX_DEPTH);
-  private static final ExpressionDetacher DISABLED = new ExpressionDetacher(Integer.MAX_VALUE);
+  private static final NestingDetacher DEFAULT = new NestingDetacher(DEFAULT_MAX_DEPTH);
+  private static final NestingDetacher DISABLED = new NestingDetacher(Integer.MAX_VALUE);
 
   /** Nesting depth of a {@code PlanRel} below the {@code Plan} it is parsed as part of. */
   private static final int PLAN_REL_DEPTH = 1;
@@ -48,7 +48,7 @@ public final class ExpressionDetacher {
 
   private final int maxDepth;
 
-  private ExpressionDetacher(int maxDepth) {
+  private NestingDetacher(int maxDepth) {
     this.maxDepth = maxDepth;
   }
 
@@ -58,7 +58,7 @@ public final class ExpressionDetacher {
    *
    * @return the default detacher
    */
-  public static ExpressionDetacher defaultDetacher() {
+  public static NestingDetacher defaultDetacher() {
     return DEFAULT;
   }
 
@@ -67,7 +67,7 @@ public final class ExpressionDetacher {
    *
    * @return a detacher that leaves every container unchanged
    */
-  public static ExpressionDetacher disabled() {
+  public static NestingDetacher disabled() {
     return DISABLED;
   }
 
@@ -78,11 +78,11 @@ public final class ExpressionDetacher {
    * @param maxDepth the deepest nesting a consumer accepts
    * @return a detacher for that limit
    */
-  public static ExpressionDetacher withMaxDepth(int maxDepth) {
+  public static NestingDetacher withMaxDepth(int maxDepth) {
     if (maxDepth < 0) {
       throw new IllegalArgumentException("maxDepth must not be negative: " + maxDepth);
     }
-    return new ExpressionDetacher(maxDepth);
+    return new NestingDetacher(maxDepth);
   }
 
   /**

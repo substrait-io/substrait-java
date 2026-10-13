@@ -1,7 +1,7 @@
 package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
-import io.substrait.expression.proto.DetachedExpressions;
+import io.substrait.expression.proto.DetachedSubtrees;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
@@ -66,7 +66,7 @@ public class ProtoExtendedExpressionConverter {
             this.extensionCollection,
             namedStruct.struct(),
             null,
-            DetachedExpressions.of(extendedExpression.getDetachedExpressionsList()));
+            DetachedSubtrees.of(extendedExpression));
 
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
 

@@ -40,13 +40,14 @@ public class ProtoExpressionConverter {
   private final ProtoTypeConverter protoTypeConverter;
   private final ProtoRelConverter protoRelConverter;
   private final LambdaBuilder lambdaBuilder = new LambdaBuilder();
-  private final DetachedExpressions detachedExpressions;
+  private final DetachedSubtrees detachedSubtrees;
 
   /**
    * Creates a converter resolving functions and types against the given extensions.
    *
-   * <p>Detached expression ordinals resolve against {@link ProtoRelConverter#detachedExpressions()}
-   * of {@code relConverter}, and are rejected when it is {@code null}.
+   * <p>Detached ordinals resolve against the {@link ProtoRelConverter#detachedSubtrees()} that
+   * {@code relConverter} holds when this converter is constructed, and are rejected when it is
+   * {@code null}.
    *
    * @param lookup used to resolve function and type references
    * @param extensions the extension collection providing definitions
@@ -63,7 +64,7 @@ public class ProtoExpressionConverter {
         extensions,
         rootType,
         relConverter,
-        relConverter == null ? DetachedExpressions.none() : relConverter.detachedExpressions());
+        relConverter == null ? DetachedSubtrees.none() : relConverter.detachedSubtrees());
   }
 
   /**
@@ -74,7 +75,7 @@ public class ProtoExpressionConverter {
    * @param extensions the extension collection providing definitions
    * @param rootType the root struct type that field references are resolved against
    * @param relConverter converter for nested relations (e.g. subqueries)
-   * @param detachedExpressions the detached expressions of the containing {@code PlanRel} or {@code
+   * @param detachedSubtrees the detached subtrees of the containing {@code PlanRel} or {@code
    *     ExtendedExpression}
    */
   public ProtoExpressionConverter(
@@ -82,13 +83,13 @@ public class ProtoExpressionConverter {
       SimpleExtension.ExtensionCollection extensions,
       Type.Struct rootType,
       ProtoRelConverter relConverter,
-      DetachedExpressions detachedExpressions) {
+      DetachedSubtrees detachedSubtrees) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
     this.protoRelConverter = relConverter;
-    this.detachedExpressions = Objects.requireNonNull(detachedExpressions, "detachedExpressions");
+    this.detachedSubtrees = Objects.requireNonNull(detachedSubtrees, "detachedSubtrees");
   }
 
   /**
@@ -395,7 +396,7 @@ public class ProtoExpressionConverter {
           }
         }
       case DETACHED_EXPRESSION_ORDINAL:
-        return detachedExpressions.resolve(expr.getDetachedExpressionOrdinal(), this::from);
+        return detachedSubtrees.resolveExpression(expr.getDetachedExpressionOrdinal(), this::from);
       default:
         throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     }

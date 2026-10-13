@@ -1,16 +1,17 @@
 package io.substrait.expression.proto;
 
 import io.substrait.proto.Expression.RexTypeCase;
-import java.util.ArrayList;
+import io.substrait.proto.ExtendedExpression;
+import io.substrait.proto.PlanRel;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * The {@code detached_expressions} of one {@code PlanRel} or {@code ExtendedExpression}, resolving
- * the {@code Expression.detached_expression_ordinal} references in it (spec v0.105.0).
+ * The detached subtrees of one {@code PlanRel} or {@code ExtendedExpression}, resolving the {@code
+ * Expression.detached_expression_ordinal} references in it against its {@code detached_expressions}
+ * (spec v0.105.0).
  *
  * <p>Detachment is an encoding of the expression tree, so an ordinal is resolved by converting its
  * entry in place of the reference: the entry binds to the input schema and correlation scope of the
@@ -20,20 +21,20 @@ import java.util.function.Function;
  * are neither converted nor validated.
  *
  * <p>An instance records which entries it has resolved, so it serves one conversion of one
- * container. The converted model inlines every resolved entry and keeps no table, so an ordinal
- * inside a {@code google.protobuf.Any} payload that a converter retains without interpreting loses
- * its target.
+ * container. The converted model inlines every resolved entry and keeps no table. The spec forbids
+ * a consumer that retains an opaque {@code google.protobuf.Any} payload from dropping the entries
+ * that payload's ordinals refer to, so a converter must not retain such a payload uninterpreted
+ * when it holds ordinals.
  */
-public final class DetachedExpressions {
-  private static final DetachedExpressions NONE =
-      new DetachedExpressions(Collections.emptyList(), false);
+public final class DetachedSubtrees {
+  private static final DetachedSubtrees NONE = new DetachedSubtrees(Collections.emptyList(), false);
 
   private final List<io.substrait.proto.Expression> entries;
   private final boolean inContainer;
   private final BitSet referenced = new BitSet();
   private final BitSet resolving = new BitSet();
 
-  private DetachedExpressions(List<io.substrait.proto.Expression> entries, boolean inContainer) {
+  private DetachedSubtrees(List<io.substrait.proto.Expression> entries, boolean inContainer) {
     this.entries = entries;
     this.inContainer = inContainer;
   }
@@ -44,24 +45,32 @@ public final class DetachedExpressions {
    *
    * @return a resolver that rejects every ordinal
    */
-  public static DetachedExpressions none() {
+  public static DetachedSubtrees none() {
     return NONE;
   }
 
   /**
-   * Creates a resolver over the {@code detached_expressions} of one container.
+   * Creates a resolver over the detached subtrees of a {@code PlanRel}.
    *
-   * @param entries the container's detached expressions, indexed by ordinal
+   * @param planRel the container whose ordinals are resolved
    * @return a resolver for that container
    */
-  public static DetachedExpressions of(List<io.substrait.proto.Expression> entries) {
-    return new DetachedExpressions(
-        Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(entries, "entries"))),
-        true);
+  public static DetachedSubtrees of(PlanRel planRel) {
+    return new DetachedSubtrees(planRel.getDetachedExpressionsList(), true);
   }
 
   /**
-   * Converts the entry an ordinal refers to.
+   * Creates a resolver over the detached subtrees of an {@code ExtendedExpression}.
+   *
+   * @param extendedExpression the container whose ordinals are resolved
+   * @return a resolver for that container
+   */
+  public static DetachedSubtrees of(ExtendedExpression extendedExpression) {
+    return new DetachedSubtrees(extendedExpression.getDetachedExpressionsList(), true);
+  }
+
+  /**
+   * Converts the {@code detached_expressions} entry an ordinal refers to.
    *
    * @param ordinal the {@code detached_expression_ordinal}, an unsigned 32-bit value
    * @param converter converts the entry, resolving any ordinals within it through this resolver
@@ -69,7 +78,8 @@ public final class DetachedExpressions {
    * @return the converted entry
    * @throws IllegalArgumentException if the reference breaks one of the spec's rules
    */
-  public <T> T resolve(int ordinal, Function<io.substrait.proto.Expression, T> converter) {
+  public <T> T resolveExpression(
+      int ordinal, Function<io.substrait.proto.Expression, T> converter) {
     long index = Integer.toUnsignedLong(ordinal);
     if (!inContainer) {
       throw new IllegalArgumentException(

@@ -1,7 +1,7 @@
 package io.substrait.extendedexpression;
 
-import io.substrait.expression.proto.ExpressionDetacher;
 import io.substrait.expression.proto.ExpressionProtoConverter;
+import io.substrait.expression.proto.NestingDetacher;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
@@ -15,24 +15,24 @@ import java.util.Objects;
  * io.substrait.proto.ExtendedExpression}
  */
 public class ExtendedExpressionProtoConverter {
-  private final ExpressionDetacher expressionDetacher;
+  private final NestingDetacher nestingDetacher;
 
   /**
-   * Creates a converter that uses {@link ExpressionDetacher#defaultDetacher()}, which leaves an
+   * Creates a converter that uses {@link NestingDetacher#defaultDetacher()}, which leaves an
    * extended expression unchanged unless its expressions nest too deeply for protobuf parsers with
    * default limits.
    */
   public ExtendedExpressionProtoConverter() {
-    this(ExpressionDetacher.defaultDetacher());
+    this(NestingDetacher.defaultDetacher());
   }
 
   /**
    * Creates a converter that bounds the nesting depth of its output with the given detacher.
    *
-   * @param expressionDetacher bounds the nesting depth of each {@link ExtendedExpression}
+   * @param nestingDetacher bounds the nesting depth of each {@link ExtendedExpression}
    */
-  public ExtendedExpressionProtoConverter(ExpressionDetacher expressionDetacher) {
-    this.expressionDetacher = Objects.requireNonNull(expressionDetacher, "expressionDetacher");
+  public ExtendedExpressionProtoConverter(NestingDetacher nestingDetacher) {
+    this.nestingDetacher = Objects.requireNonNull(nestingDetacher, "nestingDetacher");
   }
 
   /**
@@ -92,6 +92,6 @@ public class ExtendedExpressionProtoConverter {
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());
     }
-    return expressionDetacher.detach(builder.build());
+    return nestingDetacher.detach(builder.build());
   }
 }

@@ -9,7 +9,6 @@ import io.substrait.plan.Plan.ExecutionBehavior;
 import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode;
 import io.substrait.proto.PlanRel;
 import io.substrait.relation.ProtoRelConverter;
-import io.substrait.relation.Rel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -95,9 +94,7 @@ public class ProtoPlanConverter {
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();
     for (PlanRel planRel : plan.getRelationsList()) {
-      io.substrait.proto.RelRoot root = planRel.getRoot();
-      Rel rel = relConverter.from(root.getInput(), planRel.getDetachedExpressionsList());
-      roots.add(Plan.Root.builder().input(rel).names(root.getNamesList()).build());
+      roots.add(relConverter.from(planRel));
     }
 
     ImmutableVersion.Builder versionBuilder =
