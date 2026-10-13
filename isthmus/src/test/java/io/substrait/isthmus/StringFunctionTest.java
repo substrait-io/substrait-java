@@ -2,6 +2,8 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.FixedCharLiteral;
@@ -267,20 +269,15 @@ final class StringFunctionTest extends PlanTestBase {
     assertSqlRoundTrip(query);
   }
 
-  @ParameterizedTest
-  @CsvSource({"c16, c16", "c16, vc32", "c16, vc", "vc32, vc32", "vc32, vc", "vc, vc"})
-  void testContains(String left, String right) throws Exception {
-    String query = String.format("SELECT CONTAINS_SUBSTR(%s, %s) FROM strings", left, right);
-    assertSqlRoundTrip(query);
-  }
-
-  @ParameterizedTest
-  @CsvSource(
-      value = {"'start', vc", "vc, 'end'"},
-      quoteCharacter = '`')
-  void testContainsWithLiteral(String left, String right) throws Exception {
-    String query = String.format("SELECT CONTAINS_SUBSTR(%s, %s) FROM strings", left, right);
-    assertSqlRoundTrip(query);
+  @Test
+  void containsSubstrIsRejected() throws Exception {
+    String query = "SELECT CONTAINS_SUBSTR(vc, 'key') FROM strings";
+    CalciteCatalogReader catalog =
+        SubstraitCreateStatementParser.processCreateStatementsToCatalog(CREATES);
+    IllegalArgumentException failure =
+        assertThrows(
+            IllegalArgumentException.class, () -> new SqlToSubstrait().convert(query, catalog));
+    assertTrue(failure.getMessage().contains("CONTAINS_SUBSTR"));
   }
 
   @ParameterizedTest

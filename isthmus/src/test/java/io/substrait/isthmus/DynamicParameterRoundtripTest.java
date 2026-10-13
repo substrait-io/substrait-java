@@ -82,7 +82,7 @@ class DynamicParameterRoundtripTest extends PlanTestBase {
 
     Project project =
         sb.project(
-            input -> List.of(sb.multiply(sb.fieldReference(input, 2), dpMultiplier)),
+            input -> List.of(withTieToEven(sb.multiply(sb.fieldReference(input, 2), dpMultiplier))),
             Remap.of(List.of(3)),
             table);
     assertFullRoundTrip(project);

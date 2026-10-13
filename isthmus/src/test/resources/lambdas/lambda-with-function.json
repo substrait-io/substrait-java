@@ -118,6 +118,7 @@
                           "body": {
                             "scalarFunction": {
                               "functionReference": 1,
+                              "options": [{"name": "overflow", "preference": ["SILENT"]}],
                               "outputType": {
                                 "i32": {
                                   "nullability": "NULLABILITY_REQUIRED"

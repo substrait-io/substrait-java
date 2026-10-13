@@ -12,6 +12,9 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlItemOperator;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +46,7 @@ public class FieldSelectionConverter implements CallConverter {
    *
    * <ul>
    *   <li>ROW dereference by integer index
-   *   <li>ARRAY dereference by integer index
+   *   <li>ARRAY dereference by integer index, translated to Substrait's zero-based offset
    *   <li>MAP dereference by string key
    * </ul>
    *
@@ -65,19 +68,26 @@ public class FieldSelectionConverter implements CallConverter {
       LOGGER
           .atWarn()
           .log(
-              "Found item operator without literal kind/type. This isn't handled well. Reference was {} with toString {}.",
+              "Found item operator without literal kind/type. This isn't handled well. Reference"
+                  + " was {} with toString {}.",
               reference.getKind().name(),
               reference);
       return Optional.empty();
     }
 
-    Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
+    SqlTypeName containerType = toDereference.getType().getSqlTypeName();
+    // A Substrait list reference returns null for an out-of-range index, so it cannot preserve
+    // the error behavior of OFFSET or ORDINAL. Decline before the array operand is converted.
+    if (containerType == SqlTypeName.ARRAY && !isSafeArrayOperator(call.getOperator())) {
+      return Optional.empty();
+    }
 
     Expression input = topLevelConverter.apply(toDereference);
 
-    switch (toDereference.getType().getSqlTypeName()) {
+    switch (containerType) {
       case ROW:
         {
+          Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
           Optional<Integer> index = toInt(literal);
           if (index.isEmpty()) {
             return Optional.empty();
@@ -90,20 +100,33 @@ public class FieldSelectionConverter implements CallConverter {
         }
       case ARRAY:
         {
-          Optional<Integer> index = toInt(literal);
-          if (index.isEmpty()) {
-            return Optional.empty();
+          SqlItemOperator operator = (SqlItemOperator) call.getOperator();
+          long offset = Integer.MAX_VALUE;
+          if (!((RexLiteral) reference).isNull()) {
+            Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
+            Optional<Long> index = toLong(literal);
+            if (index.isEmpty()) {
+              return Optional.empty();
+            }
+            // Negative Substrait offsets count from the end, whereas Calcite returns null below
+            // the operator's base. Substrait lists have at most Integer.MAX_VALUE elements, so that
+            // zero-based offset cannot select an element. Keep the reference to evaluate the
+            // array operand and preserve its element type, including for a null index.
+            if (index.get() >= operator.offset) {
+              offset = Math.min(index.get() - operator.offset, Integer.MAX_VALUE);
+            }
           }
 
           if (input instanceof FieldReference) {
-            return Optional.of(((FieldReference) input).dereferenceList(index.get()));
+            return Optional.of(((FieldReference) input).dereferenceList((int) offset));
           } else {
-            return Optional.of(FieldReference.newListReference(index.get(), input));
+            return Optional.of(FieldReference.newListReference((int) offset, input));
           }
         }
 
       case MAP:
         {
+          Literal literal = (new LiteralConverter(typeConverter)).convert((RexLiteral) reference);
           Optional<String> mapKey = toString(literal);
           if (mapKey.isEmpty()) {
             return Optional.empty();
@@ -119,6 +142,14 @@ public class FieldSelectionConverter implements CallConverter {
     }
 
     return Optional.empty();
+  }
+
+  private static boolean isSafeArrayOperator(SqlOperator operator) {
+    if (!(operator instanceof SqlItemOperator)) {
+      return false;
+    }
+    SqlItemOperator itemOperator = (SqlItemOperator) operator;
+    return itemOperator.safe && (itemOperator.offset == 0 || itemOperator.offset == 1);
   }
 
   /**
@@ -139,6 +170,13 @@ public class FieldSelectionConverter implements CallConverter {
     }
     LOGGER.atWarn().log("Literal expected to be int type but was not. {}.", l);
     return Optional.empty();
+  }
+
+  private Optional<Long> toLong(Expression.Literal literal) {
+    if (literal instanceof Expression.I64Literal) {
+      return Optional.of(((Expression.I64Literal) literal).value());
+    }
+    return toInt(literal).map(Integer::longValue);
   }
 
   /**

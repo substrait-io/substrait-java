@@ -10,7 +10,10 @@ class ProjectTest extends PlanTestBase {
   @Test
   void avoidProjectRemapOnEmptyInput() {
     Rel projection =
-        Project.builder().input(emptyTable).addExpressions(sb.add(sb.i32(1), sb.i32(2))).build();
+        Project.builder()
+            .input(emptyTable)
+            .addExpressions(withSilentOverflow(sb.add(sb.i32(1), sb.i32(2))))
+            .build();
     assertFullRoundTrip(projection);
   }
 }

@@ -3,6 +3,7 @@ package io.substrait.isthmus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
@@ -377,12 +378,15 @@ class SqrtImportTest extends PlanTestBase {
             .from(expression("fp64", false))
             .addOptions(FunctionOption.builder().name("on_domain_error").addValues("ERROR").build())
             .build();
-    RexCall call =
-        (RexCall)
-            expression.accept(
-                converter(new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)),
-                Context.newContext());
-    assertEquals(SqlStdOperatorTable.SQRT, call.getOperator());
+    UnsupportedOperationException failure =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                expression.accept(
+                    converter(
+                        new ScalarFunctionConverter(extensions.scalarFunctions(), typeFactory)),
+                    Context.newContext()));
+    assertTrue(failure.getMessage().contains("sqrt on_domain_error"));
   }
 
   @Test

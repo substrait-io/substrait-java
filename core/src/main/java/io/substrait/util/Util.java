@@ -9,6 +9,10 @@ public class Util {
    * Wraps a supplier so that its value is computed at most once, on first access, and cached for
    * subsequent calls.
    *
+   * <p>The returned supplier is thread-safe: once {@code supplier} returns, its value is cached and
+   * every caller observes it, and concurrent first calls wait rather than invoking {@code supplier}
+   * again. If {@code supplier} throws, the exception propagates and the next call retries.
+   *
    * @param supplier the supplier to memoize
    * @param <T> the supplied value type
    * @return a memoizing supplier delegating to {@code supplier}
@@ -19,9 +23,10 @@ public class Util {
 
   private static class Memoizer<T> implements Supplier<T> {
 
-    private boolean retrieved;
+    // Written after value; a reader that sees true via this volatile read also sees value.
+    private volatile boolean retrieved;
     private T value;
-    private Supplier<T> delegate;
+    private final Supplier<T> delegate;
 
     public Memoizer(Supplier<T> delegate) {
       this.delegate = delegate;
@@ -30,8 +35,12 @@ public class Util {
     @Override
     public T get() {
       if (!retrieved) {
-        value = delegate.get();
-        retrieved = true;
+        synchronized (this) {
+          if (!retrieved) {
+            value = delegate.get();
+            retrieved = true;
+          }
+        }
       }
       return value;
     }
