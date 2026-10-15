@@ -74,13 +74,13 @@ class FunctionBindingResolverTest {
         scalar(DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "divide:dec_dec");
     List<ResolvedArgument> arguments =
         List.of(ResolvedArgument.value(R.decimal(10, 2)), ResolvedArgument.value(R.decimal(5, 1)));
-    assertEquals(R.decimal(21, 8), FunctionBindingResolver.deriveOutputType(divide, arguments));
+    assertEquals(R.decimal(17, 8), FunctionBindingResolver.deriveOutputType(divide, arguments));
     assertEquals(
-        R.decimal(21, 8),
-        FunctionBindingResolver.resolveAndValidate(divide, arguments, List.of(), R.decimal(21, 8))
+        R.decimal(17, 8),
+        FunctionBindingResolver.resolveAndValidate(divide, arguments, List.of(), R.decimal(17, 8))
             .outputType());
 
-    for (Type declared : List.of(R.decimal(20, 2), R.decimal(21, 7), N.decimal(21, 8))) {
+    for (Type declared : List.of(R.decimal(21, 8), R.decimal(17, 7), N.decimal(17, 8))) {
       InvalidFunctionBindingException error =
           assertThrows(
               InvalidFunctionBindingException.class,
