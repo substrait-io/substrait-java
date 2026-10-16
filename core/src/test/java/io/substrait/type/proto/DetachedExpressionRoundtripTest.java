@@ -14,6 +14,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.LambdaBuilder;
 import io.substrait.expression.proto.NestingDetacher;
+import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extendedexpression.ExtendedExpression;
 import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
 import io.substrait.extendedexpression.ImmutableExpressionReference;
@@ -24,8 +25,11 @@ import io.substrait.extension.ExtensionProtoConverter;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
+import io.substrait.proto.FilterRel;
 import io.substrait.proto.PlanRel;
+import io.substrait.relation.Filter;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.NamedStruct;
@@ -34,6 +38,7 @@ import io.substrait.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.utils.StringHolderHandlingRelProtoConverter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -49,8 +54,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
 
-  /** A detacher with no depth to spare, so it detaches every expression it can. */
-  static final NestingDetacher DETACH_ALL = NestingDetacher.withMaxDepth(0);
+  static final NestingDetacher DETACH_ALL = NestingDetacher.everyExpression();
 
   /** Deep enough that the nested additions exceed protobuf-java's parse recursion limit. */
   static final int DEEP = 200;
@@ -200,6 +204,132 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
   }
 
   @Test
+  void aShallowSubqueryOverALongChainIsDetachedByTheFallback()
+      throws InvalidProtocolBufferException {
+    Rel subquery = filters(scan, 28);
+    Rel project =
+        sb.project(
+            input -> List.of(sb.scalarSubquery(subquery, R.I32)), Remap.of(List.of(1)), scan);
+    Plan plan = sb.plan(sb.root(filters(project, 18)));
+
+    io.substrait.proto.Plan undetached = planConverter(NestingDetacher.disabled()).toProto(plan);
+    assertTrue(depth(undetached) > NestingDetacher.DEFAULT_MAX_DEPTH);
+    io.substrait.proto.Plan proto =
+        io.substrait.proto.Plan.parseFrom(new PlanProtoConverter().toProto(plan).toByteArray());
+    assertTrue(depth(proto) <= NestingDetacher.DEFAULT_MAX_DEPTH, () -> "depth " + depth(proto));
+    assertEquals(plan, new ProtoPlanConverter().from(proto));
+  }
+
+  @Test
+  void aContainerThatCannotBeMadeToFitIsReturnedAsIs() {
+    PlanRel planRel = planRel(filters(scan, 60));
+    assertTrue(depth(planRel) > NestingDetacher.DEFAULT_MAX_DEPTH);
+    assertSame(planRel, NestingDetacher.defaultDetacher().detach(planRel));
+  }
+
+  @Test
+  void detachingRaisesAnEarlierDeclaredVersion() {
+    Plan.Version earlier =
+        Plan.Version.builder()
+            .major(0)
+            .minor(90)
+            .patch(0)
+            .gitHash(Optional.of("0123abc"))
+            .producer(Optional.of("a producer"))
+            .build();
+    Plan deep =
+        Plan.builder()
+            .from(sb.plan(sb.root(sb.project(in -> List.of(nestedAdditions(in, DEEP)), scan))))
+            .version(earlier)
+            .build();
+    io.substrait.proto.Version written = new PlanProtoConverter().toProto(deep).getVersion();
+    assertEquals(
+        List.of(0, 105, 0),
+        List.of(written.getMajorNumber(), written.getMinorNumber(), written.getPatchNumber()));
+    assertEquals("", written.getGitHash());
+    assertEquals("a producer", written.getProducer());
+
+    Plan shallow =
+        Plan.builder()
+            .from(sb.plan(sb.root(sb.project(in -> List.of(nestedAdditions(in, 3)), scan))))
+            .version(earlier)
+            .build();
+    io.substrait.proto.Version unchanged = new PlanProtoConverter().toProto(shallow).getVersion();
+    assertEquals(90, unchanged.getMinorNumber());
+    assertEquals("0123abc", unchanged.getGitHash());
+  }
+
+  @Test
+  void anOpaqueAdvancedExtensionKeepsItsDetachedTargets() {
+    io.substrait.proto.ExtendedExpression shallow =
+        new ExtendedExpressionProtoConverter()
+            .toProto(
+                ImmutableExtendedExpression.builder()
+                    .baseSchema(NamedStruct.of(List.of("a"), R.struct(R.I32)))
+                    .addReferredExpressions(
+                        ImmutableExpressionReference.builder()
+                            .expression(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)))
+                            .addOutputNames("eq")
+                            .build())
+                    .build());
+    io.substrait.proto.Expression payloadTarget = literal();
+    // The payload names entry 0; the referred expression names entry 1, which is resolved.
+    io.substrait.proto.ExtendedExpression withPayload =
+        shallow.toBuilder()
+            .setReferredExpr(0, shallow.getReferredExpr(0).toBuilder().setExpression(ordinal(1)))
+            .addDetachedExpressions(payloadTarget)
+            .addDetachedExpressions(shallow.getReferredExpr(0).getExpression())
+            .setAdvancedExtensions(
+                io.substrait.proto.AdvancedExtension.newBuilder()
+                    .setEnhancement(com.google.protobuf.Any.pack(ordinal(0))))
+            .build();
+
+    ExtendedExpression read = new ProtoExtendedExpressionConverter().from(withPayload);
+    assertEquals(List.of(payloadTarget), read.getRetainedDetachedExpressions());
+
+    io.substrait.proto.ExtendedExpression written =
+        new ExtendedExpressionProtoConverter().toProto(read);
+    assertEquals(List.of(payloadTarget), written.getDetachedExpressionsList());
+    assertEquals(read, new ProtoExtendedExpressionConverter().from(written));
+
+    io.substrait.proto.ExtendedExpression allDetached =
+        new ExtendedExpressionProtoConverter(DETACH_ALL).toProto(read);
+    assertEquals(payloadTarget, allDetached.getDetachedExpressions(0));
+    assertEquals(read, new ProtoExtendedExpressionConverter().from(allDetached));
+  }
+
+  @Test
+  void aBarePlanRelIsReadWithItsDetachedSubtrees() {
+    Rel rel = filterOn(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)));
+    PlanRel detached =
+        DETACH_ALL.detach(PlanRel.newBuilder().setRel(relProtoConverter.toProto(rel)).build());
+    assertTrue(detached.getDetachedExpressionsCount() > 0);
+    assertEquals(rel, protoRelConverter.fromRel(detached));
+    assertThrows(IllegalArgumentException.class, () -> protoRelConverter.from(detached));
+  }
+
+  @Test
+  void anExpressionConverterBuiltBeforeTheConversionResolvesAgainstIt() {
+    ProtoRelConverter reader =
+        new ProtoRelConverter(functionCollector, extensions) {
+          // Built before any PlanRel is converted, as a subclass field would be.
+          final ProtoExpressionConverter early =
+              new ProtoExpressionConverter(
+                  functionCollector, extensions, scan.getRecordType(), this);
+
+          @Override
+          protected Filter newFilter(FilterRel rel) {
+            return Filter.builder()
+                .input(from(rel.getInput()))
+                .condition(early.from(rel.getCondition()))
+                .build();
+          }
+        };
+    Rel rel = filterOn(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)));
+    assertEquals(rel, reader.from(DETACH_ALL.detach(planRel(rel))).getInput());
+  }
+
+  @Test
   void aPlanRelWithoutARootIsRejected() {
     IllegalArgumentException error =
         assertThrows(
@@ -335,6 +465,16 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
                         .addAllDetachedExpressions(detachedExpressions)
                         .build()));
     assertTrue(error.getMessage().contains(message), error.getMessage());
+  }
+
+  /** {@code count} filters stacked on {@code input}. */
+  private Rel filters(Rel input, int count) {
+    Rel rel = input;
+    for (int i = 0; i < count; i++) {
+      int value = i;
+      rel = sb.filter(in -> sb.equal(sb.fieldReference(in, 0), sb.i32(value)), rel);
+    }
+    return rel;
   }
 
   private Rel filterOn(Expression condition) {

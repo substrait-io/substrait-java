@@ -24,6 +24,9 @@ public class PlanProtoConverter {
 
   @NonNull private final NestingDetacher nestingDetacher;
 
+  /** The spec release that introduced detached expressions, as major, minor and patch. */
+  private static final int[] DETACHED_EXPRESSIONS_SINCE = {0, 105, 0};
+
   /** Default constructor. */
   public PlanProtoConverter() {
     this(DefaultExtensionCatalog.DEFAULT_COLLECTION);
@@ -97,19 +100,22 @@ public class PlanProtoConverter {
    */
   public Plan toProto(final io.substrait.plan.Plan plan) {
     final List<PlanRel> planRels = new ArrayList<>();
+    boolean detached = false;
     final ExtensionCollector functionCollector = new ExtensionCollector(extensionCollection);
     for (final io.substrait.plan.Plan.Root root : plan.getRoots()) {
       final Rel input =
           new RelProtoConverter(functionCollector, extensionProtoConverter)
               .toProto(root.getInput());
-      planRels.add(
-          nestingDetacher.detach(
-              PlanRel.newBuilder()
-                  .setRoot(
-                      io.substrait.proto.RelRoot.newBuilder()
-                          .setInput(input)
-                          .addAllNames(root.getNames()))
-                  .build()));
+      final PlanRel planRel =
+          PlanRel.newBuilder()
+              .setRoot(
+                  io.substrait.proto.RelRoot.newBuilder()
+                      .setInput(input)
+                      .addAllNames(root.getNames()))
+              .build();
+      final PlanRel bounded = nestingDetacher.detach(planRel);
+      detached |= bounded != planRel;
+      planRels.add(bounded);
     }
     final Plan.Builder builder =
         Plan.newBuilder()
@@ -129,6 +135,14 @@ public class PlanProtoConverter {
 
     plan.getVersion().getGitHash().ifPresent(gh -> versionBuilder.setGitHash(gh));
     plan.getVersion().getProducer().ifPresent(p -> versionBuilder.setProducer(p));
+    if (detached && precedesDetachedExpressions(versionBuilder)) {
+      // The git hash identifies the earlier release, so it no longer describes the plan.
+      versionBuilder
+          .setMajorNumber(DETACHED_EXPRESSIONS_SINCE[0])
+          .setMinorNumber(DETACHED_EXPRESSIONS_SINCE[1])
+          .setPatchNumber(DETACHED_EXPRESSIONS_SINCE[2])
+          .clearGitHash();
+    }
 
     builder.setVersion(versionBuilder);
 
@@ -136,6 +150,22 @@ public class PlanProtoConverter {
     builder.setExecutionBehavior(toProtoExecutionBehavior(plan.getExecutionBehavior()));
 
     return builder.build();
+  }
+
+  /**
+   * Whether a plan declaring {@code version} predates detached expressions, which a {@link PlanRel}
+   * rewritten by the {@link NestingDetacher} uses, so the declared version has to be raised.
+   */
+  private static boolean precedesDetachedExpressions(final Version.Builder version) {
+    final int[] declared = {
+      version.getMajorNumber(), version.getMinorNumber(), version.getPatchNumber()
+    };
+    for (int i = 0; i < declared.length; i++) {
+      if (declared[i] != DETACHED_EXPRESSIONS_SINCE[i]) {
+        return declared[i] < DETACHED_EXPRESSIONS_SINCE[i];
+      }
+    }
+    return false;
   }
 
   /**

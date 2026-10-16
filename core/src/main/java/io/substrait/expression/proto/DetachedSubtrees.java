@@ -70,6 +70,22 @@ public final class DetachedSubtrees {
   }
 
   /**
+   * Returns the {@code detached_expressions} entries a retained opaque payload may still refer to:
+   * every entry up to the last one this resolver has not resolved. A resolved entry is referenced
+   * only from the tree that inlined it, so dropping the trailing run of resolved entries removes no
+   * payload's target and renumbers nothing.
+   *
+   * @return the leading entries to retain, indexed by ordinal
+   */
+  public List<io.substrait.proto.Expression> unresolvedPrefix() {
+    int end = entries.size();
+    while (end > 0 && referenced.get(end - 1)) {
+      end--;
+    }
+    return entries.subList(0, end);
+  }
+
+  /**
    * Converts the {@code detached_expressions} entry an ordinal refers to.
    *
    * @param ordinal the {@code detached_expression_ordinal}, an unsigned 32-bit value

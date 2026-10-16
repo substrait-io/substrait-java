@@ -25,19 +25,23 @@ import java.util.stream.Collectors;
  * nested more than {@value #DEFAULT_MAX_DEPTH} levels below the root it parses. A container already
  * within the limit is returned unchanged. Otherwise, an expression that does not fit at its
  * position is detached once it lies deeper than half the limit, and its subtree is processed again
- * from its new position directly below the container. Ordinals are assigned in the order the
- * subtrees are detached, so a detached entry refers only to entries after it.
+ * from its new position directly below the container. If that leaves the container too deep, for
+ * instance because the deep part is a chain of relations below a shallow subquery, detachment is
+ * retried with every expression below the container eligible. Ordinals are assigned in the order
+ * the subtrees are detached, so a detached entry refers only to entries after it.
  *
- * <p>Detachment shortens expression nesting only. Nesting in a chain of relations, in a literal or
- * type, or inside a {@code google.protobuf.Any} payload is left as is, so the result may still
- * exceed the limit.
+ * <p>Detachment shortens expression nesting only, not nesting within a chain of relations, a
+ * literal or type, or a {@code google.protobuf.Any} payload. A container that still exceeds the
+ * limit after both attempts is returned unchanged, so that it does not need a consumer that reads
+ * detached expressions without gaining one that parses it.
  */
 public final class NestingDetacher {
   /** The default parse recursion limit of protobuf-java, and of the C++ and upb runtimes. */
   public static final int DEFAULT_MAX_DEPTH = 100;
 
-  private static final NestingDetacher DEFAULT = new NestingDetacher(DEFAULT_MAX_DEPTH);
-  private static final NestingDetacher DISABLED = new NestingDetacher(Integer.MAX_VALUE);
+  private static final NestingDetacher DEFAULT = new NestingDetacher(DEFAULT_MAX_DEPTH, false);
+  private static final NestingDetacher DISABLED = new NestingDetacher(Integer.MAX_VALUE, false);
+  private static final NestingDetacher EVERY_EXPRESSION = new NestingDetacher(0, true);
 
   /** Nesting depth of a {@code PlanRel} below the {@code Plan} it is parsed as part of. */
   private static final int PLAN_REL_DEPTH = 1;
@@ -47,9 +51,11 @@ public final class NestingDetacher {
       new ConcurrentHashMap<>();
 
   private final int maxDepth;
+  private final boolean everyExpression;
 
-  private NestingDetacher(int maxDepth) {
+  private NestingDetacher(int maxDepth, boolean everyExpression) {
     this.maxDepth = maxDepth;
+    this.everyExpression = everyExpression;
   }
 
   /**
@@ -72,6 +78,16 @@ public final class NestingDetacher {
   }
 
   /**
+   * Returns a detacher that detaches every expression below the container, however shallow, so that
+   * a consumer's handling of detached expressions can be exercised on any plan.
+   *
+   * @return a detacher that detaches every expression it can
+   */
+  public static NestingDetacher everyExpression() {
+    return EVERY_EXPRESSION;
+  }
+
+  /**
    * Returns a detacher for a consumer that parses up to {@code maxDepth} levels of nesting below
    * the root message, the root itself being at depth 0.
    *
@@ -82,7 +98,7 @@ public final class NestingDetacher {
     if (maxDepth < 0) {
       throw new IllegalArgumentException("maxDepth must not be negative: " + maxDepth);
     }
-    return new NestingDetacher(maxDepth);
+    return new NestingDetacher(maxDepth, false);
   }
 
   /**
@@ -92,7 +108,7 @@ public final class NestingDetacher {
    * @return {@code planRel} itself if it fits, otherwise a copy with detached expressions
    */
   public PlanRel detach(PlanRel planRel) {
-    return new Pass(PLAN_REL_DEPTH, planRel.getDetachedExpressionsList()).run(planRel);
+    return bound(planRel, PLAN_REL_DEPTH, planRel.getDetachedExpressionsList());
   }
 
   /**
@@ -103,28 +119,51 @@ public final class NestingDetacher {
    *     expressions
    */
   public ExtendedExpression detach(ExtendedExpression extendedExpression) {
-    return new Pass(0, extendedExpression.getDetachedExpressionsList()).run(extendedExpression);
+    return bound(extendedExpression, 0, extendedExpression.getDetachedExpressionsList());
+  }
+
+  private <M extends Message> M bound(
+      M container, int containerDepth, List<io.substrait.proto.Expression> existing) {
+    int entryDepth = containerDepth + 1;
+    if (everyExpression) {
+      return new Pass(containerDepth, entryDepth, existing).run(container);
+    }
+    if (maxDepth == Integer.MAX_VALUE || fitsWhole(container, containerDepth)) {
+      return container;
+    }
+    for (int threshold : new int[] {Math.max(maxDepth / 2, entryDepth), entryDepth}) {
+      M detached = new Pass(containerDepth, threshold, existing).run(container);
+      if (fitsWhole(detached, containerDepth)) {
+        return detached;
+      }
+    }
+    return container;
+  }
+
+  private boolean fitsWhole(Message container, int containerDepth) {
+    return maxDepth >= containerDepth && within(container, maxDepth - containerDepth);
   }
 
   /** One detachment of one container. */
   private final class Pass {
     private final int containerDepth;
+    private final int threshold;
     private final int existingEntries;
     private final List<io.substrait.proto.Expression> entries;
     private final Map<Message, Integer> heights = new IdentityHashMap<>();
 
-    Pass(int containerDepth, List<io.substrait.proto.Expression> existing) {
+    /**
+     * @param threshold the depth an expression must lie below to be detached
+     */
+    Pass(int containerDepth, int threshold, List<io.substrait.proto.Expression> existing) {
       this.containerDepth = containerDepth;
+      this.threshold = threshold;
       this.existingEntries = existing.size();
       this.entries = new ArrayList<>(existing);
     }
 
     @SuppressWarnings("unchecked")
     <M extends Message> M run(M container) {
-      if (maxDepth == Integer.MAX_VALUE
-          || maxDepth >= containerDepth && within(container, maxDepth - containerDepth)) {
-        return container;
-      }
       FieldDescriptor detachedField =
           container.getDescriptorForType().findFieldByName("detached_expressions");
       Message.Builder builder = container.toBuilder().clearField(detachedField);
@@ -157,7 +196,7 @@ public final class NestingDetacher {
         return message;
       }
       if (message instanceof io.substrait.proto.Expression
-          && depth > Math.max(maxDepth / 2, entryDepth())
+          && depth > threshold
           && ((io.substrait.proto.Expression) message).getRexTypeCase()
               != RexTypeCase.DETACHED_EXPRESSION_ORDINAL) {
         int ordinal = entries.size();

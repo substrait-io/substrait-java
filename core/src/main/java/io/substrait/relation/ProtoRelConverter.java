@@ -205,8 +205,7 @@ public class ProtoRelConverter {
       throw new IllegalArgumentException(
           "Only PlanRel roots are supported, got " + planRel.getRelTypeCase());
     }
-    DetachedSubtrees enclosing = this.detachedSubtrees;
-    this.detachedSubtrees = DetachedSubtrees.of(planRel);
+    DetachedSubtrees enclosing = enter(planRel);
     try {
       return from(planRel.getRoot());
     } finally {
@@ -215,10 +214,44 @@ public class ProtoRelConverter {
   }
 
   /**
+   * Converts the bare relation of a {@code PlanRel}, resolving the detached ordinals in it against
+   * that {@code PlanRel}'s detached subtrees.
+   *
+   * @param planRel the protobuf {@code PlanRel} to convert, which must hold a bare relation
+   * @return the converted relation
+   * @throws IllegalArgumentException if {@code planRel} holds a root rather than a bare relation
+   */
+  public Rel fromRel(io.substrait.proto.PlanRel planRel) {
+    if (!planRel.hasRel()) {
+      throw new IllegalArgumentException(
+          "Expected a PlanRel holding a bare relation, got " + planRel.getRelTypeCase());
+    }
+    DetachedSubtrees enclosing = enter(planRel);
+    try {
+      return from(planRel.getRel());
+    } finally {
+      this.detachedSubtrees = enclosing;
+    }
+  }
+
+  /**
+   * Resolves ordinals against {@code planRel} from now on, returning what they resolved against.
+   */
+  private DetachedSubtrees enter(io.substrait.proto.PlanRel planRel) {
+    DetachedSubtrees enclosing = this.detachedSubtrees;
+    this.detachedSubtrees = DetachedSubtrees.of(planRel);
+    return enclosing;
+  }
+
+  /**
    * Returns the detached subtrees that expressions converted for the current relation resolve their
-   * ordinals against: those of the {@code PlanRel} passed to {@link
-   * #from(io.substrait.proto.PlanRel)}, or a resolver that rejects every ordinal outside such a
-   * conversion.
+   * ordinals against: those of the {@code PlanRel} being converted by {@link
+   * #from(io.substrait.proto.PlanRel)} or {@link #fromRel(io.substrait.proto.PlanRel)}, or a
+   * resolver that rejects every ordinal outside such a conversion.
+   *
+   * <p>The resolver records each entry it resolves so that it can reject a second reference to it,
+   * so it is meant for the expression converters of the current conversion only: resolving an
+   * ordinal through it from elsewhere makes the conversion's own reference to that entry fail.
    *
    * @return the current detached subtrees
    */

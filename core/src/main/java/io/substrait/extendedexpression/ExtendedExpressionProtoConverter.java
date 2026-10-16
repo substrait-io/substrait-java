@@ -8,7 +8,6 @@ import io.substrait.proto.ExtendedExpression;
 import io.substrait.relation.AggregateFunctionProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
-import java.util.Objects;
 
 /**
  * Converts from {@link io.substrait.extendedexpression.ExtendedExpression} to {@link
@@ -29,10 +28,14 @@ public class ExtendedExpressionProtoConverter {
   /**
    * Creates a converter that bounds the nesting depth of its output with the given detacher.
    *
-   * @param nestingDetacher bounds the nesting depth of each {@link ExtendedExpression}
+   * @param nestingDetacher bounds the nesting depth of each {@link ExtendedExpression}, must not be
+   *     null
    */
   public ExtendedExpressionProtoConverter(NestingDetacher nestingDetacher) {
-    this.nestingDetacher = Objects.requireNonNull(nestingDetacher, "nestingDetacher");
+    if (nestingDetacher == null) {
+      throw new IllegalArgumentException("NestingDetacher is required");
+    }
+    this.nestingDetacher = nestingDetacher;
   }
 
   /**
@@ -92,6 +95,8 @@ public class ExtendedExpressionProtoConverter {
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());
     }
+    // Ahead of any newly detached entry, so the advanced extension's ordinals keep their targets.
+    builder.addAllDetachedExpressions(extendedExpression.getRetainedDetachedExpressions());
     return nestingDetacher.detach(builder.build());
   }
 }
