@@ -518,7 +518,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     val hintNames = fieldNames(firstProject)
     val expressionNames = hintNames
       .filter(_.size == literals.head.size)
-      .getOrElse(literals.head.map(toPrettySQL))
+      .getOrElse(literals.head.map(literal => toPrettySQL(literal)))
     val appendedNames = dataSchema.fieldNames.toSeq ++ expressionNames
     val remappedNames = if (firstProject.getRemap.isPresent) {
       firstProject.getRemap.get().indices().asScala.map(appendedNames(_)).toSeq
