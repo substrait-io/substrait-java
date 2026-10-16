@@ -1,6 +1,7 @@
 package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
+import io.substrait.expression.proto.DetachedSubtrees;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.ExtensionCollector;
@@ -59,9 +60,10 @@ public class ProtoExtendedExpressionConverter {
     io.substrait.type.NamedStruct namedStruct =
         io.substrait.type.NamedStruct.fromProto(baseSchemaProto, protoTypeConverter);
 
+    DetachedSubtrees detachedSubtrees = DetachedSubtrees.of(extendedExpression);
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
-            functionLookup, this.extensionCollection, namedStruct.struct(), null);
+            functionLookup, this.extensionCollection, namedStruct.struct(), null, detachedSubtrees);
 
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
 
@@ -111,6 +113,10 @@ public class ProtoExtendedExpressionConverter {
                         ? extendedExpression.getAdvancedExtensions()
                         : null))
             .baseSchema(namedStruct);
+    if (extendedExpression.hasAdvancedExtensions()) {
+      // The advanced extension stays raw, so the entries its ordinals may name keep their ordinals.
+      builder.retainedDetachedExpressions(detachedSubtrees.unresolvedPrefix());
+    }
 
     return builder.build();
   }

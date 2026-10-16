@@ -119,8 +119,8 @@ class SubstraitTypeSystemTest {
 
   /**
    * The same in a query: isthmus's own SUM and AVG take their types from the type system, where
-   * they used to repeat the argument's. The average stays nullable, the right answer for an empty
-   * group, although avg:dec declares a required result.
+   * they used to repeat the argument's. The average is nullable, the right answer for an empty
+   * group, as avg:dec declares.
    */
   @Test
   void sumAndAvgInAQueryTakeTheTypeSystemsTypes() throws Exception {

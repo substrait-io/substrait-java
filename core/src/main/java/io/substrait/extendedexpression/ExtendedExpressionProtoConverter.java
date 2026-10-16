@@ -1,6 +1,7 @@
 package io.substrait.extendedexpression;
 
 import io.substrait.expression.proto.ExpressionProtoConverter;
+import io.substrait.expression.proto.NestingDetacher;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
@@ -13,6 +14,29 @@ import io.substrait.util.EmptyVisitationContext;
  * io.substrait.proto.ExtendedExpression}
  */
 public class ExtendedExpressionProtoConverter {
+  private final NestingDetacher nestingDetacher;
+
+  /**
+   * Creates a converter that uses {@link NestingDetacher#defaultDetacher()}, which leaves an
+   * extended expression unchanged unless its expressions nest too deeply for protobuf parsers with
+   * default limits.
+   */
+  public ExtendedExpressionProtoConverter() {
+    this(NestingDetacher.defaultDetacher());
+  }
+
+  /**
+   * Creates a converter that bounds the nesting depth of its output with the given detacher.
+   *
+   * @param nestingDetacher bounds the nesting depth of each {@link ExtendedExpression}, must not be
+   *     null
+   */
+  public ExtendedExpressionProtoConverter(NestingDetacher nestingDetacher) {
+    if (nestingDetacher == null) {
+      throw new IllegalArgumentException("NestingDetacher is required");
+    }
+    this.nestingDetacher = nestingDetacher;
+  }
 
   /**
    * Converts an {@link io.substrait.extendedexpression.ExtendedExpression} into its protobuf
@@ -71,6 +95,8 @@ public class ExtendedExpressionProtoConverter {
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());
     }
-    return builder.build();
+    // Ahead of any newly detached entry, so the advanced extension's ordinals keep their targets.
+    builder.addAllDetachedExpressions(extendedExpression.getRetainedDetachedExpressions());
+    return nestingDetacher.detach(builder.build());
   }
 }
