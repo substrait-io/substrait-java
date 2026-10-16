@@ -45,6 +45,19 @@ public abstract class ExtendedExpression {
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
   /**
+   * Returns the {@code detached_expressions} entries that ordinals inside the {@link
+   * #getAdvancedExtension() advanced extension} may still refer to, at their original ordinals.
+   *
+   * <p>The advanced extension is kept as the raw proto, so an ordinal inside it is not resolved;
+   * the spec requires its target to keep its ordinal. Reading an extended expression that has an
+   * advanced extension retains every entry up to the last one no referred expression resolved, and
+   * writing one places them back at the same ordinals. Empty otherwise.
+   *
+   * @return the retained detached expressions, indexed by ordinal
+   */
+  public abstract List<io.substrait.proto.Expression> getRetainedDetachedExpressions();
+
+  /**
    * Creates a builder for {@link ExtendedExpression}.
    *
    * @return a new builder

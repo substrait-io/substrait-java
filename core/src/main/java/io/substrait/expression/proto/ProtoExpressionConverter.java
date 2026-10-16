@@ -41,8 +41,15 @@ public class ProtoExpressionConverter {
   private final ProtoRelConverter protoRelConverter;
   private final LambdaBuilder lambdaBuilder = new LambdaBuilder();
 
+  /** The container's detached subtrees, or {@code null} to ask {@link #protoRelConverter}. */
+  private final DetachedSubtrees detachedSubtrees;
+
   /**
    * Creates a converter resolving functions and types against the given extensions.
+   *
+   * <p>Detached ordinals resolve against the {@link ProtoRelConverter#detachedSubtrees()} that
+   * {@code relConverter} holds when an ordinal is reached, and are rejected when it is {@code
+   * null}.
    *
    * @param lookup used to resolve function and type references
    * @param extensions the extension collection providing definitions
@@ -54,11 +61,42 @@ public class ProtoExpressionConverter {
       SimpleExtension.ExtensionCollection extensions,
       Type.Struct rootType,
       ProtoRelConverter relConverter) {
+    this(lookup, extensions, rootType, relConverter, null);
+  }
+
+  /**
+   * Creates a converter resolving functions and types against the given extensions, and detached
+   * expression ordinals against the given container.
+   *
+   * @param lookup used to resolve function and type references
+   * @param extensions the extension collection providing definitions
+   * @param rootType the root struct type that field references are resolved against
+   * @param relConverter converter for nested relations (e.g. subqueries)
+   * @param detachedSubtrees the detached subtrees of the containing {@code PlanRel} or {@code
+   *     ExtendedExpression}, or {@code null} to resolve against those {@code relConverter} holds
+   *     when an ordinal is reached
+   */
+  public ProtoExpressionConverter(
+      ExtensionLookup lookup,
+      SimpleExtension.ExtensionCollection extensions,
+      Type.Struct rootType,
+      ProtoRelConverter relConverter,
+      DetachedSubtrees detachedSubtrees) {
     this.lookup = lookup;
     this.extensions = extensions;
     this.rootType = Objects.requireNonNull(rootType, "rootType");
     this.protoTypeConverter = new ProtoTypeConverter(lookup, extensions);
     this.protoRelConverter = relConverter;
+    this.detachedSubtrees = detachedSubtrees;
+  }
+
+  private DetachedSubtrees detachedSubtrees() {
+    if (detachedSubtrees != null) {
+      return detachedSubtrees;
+    }
+    return protoRelConverter == null
+        ? DetachedSubtrees.none()
+        : protoRelConverter.detachedSubtrees();
   }
 
   /**
@@ -364,6 +402,9 @@ public class ProtoExpressionConverter {
                       + ecv.getExecutionContextVariableTypeCase());
           }
         }
+      case DETACHED_EXPRESSION_ORDINAL:
+        return detachedSubtrees()
+            .resolveExpression(expr.getDetachedExpressionOrdinal(), this::from);
       default:
         throw new IllegalArgumentException("Unknown type: " + expr.getRexTypeCase());
     }

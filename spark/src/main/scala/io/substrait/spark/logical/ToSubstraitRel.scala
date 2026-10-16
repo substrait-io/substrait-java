@@ -45,6 +45,7 @@ import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.expression.Expression.StructLiteral
+import io.substrait.expression.proto.NestingDetacher
 import io.substrait.extension.ExtensionCollector
 import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutableExecutionBehavior, Plan}
@@ -899,14 +900,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
     val extensionCollector = new ExtensionCollector
     val relProtoConverter = new RelProtoConverter(extensionCollector)
+    val planRel = proto.PlanRel
+      .newBuilder()
+      .setRel(substraitRel
+        .accept(relProtoConverter, EmptyVisitationContext.INSTANCE))
+      .build()
     val builder = proto.Plan
       .newBuilder()
-      .addRelations(
-        proto.PlanRel
-          .newBuilder()
-          .setRel(substraitRel
-            .accept(relProtoConverter, EmptyVisitationContext.INSTANCE))
-      )
+      .addRelations(NestingDetacher.defaultDetacher().detach(planRel))
     extensionCollector.addExtensionsToPlan(builder)
     builder.build().toByteArray
   }
