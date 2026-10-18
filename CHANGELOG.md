@@ -1,6 +1,37 @@
 Release Notes
 ---
 
+## [0.107.0](https://github.com/substrait-io/substrait-java/compare/v0.106.0...v0.107.0) (2026-10-18)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** `avg` over a decimal resolves to a nullable
+`DECIMAL?<38,S>`, and plans or extended expressions whose expressions
+nest deeper than 100 protobuf levels are now serialized with detached
+expression subtrees, which consumers older than spec v0.105.0 cannot
+read. `ProtoPlanConverter` now rejects a bare-relation `PlanRel` with
+`IllegalArgumentException` instead of `UnsupportedOperationException`.
+* **core:** return type expressions in extension YAMLs are parsed
+with `!` binding tighter than `AND` and `OR`, and with `? :` grouping to
+the right, which changes the result of user-defined expressions that
+relied on the previous binding.
+* **isthmus:** Unsafe array access operators (`OFFSET`, `ORDINAL`) now
+fail conversion. Safe accesses such as `a[0]`, negative indexes, NULL
+indexes, and indexes of 2^31 or more now return null; invalid indexes
+are no longer copied or narrowed into a potentially valid list offset.
+`SAFE_OFFSET` remains zero-based. Callers must handle unsupported unsafe
+operators and remove workarounds that depended on the previous
+invalid-index behavior.
+
+### Features
+
+* **core:** bump substrait to v0.104.0 ([#1404](https://github.com/substrait-io/substrait-java/issues/1404)) ([1948a86](https://github.com/substrait-io/substrait-java/commit/1948a86b700134ff037e1381806c6f5cc9c0eb6f))
+* **core:** bump substrait to v0.105.0 ([#1415](https://github.com/substrait-io/substrait-java/issues/1415)) ([be851a8](https://github.com/substrait-io/substrait-java/commit/be851a8452ccf475c3a30cc8ccb0b9c366670c89))
+
+### Bug Fixes
+
+* **isthmus:** translate array indexes correctly ([#1261](https://github.com/substrait-io/substrait-java/issues/1261)) ([af247e6](https://github.com/substrait-io/substrait-java/commit/af247e68cf2b68d0235cc66f8e0a1c2de533727c))
+
 ## [0.106.0](https://github.com/substrait-io/substrait-java/compare/v0.105.0...v0.106.0) (2026-10-11)
 
 ### ⚠ BREAKING CHANGES
