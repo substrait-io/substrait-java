@@ -4,10 +4,13 @@ import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.ProtocolMessageEnum;
 import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import io.substrait.extension.SimpleExtension;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.calcite.rel.metadata.BuiltInMetadata;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.MetadataHandler;
@@ -60,7 +63,7 @@ public final class RegisterAtRuntime implements Feature {
       // Empty class
       register(Empty.class);
 
-      try (PackageScanner substrait = new PackageScanner("io.substrait")) {
+      try (PackageScanner substrait = new PackageScanner(access, "io.substrait")) {
         // protobuf items
         substrait.registerByParent(GeneratedMessage.class);
         substrait.registerByParent(GeneratedMessage.Builder.class);
@@ -83,7 +86,7 @@ public final class RegisterAtRuntime implements Feature {
           SqlStdOperatorTable.class,
           StandardConvertletTable.class);
 
-      try (PackageScanner calcite = new PackageScanner("org.apache.calcite")) {
+      try (PackageScanner calcite = new PackageScanner(access, "org.apache.calcite")) {
         calcite.registerByParent(Metadata.class);
         calcite.registerByParent(MetadataHandler.class);
         calcite.registerByParent(Resources.Element.class);
@@ -146,33 +149,49 @@ public final class RegisterAtRuntime implements Feature {
   }
 
   private static final class PackageScanner implements AutoCloseable {
+    private final Feature.FeatureAccess access;
     private final ScanResult scan;
 
-    PackageScanner(String... packageNames) {
+    PackageScanner(Feature.FeatureAccess access, String... packageNames) {
+      this.access = access;
       scan =
           new ClassGraph()
-              .enableAllInfo()
               // GraalVM native-compile erases the classloader classpath
-              .overrideClasspath(System.getProperty("isthmus.classpath"))
+              .enableClasspathEntries(access.getApplicationClassPath())
+              .enableClassInfo()
+              .enableAnnotationInfo()
+              .ignoreClassVisibility()
               .acceptPackages(packageNames)
               .scan();
     }
 
     void registerByAnnotation(Class<? extends Annotation> annotation) {
-      scan.getClassesWithAnnotation(annotation).loadClasses().forEach(this::registerByParent);
+      loadClasses(scan.getClassesWithAnnotation(annotation)).forEach(this::registerByParent);
     }
 
     void registerByParent(Class<?> c) {
       register(c);
-      getSubTypes(c).loadClasses().forEach(RegisterAtRuntime::register);
+      loadClasses(getSubTypes(c)).forEach(RegisterAtRuntime::register);
     }
 
     private ClassInfoList getSubTypes(Class<?> c) {
       if (c.isInterface()) {
-        return scan.getClassesImplementing(c);
+        return scan.getAllClassesImplementing(c);
       }
 
-      return scan.getSubclasses(c);
+      return scan.getAllSubclasses(c);
+    }
+
+    private List<Class<?>> loadClasses(ClassInfoList classInfos) {
+      List<Class<?>> classes = new ArrayList<>();
+      for (ClassInfo classInfo : classInfos) {
+        Class<?> c = access.findClassByName(classInfo.getName());
+        if (c == null) {
+          throw new IllegalStateException("Class not found: " + classInfo.getName());
+        }
+        classes.add(c);
+      }
+      return classes;
     }
 
     @Override
