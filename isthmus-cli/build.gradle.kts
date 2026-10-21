@@ -68,13 +68,13 @@ graalvmNative {
       // src/main/resources/META-INF/native-image/.../reachability-metadata.json.
       buildArgs.add("-H:+ReportExceptionStackTraces")
       buildArgs.add("--features=io.substrait.isthmus.cli.RegisterAtRuntime")
+      // ClassGraph registers this FileSystemProvider via META-INF/services. RegisterAtRuntime
+      // scans with ClassGraph inside the image builder, which leaves the provider in the JDK's
+      // cached list of installed providers, and so in the image heap.
+      buildArgs.add("--initialize-at-build-time=io.github.classgraph.vfs.VfsFileSystemProvider")
       // Removed due to https://github.com/oracle/graal/issues/13316
       // buildArgs.add("--future-defaults=all")
       jvmArgs.add("--sun-misc-unsafe-memory-access=allow")
-
-      // Capture the classpath since native-compile erases it
-      val isthmusClasspath = classpath.joinToString(":")
-      jvmArgs.add("-Disthmus.classpath=$isthmusClasspath")
     }
   }
 }
