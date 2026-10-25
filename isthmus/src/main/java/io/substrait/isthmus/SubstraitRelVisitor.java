@@ -36,6 +36,10 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
 import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import io.substrait.type.TypeCreator;
@@ -49,6 +53,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelFieldCollation.Direction;
 import org.apache.calcite.rel.RelNode;
@@ -797,7 +802,40 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.Exchange exchange) {
-    return super.visit(exchange);
+    // A SortExchange also sorts each partition, which no Substrait exchange expresses.
+    if (exchange instanceof org.apache.calcite.rel.core.SortExchange) {
+      throw new UnsupportedOperationException("SortExchange is not supported");
+    }
+    Rel input = apply(exchange.getInput());
+    RelDistribution distribution = exchange.getDistribution();
+    // A Calcite plan carries no partition count; 0 leaves it to the consumer.
+    switch (distribution.getType()) {
+      case HASH_DISTRIBUTED:
+        return ScatterExchange.builder()
+            .input(input)
+            .addAllFields(
+                distribution.getKeys().stream()
+                    .map(key -> FieldReference.newInputRelReference(key, input))
+                    .collect(Collectors.toList()))
+            .partitionCount(0)
+            .build();
+      case BROADCAST_DISTRIBUTED:
+        return BroadcastExchange.builder().input(input).partitionCount(0).build();
+      case ROUND_ROBIN_DISTRIBUTED:
+        // Calcite assigns records to instances in turn, i.e. per record.
+        return RoundRobinExchange.builder().input(input).exact(true).partitionCount(0).build();
+      case RANDOM_DISTRIBUTED:
+        return RoundRobinExchange.builder().input(input).exact(false).partitionCount(0).build();
+      case SINGLETON:
+        return SingleBucketExchange.builder()
+            .input(input)
+            .expression(ExpressionCreator.i32(false, 0))
+            .partitionCount(1)
+            .build();
+      default:
+        throw new UnsupportedOperationException(
+            "Unsupported exchange distribution: " + distribution.getType());
+    }
   }
 
   /**
