@@ -80,7 +80,11 @@ class DefaultExtensionCatalogTest {
 
   private static List<String> getExtensionYamlFiles() {
     try (ScanResult scan =
-        new ClassGraph().acceptPathsNonRecursive("substrait/extensions").scan()) {
+        new ClassGraph()
+            .enableClasspath()
+            .enableNonSystemModules()
+            .acceptPathsNonRecursive("substrait/extensions")
+            .scan()) {
       ResourceList resources = scan.getResourcesWithExtension(".yaml");
       return resources.stream()
           .map(r -> r.getPath().substring("substrait/extensions/".length()))
