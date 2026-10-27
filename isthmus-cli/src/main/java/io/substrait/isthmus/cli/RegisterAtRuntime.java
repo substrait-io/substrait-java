@@ -9,8 +9,8 @@ import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import io.substrait.extension.SimpleExtension;
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.calcite.rel.metadata.BuiltInMetadata;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.MetadataHandler;
@@ -183,15 +183,18 @@ public final class RegisterAtRuntime implements Feature {
     }
 
     private List<Class<?>> loadClasses(ClassInfoList classInfos) {
-      List<Class<?>> classes = new ArrayList<>();
-      for (ClassInfo classInfo : classInfos) {
-        Class<?> c = access.findClassByName(classInfo.getName());
-        if (c == null) {
-          throw new IllegalStateException("Class not found: " + classInfo.getName());
-        }
-        classes.add(c);
+      return classInfos.stream()
+          .map(ClassInfo::getName)
+          .map(this::loadClass)
+          .collect(Collectors.toList());
+    }
+
+    private Class<?> loadClass(String className) {
+      try {
+        return Class.forName(className, false, access.getApplicationClassLoader());
+      } catch (ClassNotFoundException | LinkageError e) {
+        throw new IllegalStateException("Could not load class " + className, e);
       }
-      return classes;
     }
 
     @Override
