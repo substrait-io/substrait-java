@@ -16,11 +16,11 @@
  */
 package io.substrait.spark.expression
 
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{Add, EvalMode, Expression, Multiply, Subtract}
 
 import io.substrait.`type`.Type
 import io.substrait.expression.{Expression => SExpression, FunctionArg}
-import io.substrait.extension.SimpleExtension
+import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 
 import scala.jdk.CollectionConverters._
 
@@ -43,6 +43,50 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
   def convert(expression: Expression, operands: Seq[FunctionArg]): Option[SExpression] = {
     Option(signatures.get(expression.getClass))
       .flatMap(m => m.attemptMatch(expression, operands))
+  }
+
+  def getSparkExpressionFromSubstraitFunc(
+      invocation: SExpression.ScalarFunctionInvocation,
+      args: Seq[Expression]): Option[Expression] = {
+    getSparkExpressionFromSubstraitFunc(invocation.declaration().key(), args)
+      .map(expression => resolveDecimalOverflow(invocation, expression))
+  }
+
+  private def resolveDecimalOverflow(
+      invocation: SExpression.ScalarFunctionInvocation,
+      expression: Expression): Expression = {
+    val declaration = invocation.declaration()
+    if (
+      invocation.options().isEmpty ||
+      declaration.urn() != DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL ||
+      !Set("add:dec_dec", "subtract:dec_dec", "multiply:dec_dec").contains(declaration.key())
+    ) {
+      return expression
+    }
+    val declaredValues = declaration.options().get("overflow").getValues.asScala
+    invocation.options().asScala.foreach {
+      option =>
+        if (!option.getName.equalsIgnoreCase("overflow")) {
+          throw new UnsupportedOperationException(
+            s"Unsupported decimal arithmetic option: ${option.getName}")
+        }
+        val values = option.values().asScala
+        if (
+          !values.forall(value => declaredValues.exists(_.equalsIgnoreCase(value))) ||
+          !values.exists(_.equalsIgnoreCase("ERROR"))
+        ) {
+          throw new UnsupportedOperationException(
+            s"Unsupported overflow preferences for ${declaration.key()}: ${option.values()}")
+        }
+    }
+    expression match {
+      case add: Add => add.copy(evalMode = EvalMode.ANSI)
+      case subtract: Subtract => subtract.copy(evalMode = EvalMode.ANSI)
+      case multiply: Multiply => multiply.copy(evalMode = EvalMode.ANSI)
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"Cannot honor overflow=ERROR for ${declaration.key()}")
+    }
   }
 }
 
