@@ -555,7 +555,8 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       context: EmptyVisitationContext): LogicalPlan = {
     val plan = resolve(UnresolvedRelation(namedScan.getNames.asScala.toSeq)) match {
       case m: MultiInstanceRelation => m.newInstance()
-      case other => other
+      case other =>
+        Project(other.output.map(attribute => Alias(attribute, attribute.name)()), other)
     }
     remap(applyFilter(plan, namedScan.getFilter, context), namedScan.getRemap)
   }
