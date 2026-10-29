@@ -605,9 +605,13 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
             throw new UnsupportedOperationException(
               "A read projection that selects inside a column is not supported")
           }
-          Int.box(item.getField)
+          item.getField
       }
-      remap(filtered, Optional.of(relation.Rel.Remap.of(fields.asJava)))
+      if (fields.zip(fields.drop(1)).exists { case (first, second) => first >= second }) {
+        throw new UnsupportedOperationException(
+          "A read projection must select columns in schema order; use emit to reorder or repeat columns")
+      }
+      remap(filtered, Optional.of(relation.Rel.Remap.of(fields.map(Int.box).asJava)))
     } else {
       filtered
     }

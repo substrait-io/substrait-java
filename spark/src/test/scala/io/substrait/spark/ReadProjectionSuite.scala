@@ -90,12 +90,30 @@ class ReadProjectionSuite extends SparkFunSuite with SharedSparkSession {
 
   Seq("named table", "virtual table", "local files").foreach {
     kind =>
-      test(s"read projection on $kind selects and reorders whole columns") {
+      test(s"read projection on $kind selects whole columns before emit reorders them") {
         withScan(kind) {
           scan =>
             assertRows(scan, Row(1L, "one", true), Row(2L, "two", false), Row(3L, null, null))
             assertRows(project(scan, columns(0, 2)), Row(1L, true), Row(2L, false), Row(3L, null))
-            assertRows(project(scan, columns(2, 0)), Row(true, 1L), Row(false, 2L), Row(null, 3L))
+            assertRows(
+              project(scan, columns(0, 2), emit = Optional.of(builder.remap(1, 0))),
+              Row(true, 1L),
+              Row(false, 2L),
+              Row(null, 3L))
+        }
+      }
+
+      test(s"read projection on $kind rejects reordered or repeated mask fields") {
+        withScan(kind) {
+          scan =>
+            Seq(columns(2, 0), columns(0, 0), columns(0, 2, 1)).foreach {
+              mask =>
+                val error = intercept[UnsupportedOperationException] {
+                  project(scan, mask)
+                    .accept(new ToLogicalPlan(spark), EmptyVisitationContext.INSTANCE)
+                }
+                assert(error.getMessage.contains("schema order"))
+            }
         }
       }
 
@@ -123,9 +141,9 @@ class ReadProjectionSuite extends SparkFunSuite with SharedSparkSession {
           scan =>
             val projected = project(
               scan,
-              columns(1, 0),
+              columns(0, 1),
               Optional.of(builder.fieldReference(scan, 2)),
-              Optional.of(Rel.Remap.offset(1, 1)))
+              Optional.of(Rel.Remap.offset(0, 1)))
             assertRows(projected, Row(1L))
         }
       }
