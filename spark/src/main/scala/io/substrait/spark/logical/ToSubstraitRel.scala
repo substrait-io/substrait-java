@@ -431,20 +431,27 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
     // The 'exists' attribute in the parent filter condition will be associated with this.
 
-    // extract the needle expressions from the join condition
-    def findNeedles(expr: Expression): Iterable[Expression] = expr match {
-      case And(lhs, rhs) => findNeedles(lhs) ++ findNeedles(rhs)
-      case EqualTo(lhs, _) => Seq(lhs)
+    // Keep both sides of each key so the needles and haystack have the same order.
+    def findKeys(expr: Expression): Iterable[(Expression, Expression)] = expr match {
+      case And(lhs, rhs) => findKeys(lhs) ++ findKeys(rhs)
+      case EqualTo(lhs, rhs) if canEvaluate(lhs, left) && canEvaluate(rhs, right) =>
+        Seq((lhs, rhs))
+      case EqualTo(lhs, rhs) if canEvaluate(rhs, left) && canEvaluate(lhs, right) =>
+        Seq((rhs, lhs))
       case _ =>
         throw new UnsupportedOperationException(
           s"Unable to convert the ExistenceJoin condition: $expr")
     }
-    val needles = condition.toSeq
-      .flatMap(w => findNeedles(w))
+    val keys = condition.toSeq.flatMap(findKeys)
+    val needles = keys
+      .map(_._1)
       .map(toExpression(left.output))
       .asJava
 
-    val haystack = visit(right)
+    val haystackKeys = keys.zipWithIndex.map {
+      case ((_, key), index) => Alias(key, s"key_$index")()
+    }
+    val haystack = visit(Project(haystackKeys, right))
 
     val inPredicate =
       SExpression.InPredicate.builder().needles(needles).haystack(haystack).build()
