@@ -43,7 +43,7 @@ import io.substrait.{expression => exp}
 import io.substrait.expression.{Expression => SExpression}
 import io.substrait.plan.Plan
 import io.substrait.relation
-import io.substrait.relation.{ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
+import io.substrait.relation.{AbstractReadRel, ExtensionWrite, LocalFiles, NamedDdl, NamedWrite}
 import io.substrait.relation.AbstractDdlRel.{DdlObject, DdlOp}
 import io.substrait.relation.AbstractWriteRel.{CreateMode, OutputMode, WriteOp}
 import io.substrait.relation.Expand.{ConsistentField, SwitchingField}
@@ -547,7 +547,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case _ =>
         LocalRelation(ToSparkType.toAttributeSeq(virtualTableScan.getInitialSchema), rows)
     }
-    remap(applyFilter(plan, virtualTableScan.getFilter, context), virtualTableScan.getRemap)
+    finishRead(plan, virtualTableScan, context)
   }
 
   override def visit(
@@ -557,7 +557,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       case m: MultiInstanceRelation => m.newInstance()
       case other => other
     }
-    remap(applyFilter(plan, namedScan.getFilter, context), namedScan.getRemap)
+    finishRead(plan, namedScan, context)
   }
 
   override def visit(localFiles: LocalFiles, context: EmptyVisitationContext): LogicalPlan = {
@@ -590,7 +590,32 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       catalogTable = None,
       isStreaming = false
     )
-    remap(applyFilter(plan, localFiles.getFilter, context), localFiles.getRemap)
+    finishRead(plan, localFiles, context)
+  }
+
+  private def finishRead(
+      plan: LogicalPlan,
+      read: AbstractReadRel,
+      context: EmptyVisitationContext): LogicalPlan = {
+    val filtered = applyFilter(plan, read.getFilter, context)
+    val projected = if (read.getProjection.isPresent) {
+      val fields = read.getProjection.get.getSelect.getStructItems.asScala.map {
+        item =>
+          if (item.getChild.isPresent) {
+            throw new UnsupportedOperationException(
+              "A read projection that selects inside a column is not supported")
+          }
+          item.getField
+      }
+      if (fields.zip(fields.drop(1)).exists { case (first, second) => first >= second }) {
+        throw new UnsupportedOperationException(
+          "A read projection must select columns in schema order; use emit to reorder or repeat columns")
+      }
+      remap(filtered, Optional.of(relation.Rel.Remap.of(fields.map(Int.box).asJava)))
+    } else {
+      filtered
+    }
+    remap(projected, read.getRemap)
   }
 
   private def applyFilter(
