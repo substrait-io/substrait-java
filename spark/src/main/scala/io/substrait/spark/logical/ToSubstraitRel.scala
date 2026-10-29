@@ -73,12 +73,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   private val TRUE = ExpressionCreator.bool(false, true)
 
   private val existenceJoins = scala.collection.mutable.Map[Long, SExpression.InPredicate]()
+  private val existencePredicates = scala.collection.mutable.Map[Long, SExpression]()
 
   private var _rddLimit = 100
   def rddLimit: Int = _rddLimit
   def rddLimit_=(rddLimit: Int): Unit = _rddLimit = rddLimit
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
+
+  private[logical] def getExistencePredicate(id: Long): Option[SExpression] =
+    existencePredicates.get(id)
 
   override def default(p: LogicalPlan): relation.Rel = p match {
     case c: CommandResult => visit(c.commandLogicalPlan)
@@ -451,12 +455,30 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
     val haystackKeys = keys.zipWithIndex.map {
       case ((_, key), index) => Alias(key, s"key_$index")()
     }
-    val haystack = visit(Project(haystackKeys, right))
+    val projectedHaystack = Project(haystackKeys, right)
+    val nonNullHaystackKeys = haystackKeys
+      .map(key => IsNotNull(key.toAttribute): Expression)
+      .reduceOption(And)
+    val haystack = visit(
+      nonNullHaystackKeys
+        .map(Filter(_, projectedHaystack))
+        .getOrElse(projectedHaystack))
 
     val inPredicate =
       SExpression.InPredicate.builder().needles(needles).haystack(haystack).build()
-    // put this in a map exists->inPredicate for later lookup
+    // Equality joins never match null keys. Guard needles and remove null haystack keys
+    // so that IN remains two-valued here, including below NOT.
+    val existencePredicate = keys
+      .map { case (needle, _) => IsNotNull(needle): Expression }
+      .reduceOption(And)
+      .map(
+        nonNull =>
+          ExpressionCreator.ifThenStatement(
+            ExpressionCreator.bool(false, false),
+            ExpressionCreator.ifThenClause(toExpression(left.output)(nonNull), inPredicate)))
+      .getOrElse(inPredicate)
     existenceJoins.put(exists.exprId.id, inPredicate)
+    existencePredicates.put(exists.exprId.id, existencePredicate)
     // return the left child, which will become the child of the enclosing filter
     visit(left)
   }
@@ -955,7 +977,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
   }
 
   override protected def translateAttribute(a: AttributeReference): Option[SExpression] = {
-    toSubstraitRel.getExistenceJoin(a.exprId.id) match {
+    toSubstraitRel.getExistencePredicate(a.exprId.id) match {
       case Some(exists) => Some(exists)
       case None => super.translateAttribute(a)
     }

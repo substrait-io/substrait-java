@@ -11,6 +11,7 @@ import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.BooleanType
 
+import io.substrait.dsl.SubstraitBuilder
 import io.substrait.plan.{PlanProtoConverter, ProtoPlanConverter}
 
 class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
@@ -35,9 +36,14 @@ class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
   }
 
   private def assertQuery(condition: String, expected: Row*): Unit = {
-    val query = spark.sql(
+    assertSqlQuery(
       s"""SELECT l.a, l.b FROM exists_left l
-         |WHERE EXISTS (SELECT 1 FROM exists_right r WHERE $condition) OR l.keep""".stripMargin)
+         |WHERE EXISTS (SELECT 1 FROM exists_right r WHERE $condition) OR l.keep""".stripMargin,
+      expected: _*)
+  }
+
+  private def assertSqlQuery(sql: String, expected: Row*): Unit = {
+    val query = spark.sql(sql)
     val optimized = query.queryExecution.optimizedPlan
     assert(optimized.exists {
       case Join(_, _, _: ExistenceJoin, _, _) => true
@@ -66,6 +72,44 @@ class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
           assertQuery(condition, Row(1, 10), Row(2, 20), Row(3, 30), Row(4, null), Row(null, 40))
         }
       }
+  }
+
+  Seq("r.a = l.a", "l.a = r.a").foreach {
+    condition =>
+      test(s"NOT EXISTS under OR retains unmatched null keys: $condition") {
+        withTempView("null_exists_left", "null_exists_right") {
+          spark
+            .sql("SELECT * FROM VALUES (1, NULL, false), (2, 1, false), (3, 2, false), " +
+              "(4, NULL, true), (5, 3, false) AS l(id, a, keep)")
+            .createOrReplaceTempView("null_exists_left")
+          spark
+            .sql("SELECT * FROM VALUES (2), (NULL) AS r(a)")
+            .createOrReplaceTempView("null_exists_right")
+          assertSqlQuery(
+            s"""SELECT l.id FROM null_exists_left l
+               |WHERE NOT EXISTS (SELECT 1 FROM null_exists_right r WHERE $condition) OR l.keep""".stripMargin,
+            Row(1),
+            Row(2),
+            Row(4),
+            Row(5)
+          )
+        }
+      }
+  }
+
+  test("ordinary imported NOT IN keeps unknown distinct from false") {
+    val builder = new SubstraitBuilder
+    val left = new ToSubstraitRel().visit(
+      spark
+        .sql("SELECT * FROM VALUES (CAST(NULL AS INT)), (1), (2) AS l(a)")
+        .queryExecution
+        .optimizedPlan)
+    val right = new ToSubstraitRel().visit(
+      spark.sql("SELECT * FROM VALUES (2), (NULL) AS r(a)").queryExecution.optimizedPlan)
+    val predicate = builder.inPredicate(right, builder.fieldReference(left, 0))
+    val filtered = builder.filter(_ => builder.not(predicate), left)
+    val restored = new ToLogicalPlan(spark).convert(filtered)
+    assert(DatasetUtil.fromLogicalPlan(spark, restored).collect().isEmpty)
   }
 
   for {
