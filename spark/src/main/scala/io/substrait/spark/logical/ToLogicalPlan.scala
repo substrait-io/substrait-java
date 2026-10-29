@@ -324,25 +324,34 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
 
   override def visit(project: relation.Project, context: EmptyVisitationContext): LogicalPlan = {
     val child = project.getInput.accept(this, context)
-    val (output, createProject) = child match {
-      case a: Aggregate => (a.aggregateExpressions, false)
-      case other => (other.output, true)
+    val aggregate = child match {
+      case a: Aggregate if project.getInput.isInstanceOf[relation.Aggregate] => Some(a)
+      case _ => None
     }
-    withOutput(output) {
-      val projectList = project.getExpressions.asScala
-        .map(expr => toNamedExpression(expr.accept(expressionConverter, context)))
-        .toSeq
-      val remapped = remapExpressions(output ++ projectList, project.getRemap)
-      val named = fieldNames(project)
-        .filter(_.size == remapped.size)
-        .map(names => remapped.zip(names).map { case (expr, name) => Alias(expr, name)() })
-        .getOrElse(remapped)
-      if (createProject) {
-        Project(named, child)
-      } else {
-        val aggregate: Aggregate = child.asInstanceOf[Aggregate]
-        aggregate.copy(aggregateExpressions = named)
+    def convertExpressions(output: Seq[NamedExpression]): Seq[NamedExpression] =
+      withOutput(output) {
+        project.getExpressions.asScala
+          .map(expr => toNamedExpression(expr.accept(expressionConverter, context)))
+          .toSeq
       }
+    val output = aggregate.map(_.aggregateExpressions).getOrElse(child.output)
+    val expressions = convertExpressions(output)
+    val fold = aggregate.nonEmpty && !expressions.exists(SubqueryExpression.hasSubquery)
+    val (projectOutput, projectList) = if (aggregate.nonEmpty && !fold) {
+      // Subquery needles must reference aggregate output attributes, not aggregate expressions.
+      (child.output, convertExpressions(child.output))
+    } else {
+      (output, expressions)
+    }
+    val remapped = remapExpressions(projectOutput ++ projectList, project.getRemap)
+    val named = fieldNames(project)
+      .filter(_.size == remapped.size)
+      .map(names => remapped.zip(names).map { case (expr, name) => Alias(expr, name)() })
+      .getOrElse(remapped)
+    if (fold) {
+      aggregate.get.copy(aggregateExpressions = named)
+    } else {
+      Project(named, child)
     }
   }
 
@@ -801,7 +810,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
     withOutput(output)(body)
   }
 
-  private def withOutput(output: Seq[NamedExpression])(body: => LogicalPlan): LogicalPlan = {
+  private def withOutput[T](output: Seq[NamedExpression])(body: => T): T = {
     expressionConverter.pushOutput(output)
     try {
       body
