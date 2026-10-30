@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.EnumArg;
 import io.substrait.expression.Expression;
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
@@ -25,6 +26,12 @@ import io.substrait.plan.Plan;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set.SetOp;
+import io.substrait.relation.physical.AbstractExchangeRel;
+import io.substrait.relation.physical.BroadcastExchange;
+import io.substrait.relation.physical.RoundRobinExchange;
+import io.substrait.relation.physical.ScatterExchange;
+import io.substrait.relation.physical.SingleBucketExchange;
+import io.substrait.relation.physical.TargetType;
 import io.substrait.type.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +42,9 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.rules.CoreRules;
@@ -1423,6 +1433,168 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
               .build();
 
       assertThrows(UnsupportedOperationException.class, () -> substraitToCalcite.convert(sort));
+    }
+  }
+
+  @Nested
+  class Exchange {
+    @Test
+    void scatterRoundTrip() {
+      assertFullRoundTrip(
+          ScatterExchange.builder()
+              .input(commonTable)
+              .addFields(sb.fieldReference(commonTable, 0), sb.fieldReference(commonTable, 2))
+              .partitionCount(0)
+              .build());
+    }
+
+    @Test
+    void broadcastRoundTrip() {
+      assertFullRoundTrip(BroadcastExchange.builder().input(commonTable).partitionCount(0).build());
+    }
+
+    @Test
+    void exactRoundRobinRoundTrip() {
+      assertFullRoundTrip(
+          RoundRobinExchange.builder().input(commonTable).exact(true).partitionCount(0).build());
+    }
+
+    @Test
+    void approximateRoundRobinConvertsToRoundRobin() {
+      Rel exchange =
+          RoundRobinExchange.builder().input(commonTable).exact(false).partitionCount(0).build();
+
+      assertEquals(
+          RelDistribution.Type.ROUND_ROBIN_DISTRIBUTED,
+          distributionType(substraitToCalcite.convert(exchange)));
+    }
+
+    @Test
+    void partitionCountAndTargetsAreDropped() {
+      Rel exchange =
+          BroadcastExchange.builder()
+              .input(commonTable)
+              .partitionCount(4)
+              .addTargets(
+                  AbstractExchangeRel.ExchangeTarget.builder()
+                      .addPartitionIds(0)
+                      .type(TargetType.Uri.builder().uri("worker-0").build())
+                      .build())
+              .build();
+
+      assertEquals(
+          RelDistribution.Type.BROADCAST_DISTRIBUTED,
+          distributionType(substraitToCalcite.convert(exchange)));
+    }
+
+    @Test
+    void rejectsUnorderedScatterFields() {
+      Rel exchange =
+          ScatterExchange.builder()
+              .input(commonTable)
+              .addFields(sb.fieldReference(commonTable, 2), sb.fieldReference(commonTable, 0))
+              .partitionCount(0)
+              .build();
+
+      UnsupportedOperationException e =
+          assertThrows(
+              UnsupportedOperationException.class, () -> substraitToCalcite.convert(exchange));
+      assertEquals(
+          "A scatter exchange whose fields are not in ascending order is not supported",
+          e.getMessage());
+    }
+
+    @Test
+    void rejectsNestedScatterField() {
+      Rel input = sb.namedScan(List.of("example"), List.of("s", "x"), List.of(R.struct(R.I32)));
+      Rel exchange =
+          ScatterExchange.builder()
+              .input(input)
+              .addFields(sb.fieldReference(input, 0).dereferenceStruct(0))
+              .partitionCount(0)
+              .build();
+
+      UnsupportedOperationException e =
+          assertThrows(
+              UnsupportedOperationException.class, () -> substraitToCalcite.convert(exchange));
+      assertEquals(
+          "A scatter exchange on anything other than a top-level field is not supported",
+          e.getMessage());
+    }
+
+    @Test
+    void randomDistributionConvertsToApproximateRoundRobin() {
+      RelNode exchange =
+          builder
+              .values(new String[] {"a"}, 1)
+              .exchange(RelDistributions.RANDOM_DISTRIBUTED)
+              .build();
+
+      RoundRobinExchange converted =
+          assertInstanceOf(
+              RoundRobinExchange.class, SubstraitRelVisitor.convert(exchange, converterProvider));
+      assertFalse(converted.getExact());
+      assertEquals(0, converted.getPartitionCount());
+    }
+
+    @Test
+    void singletonConvertsToSingleBucket() {
+      RelNode exchange =
+          builder.values(new String[] {"a"}, 1).exchange(RelDistributions.SINGLETON).build();
+
+      SingleBucketExchange converted =
+          assertInstanceOf(
+              SingleBucketExchange.class, SubstraitRelVisitor.convert(exchange, converterProvider));
+      assertEquals(ExpressionCreator.i32(false, 0), converted.getExpression());
+      assertEquals(1, converted.getPartitionCount());
+    }
+
+    @Test
+    void rejectsRangeDistribution() {
+      RelNode exchange =
+          builder
+              .values(new String[] {"a"}, 1)
+              .exchange(RelDistributions.range(List.of(0)))
+              .build();
+
+      UnsupportedOperationException e =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () -> SubstraitRelVisitor.convert(exchange, converterProvider));
+      assertEquals("Unsupported exchange distribution: RANGE_DISTRIBUTED", e.getMessage());
+    }
+
+    @Test
+    void rejectsSortExchange() {
+      RelNode exchange =
+          builder
+              .values(new String[] {"a"}, 1)
+              .sortExchange(RelDistributions.hash(List.of(0)), RelCollations.of(0))
+              .build();
+
+      UnsupportedOperationException e =
+          assertThrows(
+              UnsupportedOperationException.class,
+              () -> SubstraitRelVisitor.convert(exchange, converterProvider));
+      assertEquals("SortExchange is not supported", e.getMessage());
+    }
+
+    @Test
+    void rootKeepsOutputNames() {
+      Plan.Root root =
+          sb.root(
+              BroadcastExchange.builder().input(commonTable).partitionCount(0).build(),
+              List.of("w", "x", "y", "z"));
+
+      RelNode projected = substraitToCalcite.convert(root).project(true);
+
+      assertEquals(List.of("w", "x", "y", "z"), projected.getRowType().getFieldNames());
+    }
+
+    private RelDistribution.Type distributionType(RelNode node) {
+      return assertInstanceOf(org.apache.calcite.rel.core.Exchange.class, node)
+          .getDistribution()
+          .getType();
     }
   }
 }
