@@ -40,9 +40,7 @@ class SparkCompatImpl extends SparkCompat {
   override def createQueryExecution(
       spark: AnyRef,
       plan: LogicalPlan): org.apache.spark.sql.execution.QueryExecution = {
-    new org.apache.spark.sql.execution.QueryExecution(
-      spark.asInstanceOf[org.apache.spark.sql.SparkSession],
-      plan)
+    spark.asInstanceOf[org.apache.spark.sql.SparkSession].sessionState.executePlan(plan)
   }
 
   override def getConf(spark: AnyRef, key: String): String = {
