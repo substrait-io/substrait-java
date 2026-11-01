@@ -455,8 +455,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   }
 
   override def visitProject(p: Project): relation.Rel = {
-    val expressions = p.projectList.map(toExpression(p.child.output)).toList
     val child = visit(p.child)
+    val expressions = p.projectList.map(toExpression(p.child.output)).toList
     val remap = relation.Rel.Remap.offset(
       // when calculating the offset, ignore any placeholder 'exists' attributes
       p.child.output.count(o => !existenceJoins.contains(o.exprId.id)),

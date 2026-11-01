@@ -2,6 +2,7 @@ package io.substrait.spark
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
@@ -16,6 +17,32 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
     assertSqlSubstraitRelRoundTrip(
       "select * from (values (1, 'a'), (2, 'b') as table(col1, col2))"
     )
+  }
+
+  Seq(
+    (
+      "retained input",
+      "col1, col1 in (select x from values (1) as t2(x)) as flag",
+      Seq(Row(1, true), Row(2, false))),
+    (
+      "predicate only",
+      "col1 in (select x from values (1) as t2(x)) as flag",
+      Seq(Row(true), Row(false))),
+    (
+      "multiple predicates",
+      "col1 in (select x from values (1) as t2(x)) as first, " +
+        "col1 in (select x from values (2) as t3(x)) as second, col1",
+      Seq(Row(true, false, 1), Row(false, true, 2)))
+  ).foreach {
+    case (name, projection, expected) =>
+      test(s"select-list IN subquery with $name") {
+        val query = s"select $projection from values (1), (2) as t(col1)"
+        def sorted(rows: Seq[Row]): Seq[Row] = rows.sortBy(_.toString)
+        assertResult(sorted(expected))(sorted(spark.sql(query).collect().toSeq))
+        val converted = assertSqlSubstraitRelRoundTrip(query)
+        assertResult(sorted(expected))(
+          sorted(DatasetUtil.fromLogicalPlan(spark, converted).collect().toSeq))
+      }
   }
 
   test("local_relation_null") {
