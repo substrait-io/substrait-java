@@ -1,6 +1,11 @@
 package io.substrait.type.proto;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.substrait.TestBase;
+import io.substrait.proto.HashJoinRel;
+import io.substrait.proto.MergeJoinRel;
+import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.relation.Join;
 import io.substrait.relation.LateralJoin;
 import io.substrait.relation.Rel;
@@ -49,14 +54,25 @@ class JoinRoundtripTest extends TestBase {
     verifyRoundTrip(filtered);
   }
 
-  @Test
-  void hashJoin() {
+  @ParameterizedTest
+  @EnumSource(
+      value = HashJoinRel.JoinType.class,
+      names = {"JOIN_TYPE_UNSPECIFIED", "UNRECOGNIZED"},
+      mode = EnumSource.Mode.EXCLUDE)
+  void hashJoin(HashJoinRel.JoinType joinType) {
     List<Integer> leftKeys = Arrays.asList(0, 1);
     List<Integer> rightKeys = Arrays.asList(2, 0);
     Rel relWithoutKeys =
         HashJoin.builder()
-            .from(sb.hashJoin(leftKeys, rightKeys, HashJoin.JoinType.INNER, leftTable, rightTable))
+            .from(
+                sb.hashJoin(
+                    leftKeys,
+                    rightKeys,
+                    HashJoin.JoinType.fromProto(joinType),
+                    leftTable,
+                    rightTable))
             .build();
+    assertEquals(joinType, relProtoConverter.toProto(relWithoutKeys).getHashJoin().getType());
     verifyRoundTrip(relWithoutKeys);
   }
 
@@ -92,15 +108,25 @@ class JoinRoundtripTest extends TestBase {
     verifyRoundTrip(rel);
   }
 
-  @Test
-  void mergeJoin() {
+  @ParameterizedTest
+  @EnumSource(
+      value = MergeJoinRel.JoinType.class,
+      names = {"JOIN_TYPE_UNSPECIFIED", "UNRECOGNIZED"},
+      mode = EnumSource.Mode.EXCLUDE)
+  void mergeJoin(MergeJoinRel.JoinType joinType) {
     List<Integer> leftKeys = Arrays.asList(0, 1);
     List<Integer> rightKeys = Arrays.asList(2, 0);
     Rel relWithoutKeys =
         MergeJoin.builder()
             .from(
-                sb.mergeJoin(leftKeys, rightKeys, MergeJoin.JoinType.INNER, leftTable, rightTable))
+                sb.mergeJoin(
+                    leftKeys,
+                    rightKeys,
+                    MergeJoin.JoinType.fromProto(joinType),
+                    leftTable,
+                    rightTable))
             .build();
+    assertEquals(joinType, relProtoConverter.toProto(relWithoutKeys).getMergeJoin().getType());
     verifyRoundTrip(relWithoutKeys);
   }
 
@@ -137,18 +163,23 @@ class JoinRoundtripTest extends TestBase {
     verifyRoundTrip(rel);
   }
 
-  @Test
-  void nestedLoopJoin() {
+  @ParameterizedTest
+  @EnumSource(
+      value = NestedLoopJoinRel.JoinType.class,
+      names = {"JOIN_TYPE_UNSPECIFIED", "UNRECOGNIZED"},
+      mode = EnumSource.Mode.EXCLUDE)
+  void nestedLoopJoin(NestedLoopJoinRel.JoinType joinType) {
     Rel rel =
         NestedLoopJoin.builder()
             .from(
                 sb.nestedLoopJoin(
                     inputRels ->
                         sb.equal(sb.fieldReference(inputRels, 0), sb.fieldReference(inputRels, 5)),
-                    NestedLoopJoin.JoinType.INNER,
+                    NestedLoopJoin.JoinType.fromProto(joinType),
                     leftTable,
                     rightTable))
             .build();
+    assertEquals(joinType, relProtoConverter.toProto(rel).getNestedLoopJoin().getType());
     verifyRoundTrip(rel);
   }
 
