@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.MaskExpression;
 import io.substrait.extension.FunctionBindingResolver;
@@ -73,6 +74,7 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -994,7 +996,28 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(ScatterExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    List<Integer> keys =
+        exchange.getFields().stream()
+            .map(SubstraitRelNodeConverter::topLevelFieldIndex)
+            .collect(Collectors.toList());
+    // Calcite sorts hash keys, but Substrait hashes in field order, which other exchanges may rely
+    // on to line up partitions.
+    if (!keys.equals(keys.stream().sorted().collect(Collectors.toList()))) {
+      throw new UnsupportedOperationException(
+          "A scatter exchange whose fields are not in ascending order is not supported");
+    }
+    RelNode node = relBuilder.push(child).exchange(RelDistributions.hash(keys)).build();
+    return applyRelCommon(node, exchange, child);
+  }
+
+  private static int topLevelFieldIndex(FieldReference field) {
+    if (!field.isSimpleRootReference()
+        || !(field.segments().get(0) instanceof FieldReference.StructField)) {
+      throw new UnsupportedOperationException(
+          "A scatter exchange on anything other than a top-level field is not supported");
+    }
+    return ((FieldReference.StructField) field.segments().get(0)).offset();
   }
 
   @Override
@@ -1009,12 +1032,17 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(RoundRobinExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    RelNode node =
+        relBuilder.push(child).exchange(RelDistributions.ROUND_ROBIN_DISTRIBUTED).build();
+    return applyRelCommon(node, exchange, child);
   }
 
   @Override
   public RelNode visit(BroadcastExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    RelNode node = relBuilder.push(child).exchange(RelDistributions.BROADCAST_DISTRIBUTED).build();
+    return applyRelCommon(node, exchange, child);
   }
 
   @Override
