@@ -138,21 +138,23 @@ private[spark] object SparkAggregateFunctions {
         s"Spark ${function.key()} declares $outputType but derives $actualType")
     }
     configured match {
+      case sum: Sum if sum.child.dataType.isInstanceOf[DecimalType] =>
+        DecimalAggregate(sum)
       case avg: Average if avg.child.dataType.isInstanceOf[DecimalType] =>
-        DecimalAverage(avg)
+        DecimalAggregate(avg)
       case other => other
     }
   }
 
   def unwrap(expression: AggregateExpression): AggregateExpression =
     expression.aggregateFunction match {
-      case DecimalAverage(delegate) => expression.copy(aggregateFunction = delegate)
+      case DecimalAggregate(delegate) => expression.copy(aggregateFunction = delegate)
       case _ => expression
     }
 
-  // DecimalAggregates replaces native decimal AVG with floating-point arithmetic. A call
-  // imported with the decimal contract must retain that contract under either optimizer setting.
-  private case class DecimalAverage(delegate: Average) extends DeclarativeAggregate {
+  // DecimalAggregates changes AVG arithmetic and rebuilds SUM with the consumer's overflow
+  // mode. Imported calls must retain their declared contracts under either optimizer setting.
+  private case class DecimalAggregate(delegate: DeclarativeAggregate) extends DeclarativeAggregate {
     override def children: Seq[Expression] = delegate.children
     override def nullable: Boolean = delegate.nullable
     override def dataType = delegate.dataType
@@ -164,6 +166,6 @@ private[spark] object SparkAggregateFunctions {
     override lazy val mergeExpressions: Seq[Expression] = delegate.mergeExpressions
     override lazy val evaluateExpression: Expression = delegate.evaluateExpression
     override protected def withNewChildrenInternal(children: IndexedSeq[Expression]): Expression =
-      copy(delegate = delegate.withNewChildren(children).asInstanceOf[Average])
+      copy(delegate = delegate.withNewChildren(children).asInstanceOf[DeclarativeAggregate])
   }
 }

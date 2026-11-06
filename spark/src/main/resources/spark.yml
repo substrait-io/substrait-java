@@ -40,12 +40,19 @@ scalar_functions:
 aggregate_functions:
   - name: sum
     description: >-
-      Spark sum. Decimal inputs use a decimal<min(P+10,38),S> accumulator
+      Spark sum. Decimal inputs have a decimal<min(P+10,38),S> buffer type
       and result; i64 inputs use an i64 accumulator and result. Ignore null
       inputs and return null for an empty or all-null group. Overflow returns
       null for NULL, raises an error for ERROR, or wraps for WRAP (i64 only).
-      With NULL, an accumulator that overflows remains null through subsequent
-      updates and merges. Only INITIAL_TO_RESULT is supported.
+      Decimal updates and merges do not check the buffer's declared precision.
+      Finalization checks the result precision. An out-of-range live decimal
+      buffer can therefore recover after cancellation, even after an earlier
+      window result was null. Materialization that checks the buffer precision
+      can instead store null; a stored null propagates through updates and merges
+      and is handled by the overflow option at finalization. Decimal overflow
+      outcomes can depend on physical buffer materialization. For i64 with NULL,
+      overflow during addition makes the accumulator remain null. Only
+      INITIAL_TO_RESULT is supported.
     impls:
       - args:
           - name: x
@@ -68,11 +75,14 @@ aggregate_functions:
   - name: avg
     description: >-
       Spark average. Decimal inputs use a decimal<min(P+10,38),S> sum
-      accumulator and an i64 count, then divide with HALF_UP rounding to
+      buffer and an i64 count, then divide with HALF_UP rounding to
       decimal<min(P+4,38),min(S+4,38)>. i64 inputs use an fp64 sum and i64
       count and return fp64. Ignore null inputs and return null for an empty
-      or all-null group. Decimal accumulator or result overflow returns null
-      for NULL and raises an error for ERROR. Only INITIAL_TO_RESULT is supported.
+      or all-null group. The decimal sum buffer has the same unchecked updates,
+      merges and materialization behavior as sum:dec. A null sum buffer or result
+      overflow returns null for NULL and raises an error for ERROR at finalization.
+      Decimal overflow outcomes can depend on physical buffer materialization.
+      Only INITIAL_TO_RESULT is supported.
     impls:
       - args:
           - name: x

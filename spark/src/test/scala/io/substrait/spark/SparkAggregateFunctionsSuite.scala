@@ -22,9 +22,9 @@ import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
 import org.apache.spark.{SparkFunSuite, SparkThrowable}
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.CatalystTypeConverters
-import org.apache.spark.sql.catalyst.expressions.{EvalMode, Literal}
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Final, Partial, PartialMerge, Sum}
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
+import org.apache.spark.sql.catalyst.expressions.{BoundReference, DecimalAddNoOverflowCheck, EvalMode, Literal, UnsafeProjection}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Complete, Final, Partial, PartialMerge, Sum}
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.{Decimal, DecimalType}
 
@@ -124,7 +124,8 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
                                                 else decimalRule)) {
         val imported = new ToLogicalPlan(spark).convert(parsed)
         val restored = if (repeatTransport) {
-          val again = new PlanProtoConverter().toProto(new ToSubstraitRel().convert(imported))
+          val optimized = SparkCompat.instance.createQueryExecution(spark, imported).optimizedPlan
+          val again = new PlanProtoConverter().toProto(new ToSubstraitRel().convert(optimized))
           new ToLogicalPlan(spark).convert(
             new ProtoPlanConverter(SparkExtension.COLLECTION).from(again))
         } else imported
@@ -211,6 +212,89 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
       assertResult(Right(Seq(Row(null))))(
         roundTrip(s"SELECT try_$function(d) AS a" + overflow, ansi))
     }
+  }
+
+  test("decimal SUM keeps its overflow mode under the consumer optimizer") {
+    withTable("decimal_sum_mode") {
+      spark.sql(
+        "CREATE TABLE decimal_sum_mode USING parquet AS " +
+          "SELECT CAST(id AS DECIMAL(8,0)) d FROM range(2)")
+      for (ansi <- Seq(false, true); function <- Seq("sum", "try_sum")) {
+        withSQLConf(ansiKey -> ansi.toString, "spark.sql.optimizer.excludedRules" -> decimalRule) {
+          val expectedMode = if (ansi && function == "sum") EvalMode.ANSI else EvalMode.TRY
+          val expectedOption = if (expectedMode == EvalMode.ANSI) "ERROR" else "NULL"
+          for (window <- Seq(false, true)) {
+            val over = if (window) " OVER ()" else ""
+            val native = spark.sql(s"SELECT $function(d)$over AS s FROM decimal_sum_mode")
+            val proto = new PlanProtoConverter().toProto(
+              new ToSubstraitRel().convert(native.queryExecution.optimizedPlan))
+            val parsed = new ProtoPlanConverter(SparkExtension.COLLECTION).from(proto)
+            withSQLConf(ansiKey -> (!ansi).toString, "spark.sql.optimizer.excludedRules" -> "") {
+              val imported = new ToLogicalPlan(spark).convert(parsed)
+              val optimized =
+                SparkCompat.instance.createQueryExecution(spark, imported).optimizedPlan
+              val calls = optimized.flatMap(_.expressions.flatMap(_.collect {
+                case expression: AggregateExpression => SparkAggregateFunctions.unwrap(expression)
+              }))
+              assert(calls.nonEmpty)
+              calls.foreach {
+                call =>
+                  val delegate = call.aggregateFunction.asInstanceOf[Sum]
+                  assertResult(expectedMode)(delegate.evalMode)
+                  // Exercise finalization at an overflowing buffer value without billions of rows.
+                  val finalized = delegate.evaluateExpression.transformDown {
+                    case attribute: org.apache.spark.sql.catalyst.expressions.AttributeReference
+                        if attribute == delegate.aggBufferAttributes.head =>
+                      Literal.create(Decimal(BigDecimal("1000000000000000000")), attribute.dataType)
+                    case attribute: org.apache.spark.sql.catalyst.expressions.AttributeReference
+                        if attribute == delegate.aggBufferAttributes(1) =>
+                      Literal(false)
+                  }
+                  if (expectedMode == EvalMode.ANSI)
+                    intercept[ArithmeticException](finalized.eval())
+                  else assertResult(null)(finalized.eval())
+                  assertResult(Seq(option(expectedOption)))(
+                    SparkAggregateFunctions.options(call, declaration))
+              }
+              // Re-export the optimized consumer plan, including its protected aggregate.
+              new ToSubstraitRel().convert(optimized)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  test("decimal window buffers can recover after a null result until materialized") {
+    val max = "9" * 38
+    val rows = Seq(max, max, "-" + max, "-" + max, "1").zipWithIndex
+      .map { case (value, i) => s"($i, CAST('$value' AS DECIMAL(38,0)))" }
+      .mkString(",")
+    val result = roundTrip(
+      "SELECT k, sum(d) OVER (ORDER BY k ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) s, " +
+        "avg(d) OVER (ORDER BY k ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) a " +
+        s"FROM VALUES $rows AS t(k,d) ORDER BY k",
+      ansi = false,
+      repeatTransport = true
+    )
+    def decimal(value: String) = new java.math.BigDecimal(value)
+    assertResult(
+      Right(
+        Seq(
+          Row(0, decimal(max), null),
+          Row(1, null, null),
+          Row(2, decimal(max), null),
+          Row(3, decimal("0"), decimal("0.0000")),
+          Row(4, decimal("1"), decimal("0.2000"))
+        )))(result)
+
+    val t = DecimalType(38, 0)
+    val value = Literal.create(Decimal(BigDecimal(max)), t)
+    val live = DecimalAddNoOverflowCheck(value, value, t).eval().asInstanceOf[Decimal]
+    assertResult(new java.math.BigDecimal(max).multiply(new java.math.BigDecimal("2")))(
+      live.toBigDecimal.bigDecimal)
+    val materialize = UnsafeProjection.create(Seq(BoundReference(0, t, nullable = true)))
+    assert(materialize(InternalRow(live)).isNullAt(0))
   }
 
   test("window SUM and AVG carry their types and overflow modes") {
@@ -349,14 +433,18 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
   }
 
   test("overflow preference order, defaults, and unsupported declarations") {
-    def configured(options: FunctionOption*): Sum = SparkAggregateFunctions
-      .configure(
+    def configured(options: FunctionOption*): Sum = {
+      val aggregate = SparkAggregateFunctions.configure(
         sum,
         declaration,
         options.toList.asJava,
         SExpression.AggregationPhase.INITIAL_TO_RESULT,
         sumType)
-      .asInstanceOf[Sum]
+      SparkAggregateFunctions
+        .unwrap(AggregateExpression(aggregate, Complete, isDistinct = false, filter = None))
+        .aggregateFunction
+        .asInstanceOf[Sum]
+    }
     assertResult(EvalMode.TRY)(configured().evalMode)
     assertResult(EvalMode.ANSI)(configured(option("FUTURE", "ERROR", "NULL")).evalMode)
     assertResult(EvalMode.TRY)(configured(option("NULL", "ERROR")).evalMode)
