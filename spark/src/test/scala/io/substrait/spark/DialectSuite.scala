@@ -202,5 +202,14 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
       assert(sparkKeys.map(key => (sparkUrn, key)).subsetOf(advertised))
       assert(advertised.intersect(replaced).isEmpty)
     }
+    val windowAdvertised = dialect
+      .supportedWindowFunctions()
+      .asScala
+      .toSeq
+      .flatMap {
+        f => f.supportedImpls().asScala.toSeq.map(impl => (urns(f.source()), s"${f.name()}:$impl"))
+      }
+      .toSet
+    assert(windowAdvertised.contains((DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "max:i64")))
   }
 }

@@ -588,6 +588,20 @@ supported_scalar_functions:
   supported_impls:
   - "date_i32"
 - source: "spark"
+  name: "make_decimal"
+  system_metadata:
+    name: "make_decimal"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i64_type"
+- source: "spark"
+  name: "try_make_decimal"
+  system_metadata:
+    name: "try_make_decimal"
+    notation: "FUNCTION"
+  supported_impls:
+  - "i64_type"
+- source: "spark"
   name: "unscaled_value"
   system_metadata:
     name: "unscaledvalue"

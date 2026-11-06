@@ -26,6 +26,32 @@ scalar_functions:
             value: DECIMAL<P,S>
         nullability: MIRROR
         return: i64
+  - name: make_decimal
+    description: >-
+      Interpret an i64 as an unscaled decimal with the precision and scale of
+      the type argument. Return null for null input and raise an error when
+      the unscaled value exceeds the target precision.
+    impls:
+      - args:
+          - name: value
+            value: i64
+          - name: target
+            type: DECIMAL<P,S>
+        nullability: MIRROR
+        return: DECIMAL<P,S>
+  - name: try_make_decimal
+    description: >-
+      Interpret an i64 as an unscaled decimal with the precision and scale of
+      the type argument. Return null for null input or when the unscaled value
+      exceeds the target precision.
+    impls:
+      - args:
+          - name: value
+            value: i64
+          - name: target
+            type: DECIMAL<P,S>
+        nullability: DECLARED_OUTPUT
+        return: DECIMAL?<P,S>
   - name: add
     description: >-
       Adds days to a date

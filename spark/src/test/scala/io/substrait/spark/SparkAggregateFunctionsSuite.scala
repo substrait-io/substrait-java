@@ -366,6 +366,121 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
     }
   }
 
+  test("optimized SUM retains wrapping i64 merges before its final decimal conversion") {
+    withTable("decimal_sum_wrap") {
+      spark.sql(
+        "CREATE TABLE decimal_sum_wrap USING parquet AS SELECT CAST(id AS DECIMAL(8,0)) d FROM range(2)")
+      withSQLConf(ansiKey -> "false") {
+        val native = spark.sql("SELECT sum(d) s FROM decimal_sum_wrap")
+        val source = native.queryExecution.optimizedPlan
+        val proto = new PlanProtoConverter().toProto(new ToSubstraitRel().convert(source))
+        val imported = new ToLogicalPlan(spark).convert(
+          new ProtoPlanConverter(SparkExtension.COLLECTION).from(proto))
+        def sums(plan: org.apache.spark.sql.catalyst.plans.logical.LogicalPlan): Seq[Sum] =
+          plan
+            .flatMap(_.expressions.flatMap(_.collect {
+              case ae: AggregateExpression => ae.aggregateFunction
+            }))
+            .collect { case sum: Sum => sum }
+        def merge(sum: Sum, left: Long, right: Long): Long = {
+          assertResult(org.apache.spark.sql.types.LongType)(sum.dataType)
+          sum.mergeExpressions.head
+            .transformDown {
+              case a: org.apache.spark.sql.catalyst.expressions.AttributeReference
+                  if a == sum.aggBufferAttributes.head =>
+                Literal(left)
+              case a: org.apache.spark.sql.catalyst.expressions.AttributeReference
+                  if a == sum.inputAggBufferAttributes.head =>
+                Literal(right)
+            }
+            .eval()
+            .asInstanceOf[Long]
+        }
+        val sourceSum = sums(source).head
+        val importedSum = sums(imported).head
+        // Valid partial i64 sums can total 2^64 even when each input decimal fits precision 8.
+        // Exercise those buffer merges without allocating billions of input rows.
+        for (sum <- Seq(sourceSum, importedSum)) {
+          val total = merge(sum, merge(sum, Long.MaxValue, Long.MaxValue), 2L)
+          assertResult(0L)(total)
+          assertResult(Decimal(0))(
+            org.apache.spark.sql.catalyst.expressions
+              .MakeDecimal(Literal(total), 18, 0, true)
+              .eval())
+        }
+      }
+    }
+  }
+
+  test("unmodified optimized TRY plans retain the source plan's actual overflow mode") {
+    withTable("decimal_try_source") {
+      spark.sql(
+        "CREATE TABLE decimal_try_source USING parquet AS SELECT CAST(id AS DECIMAL(8,2)) d FROM range(2)")
+      for (ansi <- Seq(false, true)) {
+        roundTrip(
+          "SELECT try_sum(d) s, try_avg(d) a FROM decimal_try_source",
+          ansi,
+          repeatTransport = true)
+        roundTrip(
+          "SELECT try_sum(d) OVER () s, try_avg(d) OVER () a FROM decimal_try_source",
+          ansi,
+          repeatTransport = true)
+      }
+      withSQLConf(ansiKey -> "true") {
+        val query = spark.sql("SELECT try_sum(d) s FROM decimal_try_source")
+        def calls(plan: org.apache.spark.sql.catalyst.plans.logical.LogicalPlan) =
+          plan.flatMap(_.expressions.flatMap(_.collect { case ae: AggregateExpression => ae }))
+        assertResult(EvalMode.TRY)(
+          calls(query.queryExecution.analyzed).head.aggregateFunction.asInstanceOf[Sum].evalMode)
+        val optimized = query.queryExecution.optimizedPlan
+        val sourceMode = calls(optimized).head.aggregateFunction.asInstanceOf[Sum].evalMode
+        def measures(rel: Rel): Seq[io.substrait.expression.AggregateFunctionInvocation] = {
+          val here = rel match {
+            case a: Aggregate => a.getMeasures.asScala.map(_.getFunction).toSeq
+            case _ => Seq.empty
+          }
+          rel match {
+            case one: SingleInputRel => here ++ measures(one.getInput)
+            case _ => here
+          }
+        }
+        val exported = new ToSubstraitRel().convert(optimized)
+        val invocation = exported.getRoots.asScala.toSeq.flatMap(r => measures(r.getInput)).head
+        val expected = sourceMode match {
+          case EvalMode.ANSI => "ERROR"
+          case EvalMode.LEGACY => "WRAP"
+          case EvalMode.TRY => "NULL"
+        }
+        assertResult("sum:i64")(invocation.declaration().key())
+        // The converter receives the optimized plan, so it must export that plan's mode.
+        assertResult(Seq(option(expected)))(invocation.options().asScala.toSeq)
+      }
+    }
+  }
+
+  test("unscaled decimal constructors retain scale, nullability and overflow behavior") {
+    val scalar = io.substrait.spark.expression.ToScalarFunction(SparkExtension.SparkScalarFunctions)
+    val converter = new io.substrait.spark.expression.ToSparkExpression(scalar, None)
+    for (
+      nullOnOverflow <- Seq(false, true);
+      raw <- Seq[java.lang.Long](123L, -123L, Long.MaxValue, null)
+    ) {
+      val child = Literal.create(raw, org.apache.spark.sql.types.LongType)
+      val native =
+        org.apache.spark.sql.catalyst.expressions.MakeDecimal(child, 3, 2, nullOnOverflow)
+      val arg =
+        if (raw == null) ExpressionCreator.typedNull(TypeCreator.NULLABLE.I64)
+        else ExpressionCreator.i64(false, raw.longValue())
+      val exported = scalar.convert(native, Seq(arg)).get
+      val restored = exported.accept(converter, io.substrait.util.EmptyVisitationContext.INSTANCE)
+      assertResult(native.nullable)(restored.nullable)
+      if (raw != null && raw.longValue() == Long.MaxValue && !nullOnOverflow) {
+        intercept[ArithmeticException](native.eval())
+        intercept[ArithmeticException](restored.eval())
+      } else assertResult(native.eval())(restored.eval())
+    }
+  }
+
   test("unscaled_value preserves fractional digits, NULL, and i64 overflow errors") {
     val scalar = io.substrait.spark.expression.ToScalarFunction(SparkExtension.SparkScalarFunctions)
     val converter = new io.substrait.spark.expression.ToSparkExpression(scalar, None)

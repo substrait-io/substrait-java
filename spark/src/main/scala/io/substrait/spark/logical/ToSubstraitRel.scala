@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.ResolvedIdentifier
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.LogicalRDD
@@ -158,23 +158,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
    */
   override def visitAggregate(agg: Aggregate): relation.Rel = {
     val input = visit(agg.child)
-    val actualResultExprs = agg.aggregateExpressions.map {
-      // Restore decimal SUM, but retain the floating-point arithmetic around optimized AVG.
-      case Alias(expr, name) =>
-        Alias(
-          expr.transform {
-            case MakeDecimal(
-                  ae @ AggregateExpression(Sum(UnscaledValue(e), mode), _, _, _, _),
-                  _,
-                  _,
-                  _) =>
-              ae.copy(aggregateFunction = Sum(e, mode))
-            case e => e
-          },
-          name
-        )()
-      case e => e
-    }
+    val actualResultExprs = agg.aggregateExpressions
     val actualGroupExprs = agg.groupingExpressions
 
     val aggExprToOutputOrdinal = mutable.HashMap.empty[Expression, Int]
@@ -238,17 +222,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
   override def visitWindow(window: Window): relation.Rel = {
     val expressions = window.windowExpressions.map {
-      case Alias(
-            MakeDecimal(
-              w @ WindowExpression(
-                ae @ AggregateExpression(Sum(UnscaledValue(child), mode), _, _, _, _),
-                _),
-              precision,
-              scale,
-              _),
-            _) if Sum(child, mode).dataType == DecimalType(precision, scale) =>
-        val restored = w.copy(windowFunction = ae.copy(aggregateFunction = Sum(child, mode)))
-        (restored, restored: Expression, false)
+      case alias @ Alias(MakeDecimal(w: WindowExpression, _, _, _), _) =>
+        (w, alias: Expression, true)
       case alias @ Alias(Cast(Divide(w: WindowExpression, _: Literal, _), _, _, _), _)
           if w.windowFunction.isInstanceOf[AggregateExpression] =>
         (w, alias: Expression, true)
