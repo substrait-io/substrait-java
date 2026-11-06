@@ -18,9 +18,9 @@ package io.substrait.spark.expression
 
 import io.substrait.spark.ToSubstraitType
 
-import org.apache.spark.sql.catalyst.expressions.EvalMode
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction, Average, Complete, Sum}
-import org.apache.spark.sql.types.LongType
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EvalMode, Expression}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction, Average, Complete, DeclarativeAggregate, Sum}
+import org.apache.spark.sql.types.{DecimalType, LongType}
 
 import io.substrait.`type`.Type
 import io.substrait.expression.{Expression => SExpression, FunctionArg, FunctionOption}
@@ -137,6 +137,33 @@ private[spark] object SparkAggregateFunctions {
       throw new IllegalArgumentException(
         s"Spark ${function.key()} declares $outputType but derives $actualType")
     }
-    configured
+    configured match {
+      case avg: Average if avg.child.dataType.isInstanceOf[DecimalType] =>
+        DecimalAverage(avg)
+      case other => other
+    }
+  }
+
+  def unwrap(expression: AggregateExpression): AggregateExpression =
+    expression.aggregateFunction match {
+      case DecimalAverage(delegate) => expression.copy(aggregateFunction = delegate)
+      case _ => expression
+    }
+
+  // DecimalAggregates replaces native decimal AVG with floating-point arithmetic. A call
+  // imported with the decimal contract must retain that contract under either optimizer setting.
+  private case class DecimalAverage(delegate: Average) extends DeclarativeAggregate {
+    override def children: Seq[Expression] = delegate.children
+    override def nullable: Boolean = delegate.nullable
+    override def dataType = delegate.dataType
+    override lazy val aggBufferAttributes: Seq[AttributeReference] = delegate.aggBufferAttributes
+    override lazy val inputAggBufferAttributes: Seq[AttributeReference] =
+      delegate.inputAggBufferAttributes
+    override lazy val initialValues: Seq[Expression] = delegate.initialValues
+    override lazy val updateExpressions: Seq[Expression] = delegate.updateExpressions
+    override lazy val mergeExpressions: Seq[Expression] = delegate.mergeExpressions
+    override lazy val evaluateExpression: Expression = delegate.evaluateExpression
+    override protected def withNewChildrenInternal(children: IndexedSeq[Expression]): Expression =
+      copy(delegate = delegate.withNewChildren(children).asInstanceOf[Average])
   }
 }

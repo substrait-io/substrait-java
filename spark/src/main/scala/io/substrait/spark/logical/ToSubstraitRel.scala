@@ -159,8 +159,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   override def visitAggregate(agg: Aggregate): relation.Rel = {
     val input = visit(agg.child)
     val actualResultExprs = agg.aggregateExpressions.map {
-      // eliminate the internal MakeDecimal and UnscaledValue functions by undoing the spark optimisation:
-      // https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala#L2223
+      // Restore decimal SUM, but retain the floating-point arithmetic around optimized AVG.
       case Alias(expr, name) =>
         Alias(
           expr.transform {
@@ -170,15 +169,6 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
                   _,
                   _) =>
               ae.copy(aggregateFunction = Sum(e, mode))
-            case Cast(
-                  Divide(
-                    ae @ AggregateExpression(Average(UnscaledValue(e), mode), _, _, _, _),
-                    _,
-                    _),
-                  _,
-                  _,
-                  _) =>
-              ae.copy(aggregateFunction = Average(e, mode))
             case e => e
           },
           name
@@ -247,41 +237,30 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   }
 
   override def visitWindow(window: Window): relation.Rel = {
-    val windowExpressions = window.windowExpressions
+    val expressions = window.windowExpressions.map {
+      case Alias(
+            MakeDecimal(
+              w @ WindowExpression(
+                ae @ AggregateExpression(Sum(UnscaledValue(child), mode), _, _, _, _),
+                _),
+              precision,
+              scale,
+              _),
+            _) if Sum(child, mode).dataType == DecimalType(precision, scale) =>
+        val restored = w.copy(windowFunction = ae.copy(aggregateFunction = Sum(child, mode)))
+        (restored, restored: Expression, false)
+      case alias @ Alias(Cast(Divide(w: WindowExpression, _: Literal, _), _, _, _), _)
+          if w.windowFunction.isInstanceOf[AggregateExpression] =>
+        (w, alias: Expression, true)
+      case w: WindowExpression => (w, w: Expression, false)
+      case alias @ Alias(w: WindowExpression, _) => (w, alias: Expression, false)
+      case other =>
+        throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+    }
+    val windowExpressions = expressions
       .map {
-        case w: WindowExpression => fromWindowCall(w, window.child.output)
-        case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
-        case Alias(
-              MakeDecimal(
-                w @ WindowExpression(
-                  ae @ AggregateExpression(Sum(UnscaledValue(child), mode), _, _, _, _),
-                  _),
-                precision,
-                scale,
-                _),
-              _) if Sum(child, mode).dataType == DecimalType(precision, scale) =>
-          fromWindowCall(
-            w.copy(windowFunction = ae.copy(aggregateFunction = Sum(child, mode))),
-            window.child.output)
-        case Alias(
-              Cast(
-                Divide(
-                  w @ WindowExpression(
-                    ae @ AggregateExpression(Average(UnscaledValue(child), mode), _, _, _, _),
-                    _),
-                  Literal(factor: Double, _),
-                  _),
-                resultType,
-                _,
-                _),
-              _)
-            if resultType == Average(child, mode).dataType &&
-              factor == math.pow(10, child.dataType.asInstanceOf[DecimalType].scale) =>
-          fromWindowCall(
-            w.copy(windowFunction = ae.copy(aggregateFunction = Average(child, mode))),
-            window.child.output)
-        case other =>
-          throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+        case (w, _, _) =>
+          fromWindowCall(w, window.child.output)
       }
       .toSeq
       .asJava
@@ -289,11 +268,32 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
     val partitionExpressions =
       window.partitionSpec.map(toExpression(window.child.output)).toSeq.asJava
     val sorts = window.orderSpec.map(toSortField(window.child.output)).toSeq.asJava
-    relation.ConsistentPartitionWindow.builder
+    val windowRel = relation.ConsistentPartitionWindow.builder
       .input(visit(window.child))
       .addAllWindowFunctions(windowExpressions)
       .addAllPartitionExpressions(partitionExpressions)
       .addAllSorts(sorts)
+      .build()
+    if (!expressions.exists(_._3)) return windowRel
+
+    val results = expressions.zipWithIndex.map {
+      case ((w, _, _), i) =>
+        AttributeReference(s"window_func_$i", w.dataType, nullable = w.nullable)()
+    }
+    val output = window.child.output ++ results
+    val projects = window.child.output ++ expressions.zipWithIndex.map {
+      case ((w, original, _), i) =>
+        original.transformDown {
+          case expression: WindowExpression if expression == w => results(i)
+        }
+    }
+    relation.Project.builder
+      .input(windowRel)
+      .remap(relation.Rel.Remap.offset(output.size, projects.size))
+      .expressions(projects.map(toExpression(output)).toSeq.asJava)
+      .hint(Hint.builder
+        .addAllOutputNames(ToSubstraitType.toNamedStruct(window.schema).names())
+        .build())
       .build()
   }
 

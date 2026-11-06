@@ -58,8 +58,9 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
   def convert(
       expression: AggregateExpression,
       operands: Seq[SExpression]): Option[AggregateFunctionInvocation] = {
-    Option(signatures.get(expression.aggregateFunction.getClass))
-      .flatMap(m => m.attemptMatch(expression, operands))
+    val native = SparkAggregateFunctions.unwrap(expression)
+    Option(signatures.get(native.aggregateFunction.getClass))
+      .flatMap(m => m.attemptMatch(native, operands))
   }
 
   def apply(

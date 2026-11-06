@@ -79,13 +79,18 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
   def convert(
       expression: WindowExpression,
       operands: Seq[SExpression]): Option[WindowRelFunctionInvocation] = {
-    val cls = expression.windowFunction match {
+    val native = expression.windowFunction match {
+      case agg: AggregateExpression =>
+        expression.copy(windowFunction = SparkAggregateFunctions.unwrap(agg))
+      case _ => expression
+    }
+    val cls = native.windowFunction match {
       case agg: AggregateExpression => agg.aggregateFunction.getClass
       case other => other.getClass
     }
 
     Option(signatures.get(cls))
-      .flatMap(m => m.attemptMatch(expression, operands))
+      .flatMap(m => m.attemptMatch(native, operands))
   }
 
   def apply(

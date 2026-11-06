@@ -95,9 +95,18 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
     }
   }
 
-  private def roundTrip(sql: String, ansi: Boolean): Either[String, Seq[Row]] = {
+  private val decimalRule = "org.apache.spark.sql.catalyst.optimizer.DecimalAggregates"
+
+  private def roundTrip(
+      sql: String,
+      ansi: Boolean,
+      sourceDecimalOptimization: Boolean = true,
+      targetDecimalOptimization: Boolean = true,
+      repeatTransport: Boolean = false): Either[String, Seq[Row]] = {
     var result: Option[Either[String, Seq[Row]]] = None
-    withSQLConf(ansiKey -> ansi.toString) {
+    withSQLConf(
+      ansiKey -> ansi.toString,
+      "spark.sql.optimizer.excludedRules" -> (if (sourceDecimalOptimization) "" else decimalRule)) {
       val native = spark.sql(sql)
       val exported = new ToSubstraitRel().convert(native.queryExecution.optimizedPlan)
       val proto = new PlanProtoConverter().toProto(exported)
@@ -109,8 +118,16 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
       }
       assert(unsupported.getMessage.contains(urn))
       val expected = outcome(native.collect().toSeq)
-      withSQLConf(ansiKey -> (!ansi).toString) {
-        val restored = new ToLogicalPlan(spark).convert(parsed)
+      withSQLConf(
+        ansiKey -> (!ansi).toString,
+        "spark.sql.optimizer.excludedRules" -> (if (targetDecimalOptimization) ""
+                                                else decimalRule)) {
+        val imported = new ToLogicalPlan(spark).convert(parsed)
+        val restored = if (repeatTransport) {
+          val again = new PlanProtoConverter().toProto(new ToSubstraitRel().convert(imported))
+          new ToLogicalPlan(spark).convert(
+            new ProtoPlanConverter(SparkExtension.COLLECTION).from(again))
+        } else imported
         assertResult(native.schema)(restored.schema)
         val actual = outcome {
           val qe = SparkCompat.instance.createQueryExecution(spark, restored)
@@ -147,6 +164,31 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
       roundTrip("SELECT sum(d) AS s, avg(d) AS a" + values(34, 2, large, large), ansi)
       val cancel = "1" + "0" * 34 + ".00"
       roundTrip("SELECT avg(d) AS a" + values(38, 2, cancel, "-" + cancel), ansi)
+    }
+  }
+
+  test("AVG preserves source arithmetic when producer and consumer optimizers differ") {
+    withTable("decimal_avg_rounding") {
+      spark.sql(
+        "CREATE TABLE decimal_avg_rounding USING parquet AS " +
+          "SELECT CAST(CASE WHEN id=0 THEN '0.03' ELSE '0.00' END AS DECIMAL(10,2)) d " +
+          "FROM range(20000)")
+      for (
+        ansi <- Seq(false, true);
+        optimized <- Seq(false, true);
+        query <- Seq(
+          "SELECT avg(d) AS a FROM decimal_avg_rounding",
+          "SELECT avg(d) OVER () AS a FROM decimal_avg_rounding LIMIT 1",
+          "SELECT sum(d) OVER () AS s, avg(d) OVER () AS a FROM decimal_avg_rounding LIMIT 1"
+        )
+      ) {
+        val result = roundTrip(query, ansi, optimized, !optimized, repeatTransport = true)
+        val average = new java.math.BigDecimal(if (optimized) "0.000001" else "0.000002")
+        val expected = if (query.contains("sum(d)")) {
+          Row(new java.math.BigDecimal("0.03"), average)
+        } else Row(average)
+        assertResult(Right(Seq(expected)))(result)
+      }
     }
   }
 
@@ -205,7 +247,7 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
     }
   }
 
-  test("undoing decimal aggregate optimizations preserves try overflow options") {
+  test("decimal aggregate optimization paths preserve try overflow options") {
     def functions(rel: Rel): Seq[io.substrait.expression.AggregateFunctionInvocation] = {
       val here = rel match {
         case aggregate: Aggregate => aggregate.getMeasures.asScala.map(_.getFunction).toSeq
