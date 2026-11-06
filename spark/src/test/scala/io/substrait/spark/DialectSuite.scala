@@ -186,14 +186,18 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
       (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "sum:i64"),
       (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "avg:i64")
     )
-    val declared =
-      (standard.aggregateFunctions().asScala.toSeq.map(f => (f.urn(), f.key())) ++
-        standard.windowFunctions().asScala.toSeq.map(f => (f.urn(), f.key()))).toSet -- replaced ++
+    val declaredAggregate =
+      standard.aggregateFunctions().asScala.toSeq.map(f => (f.urn(), f.key())).toSet -- replaced ++
+        sparkKeys.map(key => (sparkUrn, key))
+    val declaredWindow =
+      standard.windowFunctions().asScala.toSeq.map(f => (f.urn(), f.key())).toSet -- replaced ++
         sparkKeys.map(key => (sparkUrn, key))
     val dialect = DialectGenerator.generate()
     val urns = dialect.dependencies().asScala
     for (
-      functions <- Seq(dialect.supportedAggregateFunctions(), dialect.supportedWindowFunctions())
+      (functions, declared) <- Seq(
+        dialect.supportedAggregateFunctions() -> declaredAggregate,
+        dialect.supportedWindowFunctions() -> declaredWindow)
     ) {
       val advertised = functions.asScala.toSeq.flatMap {
         f => f.supportedImpls().asScala.toSeq.map(impl => (urns(f.source()), s"${f.name()}:$impl"))
