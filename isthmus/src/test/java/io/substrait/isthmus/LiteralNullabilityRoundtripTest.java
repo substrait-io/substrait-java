@@ -117,23 +117,25 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
   /**
    * A cast doing more than nullability is not this representation, so the tuple unwrap leaves it
    * alone -- and a row whose values are not literals to Calcite is not a Values row at all, so it
-   * takes the projection encoding with the cast still on it. The literal here is malformed input:
-   * its value is longer than the length it declares, and nothing rejects it, here or in the POJO
-   * that holds it. What this pins is only the cast, which is the part the conversion decides.
+   * takes the projection encoding with the cast still on it.
    */
   @Test
   void tupleUnwrapLeavesATruncatingCastAlone() {
-    VirtualTableScan overlong =
+    VirtualTableScan castRow =
         VirtualTableScan.builder()
             .initialSchema(NamedStruct.of(List.of("A"), R.struct(R.varChar(3))))
             .addRows(
                 ExpressionCreator.nestedStruct(
-                    false, ExpressionCreator.varChar(false, "abcdef", 3)))
+                    false,
+                    ExpressionCreator.cast(
+                        R.varChar(3),
+                        ExpressionCreator.varChar(false, "abcdef", 6),
+                        Expression.FailureBehavior.THROW_EXCEPTION)))
             .build();
 
     assertEquals(
-        "VirtualTable(rows=[[{ CAST('abcdef'):VARCHAR(3) NOT NULL }]])\n",
-        RelOptUtil.toString(substraitToCalcite.convert(overlong)));
+        "VirtualTable(rows=[[{ CAST('abcdef':VARCHAR(6)):VARCHAR(3) NOT NULL }]])\n",
+        RelOptUtil.toString(substraitToCalcite.convert(castRow)));
   }
 
   /**
