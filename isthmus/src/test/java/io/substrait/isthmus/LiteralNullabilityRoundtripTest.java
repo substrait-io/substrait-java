@@ -133,9 +133,11 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
                         Expression.FailureBehavior.THROW_EXCEPTION)))
             .build();
 
+    RelNode calcite = substraitToCalcite.convert(castRow);
     assertEquals(
         "VirtualTable(rows=[[{ CAST('abcdef':VARCHAR(6)):VARCHAR(3) NOT NULL }]])\n",
-        RelOptUtil.toString(substraitToCalcite.convert(castRow)));
+        RelOptUtil.toString(calcite));
+    assertEquals(castRow, SubstraitRelVisitor.convert(calcite, converterProvider));
   }
 
   /**
