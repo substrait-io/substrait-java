@@ -99,12 +99,12 @@ private[spark] object SparkAggregateFunctions {
       throw new UnsupportedOperationException(
         s"Spark extension ${function.key()} only supports INITIAL_TO_RESULT, got $phase")
     }
-    val unknown = options.asScala.filterNot(_.getName == "overflow")
+    val unknown = options.asScala.filterNot(_.getName.equalsIgnoreCase("overflow"))
     if (unknown.nonEmpty) {
       throw new UnsupportedOperationException(
         s"Unsupported Spark aggregate options: ${unknown.map(_.getName).mkString(", ")}")
     }
-    val overflow = options.asScala.filter(_.getName == "overflow")
+    val overflow = options.asScala.filter(_.getName.equalsIgnoreCase("overflow"))
     if (overflow.size > 1) {
       throw new IllegalArgumentException("Spark aggregate has duplicate overflow options")
     }
@@ -114,10 +114,21 @@ private[spark] object SparkAggregateFunctions {
     val preferences = overflow.headOption
       .map(_.values().asScala.toSeq)
       .getOrElse(Seq(supported.head))
-    val selected = preferences.find(supported.contains).getOrElse {
-      throw new UnsupportedOperationException(
-        s"Unsupported overflow preferences for Spark ${function.key()}: ${preferences.mkString(", ")}")
+    val declared = function.options().get("overflow").getValues.asScala
+    val undeclared = preferences.filterNot(value => declared.exists(_.equalsIgnoreCase(value)))
+    if (undeclared.nonEmpty) {
+      throw new IllegalArgumentException(
+        s"Undeclared overflow preferences for Spark ${function.key()}: ${undeclared.mkString(", ")}")
     }
+    val selected = preferences.iterator
+      .flatMap(value => supported.find(_.equalsIgnoreCase(value)))
+      .take(1)
+      .toSeq
+      .headOption
+      .getOrElse {
+        throw new UnsupportedOperationException(
+          s"Unsupported overflow preferences for Spark ${function.key()}: ${preferences.mkString(", ")}")
+      }
     val mode = selected match {
       case "ERROR" => EvalMode.ANSI
       case "NULL" => EvalMode.TRY

@@ -446,11 +446,25 @@ class SparkAggregateFunctionsSuite extends SparkFunSuite with SharedSparkSession
         .asInstanceOf[Sum]
     }
     assertResult(EvalMode.TRY)(configured().evalMode)
-    assertResult(EvalMode.ANSI)(configured(option("FUTURE", "ERROR", "NULL")).evalMode)
+    assertResult(EvalMode.ANSI)(configured(option("ERROR", "NULL")).evalMode)
+    assertResult(EvalMode.ANSI)(configured(option("error", "null")).evalMode)
+    assertResult(EvalMode.ANSI)(
+      configured(FunctionOption.builder().name("OVERFLOW").addValues("ERROR").build()).evalMode)
+    assertResult(EvalMode.TRY)(
+      configured(
+        FunctionOption.builder().name("OvErFlOw").addValues("nUlL", "eRrOr").build()).evalMode)
     assertResult(EvalMode.TRY)(configured(option("NULL", "ERROR")).evalMode)
-    intercept[UnsupportedOperationException](configured(option("WRAP")))
+    intercept[IllegalArgumentException](configured(option("WRAP")))
+    for (values <- Seq(Seq("FUTURE", "ERROR"), Seq("ERROR", "FUTURE"))) {
+      val error = intercept[IllegalArgumentException](configured(option(values: _*)))
+      assert(error.getMessage.contains("Undeclared overflow preferences"))
+    }
     intercept[UnsupportedOperationException](configured(option()))
     intercept[IllegalArgumentException](configured(option("NULL"), option("ERROR")))
+    intercept[IllegalArgumentException](
+      configured(
+        option("NULL"),
+        FunctionOption.builder().name("OVERFLOW").addValues("ERROR").build()))
     intercept[UnsupportedOperationException] {
       configured(FunctionOption.builder().name("unknown").addValues("x").build())
     }
