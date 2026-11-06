@@ -6,6 +6,8 @@ Substrait Java is a project that makes it easier to build [Substrait](https://su
 3) **Spark** is the module that provides an API for translating a Substrait plan to and from a Spark query plan.  The most commonly used logical relations and functions are supported, including those generated from all of the TPC-H and TPC-DS queries.
 The supported features are formally specified in the Substrait dialect file [spark_dialect.yaml](spark/spark_dialect.yaml).
 
+Spark exports decimal and i64 `SUM`/`AVG` through `extension:substrait:spark`, including window calls. These functions preserve Spark's result types, decimal accumulators, rounding and overflow modes. Consumers need the [Spark extension definitions](spark/src/main/resources/spark.yml) and implementations of those semantics. The functions support `INITIAL_TO_RESULT` only; exporting or importing staged calls is rejected. Decimal optimizations can also reference the Spark `unscaled_value` scalar function.
+
 ## Building
 Building requires a **JDK 17** installation, and Gradle itself must run on JDK 17 (see [Gradle & JDK 17](CONTRIBUTING.md#gradle--jdk-17) in the contributing guide for details).
 

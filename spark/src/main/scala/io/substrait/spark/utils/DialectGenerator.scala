@@ -45,7 +45,7 @@ class DialectGenerator(
   def generate(): Dialect = {
     val scalars = SCALAR_SIGS.flatMap(supportedFunctions(scalarFunctions))
     val aggregates = AGGREGATE_SIGS.flatMap(supportedFunctions(aggregateFunctions))
-    val windows = WINDOW_SIGS.flatMap(supportedFunctions(windowFunctions))
+    val windows = (WINDOW_SIGS ++ AGGREGATE_SIGS).flatMap(supportedFunctions(windowFunctions))
 
     val builder = Dialect
       .builder()
@@ -331,8 +331,8 @@ class DialectGenerator(
 object DialectGenerator
   extends DialectGenerator(
     SparkExtension.SparkScalarFunctions,
-    SparkExtension.StandardAggregateFunctions,
-    SparkExtension.StandardWindowFunctions) {
+    SparkExtension.AggregateFunctions,
+    SparkExtension.WindowFunctions) {
 
   def main(args: Array[String]): Unit = {
     val yaml = generateYaml()

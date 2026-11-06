@@ -41,6 +41,8 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       arguments: Seq[FunctionArg],
       outputType: Type): WindowRelFunctionInvocation = {
 
+    SparkAggregateFunctions.validateResult(function, arguments, outputType)
+
     val (frameType, lower, upper) = sparkExp match {
       case WindowExpression(
             _,
@@ -56,7 +58,7 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       case _ => throw new UnsupportedOperationException(s"Unsupported window expression: $sparkExp")
     }
 
-    ExpressionCreator.windowRelFunction(
+    val invocation = ExpressionCreator.windowRelFunction(
       function,
       outputType,
       SExpression.AggregationPhase.INITIAL_TO_RESULT, // use defaults...
@@ -66,6 +68,12 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       upper,
       arguments.asJava
     )
+    val options = sparkExp match {
+      case WindowExpression(aggregate: AggregateExpression, _) =>
+        SparkAggregateFunctions.options(aggregate, function)
+      case _ => Seq.empty
+    }
+    WindowRelFunctionInvocation.builder().from(invocation).addAllOptions(options.asJava).build()
   }
 
   def convert(

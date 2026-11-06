@@ -165,17 +165,20 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
         Alias(
           expr.transform {
             case MakeDecimal(
-                  ae @ AggregateExpression(Sum(UnscaledValue(e), _), _, _, _, _),
+                  ae @ AggregateExpression(Sum(UnscaledValue(e), mode), _, _, _, _),
                   _,
                   _,
                   _) =>
-              ae.copy(aggregateFunction = Sum(e))
+              ae.copy(aggregateFunction = Sum(e, mode))
             case Cast(
-                  Divide(ae @ AggregateExpression(Average(UnscaledValue(e), _), _, _, _, _), _, _),
+                  Divide(
+                    ae @ AggregateExpression(Average(UnscaledValue(e), mode), _, _, _, _),
+                    _,
+                    _),
                   _,
                   _,
                   _) =>
-              ae.copy(aggregateFunction = Average(e))
+              ae.copy(aggregateFunction = Average(e, mode))
             case e => e
           },
           name
@@ -248,6 +251,35 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
       .map {
         case w: WindowExpression => fromWindowCall(w, window.child.output)
         case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
+        case Alias(
+              MakeDecimal(
+                w @ WindowExpression(
+                  ae @ AggregateExpression(Sum(UnscaledValue(child), mode), _, _, _, _),
+                  _),
+                precision,
+                scale,
+                _),
+              _) if Sum(child, mode).dataType == DecimalType(precision, scale) =>
+          fromWindowCall(
+            w.copy(windowFunction = ae.copy(aggregateFunction = Sum(child, mode))),
+            window.child.output)
+        case Alias(
+              Cast(
+                Divide(
+                  w @ WindowExpression(
+                    ae @ AggregateExpression(Average(UnscaledValue(child), mode), _, _, _, _),
+                    _),
+                  Literal(factor: Double, _),
+                  _),
+                resultType,
+                _,
+                _),
+              _)
+            if resultType == Average(child, mode).dataType &&
+              factor == math.pow(10, child.dataType.asInstanceOf[DecimalType].scale) =>
+          fromWindowCall(
+            w.copy(windowFunction = ae.copy(aggregateFunction = Average(child, mode))),
+            window.child.output)
         case other =>
           throw new UnsupportedOperationException(s"Unsupported window expression: $other")
       }

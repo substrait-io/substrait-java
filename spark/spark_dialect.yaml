@@ -587,6 +587,13 @@ supported_scalar_functions:
     notation: "FUNCTION"
   supported_impls:
   - "date_i32"
+- source: "spark"
+  name: "unscaled_value"
+  system_metadata:
+    name: "unscaledvalue"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
 - source: "string"
   name: "contains"
   system_metadata:
@@ -708,7 +715,6 @@ supported_aggregate_functions:
   - "fp64"
   - "i16"
   - "i32"
-  - "i64"
   - "i8"
 - source: "arithmetic"
   name: "max"
@@ -751,59 +757,85 @@ supported_aggregate_functions:
   - "fp64"
   - "i16"
   - "i32"
-  - "i64"
   - "i8"
 - source: "arithmetic_decimal"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic_decimal"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "datetime"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "iday"
+  - "iyear"
+  - "pts"
+  - "ptstz"
+- source: "datetime"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "iday"
+  - "iyear"
+  - "pts"
+  - "ptstz"
+- source: "spark"
   name: "avg"
   system_metadata:
     name: "avg"
     notation: "FUNCTION"
   supported_impls:
   - "dec"
-- source: "arithmetic_decimal"
-  name: "max"
-  system_metadata:
-    name: "max"
-    notation: "FUNCTION"
-  supported_impls:
-  - "dec"
-- source: "arithmetic_decimal"
-  name: "min"
-  system_metadata:
-    name: "min"
-    notation: "FUNCTION"
-  supported_impls:
-  - "dec"
-- source: "arithmetic_decimal"
+  - "i64"
+- source: "spark"
   name: "sum"
   system_metadata:
     name: "sum"
     notation: "FUNCTION"
   supported_impls:
   - "dec"
-- source: "datetime"
-  name: "max"
-  system_metadata:
-    name: "max"
-    notation: "FUNCTION"
-  supported_impls:
-  - "date"
-  - "iday"
-  - "iyear"
-  - "pts"
-  - "ptstz"
-- source: "datetime"
-  name: "min"
-  system_metadata:
-    name: "min"
-    notation: "FUNCTION"
-  supported_impls:
-  - "date"
-  - "iday"
-  - "iyear"
-  - "pts"
-  - "ptstz"
+  - "i64"
 supported_window_functions:
+- source: "aggregate_approx"
+  name: "approx_count_distinct"
+  system_metadata:
+    name: "approx_count_distinct"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "aggregate_generic"
+  name: "any_value"
+  system_metadata:
+    name: "first"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+- source: "arithmetic"
+  name: "avg"
+  system_metadata:
+    name: "avg"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp32"
+  - "fp64"
+  - "i16"
+  - "i32"
+  - "i8"
 - source: "arithmetic"
   name: "cume_dist"
   system_metadata:
@@ -832,6 +864,30 @@ supported_window_functions:
     notation: "FUNCTION"
   supported_impls:
   - "any_i32_any"
+- source: "arithmetic"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp32"
+  - "fp64"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "i8"
+- source: "arithmetic"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp32"
+  - "fp64"
+  - "i16"
+  - "i32"
+  - "i64"
+  - "i8"
 - source: "arithmetic"
   name: "nth_value"
   system_metadata:
@@ -867,3 +923,73 @@ supported_window_functions:
     notation: "FUNCTION"
   supported_impls:
   - ""
+- source: "arithmetic"
+  name: "std_dev"
+  system_metadata:
+    name: "stddev_samp"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp64"
+- source: "arithmetic"
+  name: "sum"
+  system_metadata:
+    name: "sum"
+    notation: "FUNCTION"
+  supported_impls:
+  - "fp32"
+  - "fp64"
+  - "i16"
+  - "i32"
+  - "i8"
+- source: "arithmetic_decimal"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "arithmetic_decimal"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+- source: "datetime"
+  name: "max"
+  system_metadata:
+    name: "max"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "iday"
+  - "iyear"
+  - "pts"
+  - "ptstz"
+- source: "datetime"
+  name: "min"
+  system_metadata:
+    name: "min"
+    notation: "FUNCTION"
+  supported_impls:
+  - "date"
+  - "iday"
+  - "iyear"
+  - "pts"
+  - "ptstz"
+- source: "spark"
+  name: "avg"
+  system_metadata:
+    name: "avg"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+  - "i64"
+- source: "spark"
+  name: "sum"
+  system_metadata:
+    name: "sum"
+    notation: "FUNCTION"
+  supported_impls:
+  - "dec"
+  - "i64"
