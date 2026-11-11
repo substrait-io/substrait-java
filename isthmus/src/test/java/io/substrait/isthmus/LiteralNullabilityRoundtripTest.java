@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
+import io.substrait.isthmus.calcite.rel.VirtualTable;
 import io.substrait.isthmus.expression.CallConverters;
 import io.substrait.isthmus.expression.RexExpressionConverter;
 import io.substrait.relation.Project;
@@ -14,14 +15,18 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.type.NamedStruct;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Function;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -138,6 +143,36 @@ class LiteralNullabilityRoundtripTest extends PlanTestBase {
         "VirtualTable(rows=[[{ CAST('abcdef':VARCHAR(6)):VARCHAR(3) NOT NULL }]])\n",
         RelOptUtil.toString(calcite));
     assertEquals(castRow, SubstraitRelVisitor.convert(calcite, converterProvider));
+  }
+
+  @Test
+  void tupleUnwrapPreservesUnicodeWidthCast() {
+    JavaTypeFactoryImpl utf8TypeFactory =
+        new JavaTypeFactoryImpl(SubstraitTypeSystem.TYPE_SYSTEM) {
+          @Override
+          public Charset getDefaultCharset() {
+            return StandardCharsets.UTF_8;
+          }
+        };
+    ConverterProvider utf8Provider =
+        ConverterProvider.builder().typeFactory(utf8TypeFactory).build();
+    String value = "\uD83D\uDE00";
+    VirtualTableScan literalRow =
+        VirtualTableScan.builder()
+            .initialSchema(NamedStruct.of(List.of("A"), R.struct(R.varChar(1))))
+            .addRows(
+                ExpressionCreator.nestedStruct(false, ExpressionCreator.varChar(false, value, 1)))
+            .build();
+
+    RelNode calcite = new SubstraitToCalcite(utf8Provider).convert(literalRow);
+    VirtualTable computed = assertInstanceOf(VirtualTable.class, calcite);
+    RexCall cast = assertInstanceOf(RexCall.class, computed.getRows().get(0).get(0));
+    assertEquals(SqlKind.CAST, cast.getKind());
+    assertEquals(1, cast.getType().getPrecision());
+    RexLiteral literal = assertInstanceOf(RexLiteral.class, cast.getOperands().get(0));
+    // Calcite counts UTF-16 code units; Substrait accepts this single code point as VARCHAR(1).
+    assertEquals(2, literal.getType().getPrecision());
+    assertEquals(value, literal.getValueAs(String.class));
   }
 
   /**
