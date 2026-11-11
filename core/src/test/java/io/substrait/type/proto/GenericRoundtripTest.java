@@ -88,6 +88,11 @@ class GenericRoundtripTest extends TestBase {
       }
       l.add(valGenerator(param));
     }
+    if (m.getReturnType().equals(Expression.VarCharLiteral.class)) {
+      // The declared width must fit the generated value, rather than be an independent integer.
+      String value = (String) l.get(1);
+      l.set(2, value.codePointCount(0, value.length()));
+    }
     return l;
   }
 
