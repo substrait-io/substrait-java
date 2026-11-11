@@ -1638,6 +1638,25 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
+    void unsupportedDistributionReachesVisitOtherBeforeItsInput() {
+      RelNode inner =
+          builder
+              .values(new String[] {"a"}, 1)
+              .exchange(RelDistributions.range(List.of(0)))
+              .build();
+      RelNode outer = builder.push(inner).exchange(RelDistributions.range(List.of(0))).build();
+      SubstraitRelVisitor visitor =
+          new SubstraitRelVisitor(converterProvider) {
+            @Override
+            public Rel visitOther(RelNode other) {
+              return other == outer ? commonTable : super.visitOther(other);
+            }
+          };
+
+      assertSame(commonTable, visitor.apply(outer));
+    }
+
+    @Test
     void rejectsHashDistributionWithoutKeys() {
       RelNode exchange =
           builder.values(new String[] {"a"}, 1).exchange(RelDistributions.hash(List.of())).build();

@@ -806,8 +806,18 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
     if (exchange instanceof org.apache.calcite.rel.core.SortExchange) {
       return super.visit(exchange);
     }
-    Rel input = apply(exchange.getInput());
     RelDistribution distribution = exchange.getDistribution();
+    switch (distribution.getType()) {
+      case HASH_DISTRIBUTED:
+      case BROADCAST_DISTRIBUTED:
+      case ROUND_ROBIN_DISTRIBUTED:
+      case RANDOM_DISTRIBUTED:
+      case SINGLETON:
+        break;
+      default:
+        return super.visit(exchange);
+    }
+    Rel input = apply(exchange.getInput());
     // A Calcite plan carries no partition count; 0 leaves it to the consumer.
     switch (distribution.getType()) {
       case HASH_DISTRIBUTED:
