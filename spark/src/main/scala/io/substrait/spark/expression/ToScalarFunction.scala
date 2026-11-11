@@ -16,9 +16,11 @@
  */
 package io.substrait.spark.expression
 
-import org.apache.spark.sql.catalyst.expressions.Expression
+import io.substrait.spark.ToSubstraitType
 
-import io.substrait.`type`.Type
+import org.apache.spark.sql.catalyst.expressions.{Expression, MakeDecimal}
+
+import io.substrait.`type`.{Type, TypeCreator}
 import io.substrait.expression.{Expression => SExpression, FunctionArg}
 import io.substrait.extension.SimpleExtension
 
@@ -32,6 +34,16 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
       function: SimpleExtension.ScalarFunctionVariant,
       arguments: Seq[FunctionArg],
       outputType: Type): SExpression = {
+    if (ToScalarFunction.isDecimalConstructor(function)) {
+      val types = arguments.map {
+        case e: SExpression => e.getType
+        case t: Type => t
+        case other => throw new IllegalArgumentException(s"Unexpected decimal argument: $other")
+      }
+      require(
+        function.resolveType(types.asJava) == outputType,
+        "Decimal constructor output type mismatch")
+    }
     SExpression.ScalarFunctionInvocation
       .builder()
       .outputType(outputType)
@@ -41,12 +53,32 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
   }
 
   def convert(expression: Expression, operands: Seq[FunctionArg]): Option[SExpression] = {
-    Option(signatures.get(expression.getClass))
-      .flatMap(m => m.attemptMatch(expression, operands))
+    expression match {
+      case decimal: MakeDecimal =>
+        val name = if (decimal.nullOnOverflow) "try_make_decimal" else "make_decimal"
+        functions
+          .find(f => f.urn() == SparkAggregateFunctions.URN && f.key() == s"$name:i64_type")
+          .map(
+            f =>
+              generateBinding(
+                decimal,
+                f,
+                operands :+ TypeCreator.REQUIRED.decimal(decimal.precision, decimal.scale),
+                ToSubstraitType(decimal.dataType, decimal.nullable)))
+      case _ =>
+        Option(signatures.get(expression.getClass))
+          .flatMap(m => m.attemptMatch(expression, operands))
+    }
   }
 }
 
 object ToScalarFunction {
+  private[spark] val decimalConstructorKeys =
+    Set("make_decimal:i64_type", "try_make_decimal:i64_type")
+
+  private[spark] def isDecimalConstructor(function: SimpleExtension.Function): Boolean =
+    function.urn() == SparkAggregateFunctions.URN && decimalConstructorKeys.contains(function.key())
+
   def apply(functions: Seq[SimpleExtension.ScalarFunctionVariant]): ToScalarFunction = {
     new ToScalarFunction(functions) {
       override def getSigs: Seq[Sig] = FunctionMappings.SCALAR_SIGS

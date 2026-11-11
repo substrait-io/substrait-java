@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.ResolvedIdentifier
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, HiveTableRelation}
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Sum}
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.LogicalRDD
@@ -158,30 +158,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
    */
   override def visitAggregate(agg: Aggregate): relation.Rel = {
     val input = visit(agg.child)
-    val actualResultExprs = agg.aggregateExpressions.map {
-      // eliminate the internal MakeDecimal and UnscaledValue functions by undoing the spark optimisation:
-      // https://github.com/apache/spark/blob/master/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala#L2223
-      case Alias(expr, name) =>
-        Alias(
-          expr.transform {
-            case MakeDecimal(
-                  ae @ AggregateExpression(Sum(UnscaledValue(e), _), _, _, _, _),
-                  _,
-                  _,
-                  _) =>
-              ae.copy(aggregateFunction = Sum(e))
-            case Cast(
-                  Divide(ae @ AggregateExpression(Average(UnscaledValue(e), _), _, _, _, _), _, _),
-                  _,
-                  _,
-                  _) =>
-              ae.copy(aggregateFunction = Average(e))
-            case e => e
-          },
-          name
-        )()
-      case e => e
-    }
+    val actualResultExprs = agg.aggregateExpressions
     val actualGroupExprs = agg.groupingExpressions
 
     val aggExprToOutputOrdinal = mutable.HashMap.empty[Expression, Int]
@@ -244,12 +221,21 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   }
 
   override def visitWindow(window: Window): relation.Rel = {
-    val windowExpressions = window.windowExpressions
+    val expressions = window.windowExpressions.map {
+      case alias @ Alias(MakeDecimal(w: WindowExpression, _, _, _), _) =>
+        (w, alias: Expression, true)
+      case alias @ Alias(Cast(Divide(w: WindowExpression, _: Literal, _), _, _, _), _)
+          if w.windowFunction.isInstanceOf[AggregateExpression] =>
+        (w, alias: Expression, true)
+      case w: WindowExpression => (w, w: Expression, false)
+      case alias @ Alias(w: WindowExpression, _) => (w, alias: Expression, false)
+      case other =>
+        throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+    }
+    val windowExpressions = expressions
       .map {
-        case w: WindowExpression => fromWindowCall(w, window.child.output)
-        case Alias(w: WindowExpression, _) => fromWindowCall(w, window.child.output)
-        case other =>
-          throw new UnsupportedOperationException(s"Unsupported window expression: $other")
+        case (w, _, _) =>
+          fromWindowCall(w, window.child.output)
       }
       .toSeq
       .asJava
@@ -257,11 +243,32 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
     val partitionExpressions =
       window.partitionSpec.map(toExpression(window.child.output)).toSeq.asJava
     val sorts = window.orderSpec.map(toSortField(window.child.output)).toSeq.asJava
-    relation.ConsistentPartitionWindow.builder
+    val windowRel = relation.ConsistentPartitionWindow.builder
       .input(visit(window.child))
       .addAllWindowFunctions(windowExpressions)
       .addAllPartitionExpressions(partitionExpressions)
       .addAllSorts(sorts)
+      .build()
+    if (!expressions.exists(_._3)) return windowRel
+
+    val results = expressions.zipWithIndex.map {
+      case ((w, _, _), i) =>
+        AttributeReference(s"window_func_$i", w.dataType, nullable = w.nullable)()
+    }
+    val output = window.child.output ++ results
+    val projects = window.child.output ++ expressions.zipWithIndex.map {
+      case ((w, original, _), i) =>
+        original.transformDown {
+          case expression: WindowExpression if expression == w => results(i)
+        }
+    }
+    relation.Project.builder
+      .input(windowRel)
+      .remap(relation.Rel.Remap.offset(output.size, projects.size))
+      .expressions(projects.map(toExpression(output)).toSeq.asJava)
+      .hint(Hint.builder
+        .addAllOutputNames(ToSubstraitType.toNamedStruct(window.schema).names())
+        .build())
       .build()
   }
 

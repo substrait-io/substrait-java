@@ -279,6 +279,26 @@ class ToSparkExpression(
   override def visit(
       expr: SExpression.ScalarFunctionInvocation,
       context: EmptyVisitationContext): Expression = {
+    if (ToScalarFunction.isDecimalConstructor(expr.declaration())) {
+      require(expr.options().isEmpty, "Decimal constructor options are not supported")
+      expr.arguments().asScala.toSeq match {
+        case Seq(value: SExpression, target: Type.Decimal)
+            if value.getType.isInstanceOf[Type.I64] =>
+          val derived = expr.declaration().resolveType(java.util.List.of(value.getType, target))
+          require(derived == expr.getType, "Decimal constructor output type mismatch")
+          val converted = MakeDecimal(
+            value.accept(this, context),
+            target.precision(),
+            target.scale(),
+            expr.declaration().name() == "try_make_decimal")
+          require(
+            io.substrait.spark
+              .ToSubstraitType(converted.dataType, converted.nullable) == expr.getType,
+            "Decimal constructor Spark type mismatch")
+          return converted
+        case _ => throw new IllegalArgumentException("Expected an i64 value and a decimal type")
+      }
+    }
     val eArgs = expr.arguments().asScala
     val args = eArgs.zipWithIndex.map {
       case (arg, i) =>
