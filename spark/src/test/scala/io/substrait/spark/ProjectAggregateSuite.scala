@@ -4,7 +4,7 @@ import io.substrait.spark.logical.ToLogicalPlan
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate => SparkAggregate, LogicalPlan}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate => SparkAggregate, LogicalPlan, Project => SparkProject}
 import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
 
@@ -166,5 +166,40 @@ class ProjectAggregateSuite
     val converted = assertSqlSubstraitRelRoundTrip(query)
     assertResult(Seq("group_key", "total"))(converted.output.map(_.name))
     assertRows(converted, Seq(Row(2, 31L), Row(3, 8L)))
+  }
+
+  test("Spark keeps a project that repeats a non-cheap aggregate result") {
+    val query =
+      "select g, s, s + 1 as t from (" +
+        "select group_id as g, sum(value) as s " +
+        "from (values (1, 10), (1, 20), (2, 7)) as input(group_id, value) " +
+        "group by group_id)"
+    val original = plan(query)
+    assert(original.isInstanceOf[SparkProject])
+    val converted = assertSparkSubstraitRelRoundTrip(original)
+    assertRows(converted, Seq(Row(1, 30L, 31L), Row(2, 7L, 8L)))
+  }
+
+  Seq(false, true).foreach {
+    negated =>
+      test(
+        s"project keeps an aggregate-measure IN subquery outside the aggregate, negated=$negated") {
+        val required = TypeCreator.REQUIRED
+        val haystack = VirtualTableScan
+          .builder()
+          .initialSchema(NamedStruct.of(Arrays.asList("value"), required.struct(required.I64)))
+          .addRows(ExpressionCreator.nestedStruct(false, builder.i64(30)))
+          .build()
+        val project = builder.project(
+          input => {
+            val predicate = builder.inPredicate(haystack, builder.fieldReference(input, 1))
+            Arrays.asList(if (negated) builder.not(predicate) else predicate)
+          },
+          aggregateRows()
+        )
+        val converted = new ToLogicalPlan(spark).convert(project)
+        assert(converted.isInstanceOf[SparkProject])
+        assertRows(converted, Seq(Row(1, 30L, !negated), Row(2, 7L, negated)))
+      }
   }
 }
