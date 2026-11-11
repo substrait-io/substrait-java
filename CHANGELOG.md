@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.107.1](https://github.com/substrait-io/substrait-java/compare/v0.107.0...v0.107.1) (2026-11-01)
+
+### Bug Fixes
+
+* **spark:** create QueryExecution via SessionState.executePlan ([#1432](https://github.com/substrait-io/substrait-java/issues/1432)) ([ac2ee60](https://github.com/substrait-io/substrait-java/commit/ac2ee60c18bcd5f8242e7537b8e1497184502647))
+
 ## [0.107.0](https://github.com/substrait-io/substrait-java/compare/v0.106.0...v0.107.0) (2026-10-18)
 
 ### ⚠ BREAKING CHANGES
