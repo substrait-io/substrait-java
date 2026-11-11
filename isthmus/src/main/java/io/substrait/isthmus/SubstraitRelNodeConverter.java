@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.substrait.expression.Expression;
 import io.substrait.expression.Expression.SortDirection;
+import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.MaskExpression;
 import io.substrait.extension.FunctionBindingResolver;
@@ -39,6 +40,7 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.RoundRobinExchange;
@@ -73,6 +75,8 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -994,7 +998,46 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(ScatterExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    List<Integer> keys =
+        exchange.getFields().stream()
+            .map(SubstraitRelNodeConverter::topLevelFieldIndex)
+            .collect(Collectors.toList());
+    // Calcite sorts hash keys, but Substrait hashes in field order, which other exchanges may rely
+    // on to line up partitions.
+    if (!keys.equals(keys.stream().sorted().collect(Collectors.toList()))) {
+      throw new UnsupportedOperationException(
+          "A scatter exchange whose fields are not in ascending order is not supported");
+    }
+    RelNode node =
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.hash(keys)))
+            .build();
+    return applyRelCommon(node, exchange, child);
+  }
+
+  private static RelDistribution distribution(
+      AbstractExchangeRel exchange, RelDistribution distribution) {
+    // An enhancement can change how rows are partitioned, which RelDistribution cannot express.
+    if (exchange.getExtension().map(e -> e.getEnhancement().isPresent()).orElse(false)) {
+      throw new UnsupportedOperationException("An exchange with an enhancement is not supported");
+    }
+    // With one partition and no explicit targets, every row lands in the same partition.
+    if (Integer.valueOf(1).equals(exchange.getPartitionCount())
+        && exchange.getTargets().isEmpty()) {
+      return RelDistributions.SINGLETON;
+    }
+    return distribution;
+  }
+
+  private static int topLevelFieldIndex(FieldReference field) {
+    if (!field.isSimpleRootReference()
+        || !(field.segments().get(0) instanceof FieldReference.StructField)) {
+      throw new UnsupportedOperationException(
+          "A scatter exchange on anything other than a top-level field is not supported");
+    }
+    return ((FieldReference.StructField) field.segments().get(0)).offset();
   }
 
   @Override
@@ -1009,12 +1052,24 @@ public class SubstraitRelNodeConverter
 
   @Override
   public RelNode visit(RoundRobinExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    RelNode node =
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.ROUND_ROBIN_DISTRIBUTED))
+            .build();
+    return applyRelCommon(node, exchange, child);
   }
 
   @Override
   public RelNode visit(BroadcastExchange exchange, Context context) throws RuntimeException {
-    return visitFallback(exchange, context);
+    RelNode child = exchange.getInput().accept(this, context);
+    RelNode node =
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.BROADCAST_DISTRIBUTED))
+            .build();
+    return applyRelCommon(node, exchange, child);
   }
 
   @Override
