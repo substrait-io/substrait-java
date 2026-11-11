@@ -1394,11 +1394,8 @@ public class SubstraitRelNodeConverter
    * the masked columns. Building the scan from the schema alone leaves the node one column list and
    * the relation another.
    *
-   * <p>The columns come out in the order the mask lists them. That is the order {@link
-   * io.substrait.expression.MaskExpressionTypeProjector} builds the record type in, and the node
-   * has to carry the columns the relation says it carries. Spec v0.102.0 describes a mask as
-   * removing columns and asks whether reordering should be supported at all, so this order follows
-   * the record type the model derives rather than a rule the specification settles.
+   * <p>Spec v0.108.0 requires the output columns to follow the order in the mask. {@link
+   * io.substrait.expression.MaskExpressionTypeProjector} uses the same order for the record type.
    *
    * <p>Only a mask that selects whole columns is converted. A mask can also select inside a column
    * -- some of a struct's fields, some of a list's elements, some of a map's entries -- and

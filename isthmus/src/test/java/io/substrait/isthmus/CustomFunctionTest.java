@@ -697,11 +697,8 @@ class CustomFunctionTest extends PlanTestBase {
   }
 
   @Test
-  void wildcardShadowedAggregateKeepsItsBinding() {
-    // custom_overlap declares both (i32) and (any, any). The reverse signature matcher checks no
-    // per-variant arity — a shorter declaration matches by repeating its trailing argument — so
-    // invoking the wildcard impl as f(i32, i32) would re-match the concrete (i32) impl first. The
-    // binding must travel for the plan's declaration to survive.
+  void aggregateOverloadsMatchTheirOwnArgumentCount() {
+    // custom_overlap declares (i32) and (any, any). Only the latter accepts two i32 arguments.
     Rel input = sb.namedScan(List.of("example"), List.of("a", "b"), List.of(R.I32, R.I32));
     Rel wildcard =
         sb.aggregate(
@@ -722,7 +719,7 @@ class CustomFunctionTest extends PlanTestBase {
         (org.apache.calcite.rel.core.Aggregate) wildcardRel;
     assertTrue(
         AggregateFunctions.boundBinding(wildcardAgg.getAggCallList().get(0).getAggregation())
-            .isPresent());
+            .isEmpty());
     assertEquals(wildcard, calciteToSubstrait.apply(wildcardRel));
 
     // The concrete impl itself is reconstructable by its direct key: no wrapper needed.
