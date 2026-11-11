@@ -40,6 +40,7 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
 import io.substrait.relation.VirtualTableScan;
+import io.substrait.relation.physical.AbstractExchangeRel;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.MultiBucketExchange;
 import io.substrait.relation.physical.RoundRobinExchange;
@@ -74,6 +75,7 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -1007,8 +1009,26 @@ public class SubstraitRelNodeConverter
       throw new UnsupportedOperationException(
           "A scatter exchange whose fields are not in ascending order is not supported");
     }
-    RelNode node = relBuilder.push(child).exchange(RelDistributions.hash(keys)).build();
+    RelNode node =
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.hash(keys)))
+            .build();
     return applyRelCommon(node, exchange, child);
+  }
+
+  private static RelDistribution distribution(
+      AbstractExchangeRel exchange, RelDistribution distribution) {
+    // An enhancement can change how rows are partitioned, which RelDistribution cannot express.
+    if (exchange.getExtension().map(e -> e.getEnhancement().isPresent()).orElse(false)) {
+      throw new UnsupportedOperationException("An exchange with an enhancement is not supported");
+    }
+    // With one partition and no explicit targets, every row lands in the same partition.
+    if (Integer.valueOf(1).equals(exchange.getPartitionCount())
+        && exchange.getTargets().isEmpty()) {
+      return RelDistributions.SINGLETON;
+    }
+    return distribution;
   }
 
   private static int topLevelFieldIndex(FieldReference field) {
@@ -1034,14 +1054,21 @@ public class SubstraitRelNodeConverter
   public RelNode visit(RoundRobinExchange exchange, Context context) throws RuntimeException {
     RelNode child = exchange.getInput().accept(this, context);
     RelNode node =
-        relBuilder.push(child).exchange(RelDistributions.ROUND_ROBIN_DISTRIBUTED).build();
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.ROUND_ROBIN_DISTRIBUTED))
+            .build();
     return applyRelCommon(node, exchange, child);
   }
 
   @Override
   public RelNode visit(BroadcastExchange exchange, Context context) throws RuntimeException {
     RelNode child = exchange.getInput().accept(this, context);
-    RelNode node = relBuilder.push(child).exchange(RelDistributions.BROADCAST_DISTRIBUTED).build();
+    RelNode node =
+        relBuilder
+            .push(child)
+            .exchange(distribution(exchange, RelDistributions.BROADCAST_DISTRIBUTED))
+            .build();
     return applyRelCommon(node, exchange, child);
   }
 

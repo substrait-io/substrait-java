@@ -804,7 +804,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
   public Rel visit(org.apache.calcite.rel.core.Exchange exchange) {
     // A SortExchange also sorts each partition, which no Substrait exchange expresses.
     if (exchange instanceof org.apache.calcite.rel.core.SortExchange) {
-      throw new UnsupportedOperationException("SortExchange is not supported");
+      return super.visit(exchange);
     }
     Rel input = apply(exchange.getInput());
     RelDistribution distribution = exchange.getDistribution();
@@ -838,8 +838,7 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             .partitionCount(1)
             .build();
       default:
-        throw new UnsupportedOperationException(
-            "Unsupported exchange distribution: " + distribution.getType());
+        return super.visit(exchange);
     }
   }
 

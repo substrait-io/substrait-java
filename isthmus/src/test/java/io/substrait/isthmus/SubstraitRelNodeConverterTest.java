@@ -17,6 +17,7 @@ import io.substrait.expression.ExpressionCreator;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.ImmutableAggregateFunctionInvocation;
+import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.InvalidFunctionBindingException;
 import io.substrait.extension.ResolvedAggregateBinding;
@@ -1488,6 +1489,78 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
     }
 
     @Test
+    void onePartitionWithoutTargetsConvertsToSingleton() {
+      List<Rel> exchanges =
+          List.of(
+              BroadcastExchange.builder().input(commonTable).partitionCount(1).build(),
+              ScatterExchange.builder()
+                  .input(commonTable)
+                  .addFields(sb.fieldReference(commonTable, 0))
+                  .partitionCount(1)
+                  .build(),
+              RoundRobinExchange.builder()
+                  .input(commonTable)
+                  .exact(true)
+                  .partitionCount(1)
+                  .build());
+
+      for (Rel exchange : exchanges) {
+        assertEquals(
+            RelDistribution.Type.SINGLETON, distributionType(substraitToCalcite.convert(exchange)));
+      }
+    }
+
+    @Test
+    void onePartitionWithTargetsKeepsDistribution() {
+      Rel exchange =
+          BroadcastExchange.builder()
+              .input(commonTable)
+              .partitionCount(1)
+              .addTargets(
+                  AbstractExchangeRel.ExchangeTarget.builder()
+                      .addPartitionIds(0)
+                      .type(TargetType.Uri.builder().uri("worker-0").build())
+                      .build())
+              .build();
+
+      assertEquals(
+          RelDistribution.Type.BROADCAST_DISTRIBUTED,
+          distributionType(substraitToCalcite.convert(exchange)));
+    }
+
+    @Test
+    void rejectsEnhancement() {
+      AdvancedExtension extension =
+          AdvancedExtension.builder().enhancement(new AdvancedExtension.Enhancement() {}).build();
+      List<Rel> exchanges =
+          List.of(
+              BroadcastExchange.builder()
+                  .input(commonTable)
+                  .partitionCount(0)
+                  .extension(extension)
+                  .build(),
+              ScatterExchange.builder()
+                  .input(commonTable)
+                  .addFields(sb.fieldReference(commonTable, 0))
+                  .partitionCount(0)
+                  .extension(extension)
+                  .build(),
+              RoundRobinExchange.builder()
+                  .input(commonTable)
+                  .exact(true)
+                  .partitionCount(0)
+                  .extension(extension)
+                  .build());
+
+      for (Rel exchange : exchanges) {
+        UnsupportedOperationException e =
+            assertThrows(
+                UnsupportedOperationException.class, () -> substraitToCalcite.convert(exchange));
+        assertEquals("An exchange with an enhancement is not supported", e.getMessage());
+      }
+    }
+
+    @Test
     void rejectsUnorderedScatterFields() {
       Rel exchange =
           ScatterExchange.builder()
@@ -1561,7 +1634,7 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
           assertThrows(
               UnsupportedOperationException.class,
               () -> SubstraitRelVisitor.convert(exchange, converterProvider));
-      assertEquals("Unsupported exchange distribution: RANGE_DISTRIBUTED", e.getMessage());
+      assertTrue(e.getMessage().startsWith("Unable to handle node: "));
     }
 
     @Test
@@ -1588,7 +1661,7 @@ class SubstraitRelNodeConverterTest extends PlanTestBase {
           assertThrows(
               UnsupportedOperationException.class,
               () -> SubstraitRelVisitor.convert(exchange, converterProvider));
-      assertEquals("SortExchange is not supported", e.getMessage());
+      assertTrue(e.getMessage().startsWith("Unable to handle node: "));
     }
 
     @Test
