@@ -80,6 +80,17 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
 
+  private[logical] def visitSubquery(p: LogicalPlan): relation.Rel = {
+    val enclosingExistenceJoins = existenceJoins.toMap
+    existenceJoins.clear()
+    try {
+      visit(p)
+    } finally {
+      existenceJoins.clear()
+      existenceJoins ++= enclosingExistenceJoins
+    }
+  }
+
   override def default(p: LogicalPlan): relation.Rel = p match {
     case c: CommandResult => visit(c.commandLogicalPlan)
     case w: WriteFiles => visit(w.child)
@@ -922,7 +933,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
   override protected def translateSubQuery(expr: PlanExpression[_]): Option[SExpression] = {
     expr match {
       case s: ScalarSubquery if s.outerAttrs.isEmpty && s.joinCond.isEmpty =>
-        val rel = toSubstraitRel.visit(s.plan)
+        val rel = toSubstraitRel.visitSubquery(s.plan)
         val t =
           s.plan.schema.fields.head // Using this instead of s.dataType/s.nullable to get correct nullability
         Some(
@@ -943,7 +954,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
             SExpression.InPredicate
               .builder()
               .needles(values.toSeq.asJava)
-              .haystack(toSubstraitRel.visit(expr.query.plan))
+              .haystack(toSubstraitRel.visitSubquery(expr.query.plan))
               .build()
           ))
   }

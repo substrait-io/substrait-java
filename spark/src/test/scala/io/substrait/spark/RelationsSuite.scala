@@ -1,12 +1,13 @@
 package io.substrait.spark
 
+import io.substrait.spark.compat.SparkCompat
 import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, EqualTo, InSubquery, Literal, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
-import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, Project}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, Join, JoinHint, Project}
 import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.{BooleanType, IntegerType, StringType, StructField, StructType}
@@ -85,6 +86,51 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
         assertResult(sorted(expected))(
           sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
       }
+  }
+
+  for {
+    kind <- Seq("scalar", "IN")
+    order <- Seq("subquery first", "existence first")
+  } {
+    test(s"$kind subquery keeps enclosing existence-column state: $order") {
+      val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(x)").queryExecution.analyzed
+      val right = spark.sql("SELECT * FROM VALUES (1) AS r(x)").queryExecution.analyzed
+      val exists = AttributeReference("exists", BooleanType, nullable = false)()
+      val joined = Join(
+        left,
+        right,
+        ExistenceJoin(exists),
+        Some(EqualTo(left.output.head, right.output.head)),
+        JoinHint.NONE)
+      // Reuse the join and existence ID in the independent subquery plan.
+      val subqueryPlan = Project(Seq(exists), Filter(EqualTo(left.output.head, Literal(1)), joined))
+      val subquery = kind match {
+        case "scalar" => ScalarSubquery(subqueryPlan)
+        case "IN" =>
+          InSubquery(
+            Seq(Literal(true)),
+            SparkCompat.instance.createListQuery(subqueryPlan, subqueryPlan.output))
+      }
+      val projected = Alias(subquery, "subquery_exists")()
+      val columns = order match {
+        case "subquery first" => Seq(projected, exists)
+        case "existence first" => Seq(exists, projected)
+      }
+      val plan = Project(left.output ++ columns, joined)
+      assert(plan.resolved)
+      val expected = order match {
+        case "subquery first" => Seq(Row(1, true, true), Row(2, true, false))
+        case "existence first" => Seq(Row(1, true, true), Row(2, false, true))
+      }
+      def sorted(rows: Seq[Row]): Seq[Row] = rows.sortBy(_.toString)
+      assertResult(sorted(expected))(
+        sorted(DatasetUtil.fromLogicalPlan(spark, plan).collect().toSeq))
+      val exported = new ToSubstraitRel().convert(plan)
+      val restored = new ToLogicalPlan(spark).convert(exported)
+      assertResult(plan.schema)(restored.schema)
+      assertResult(sorted(expected))(
+        sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
+    }
   }
 
   test("local_relation_null") {
