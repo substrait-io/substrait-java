@@ -6,11 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.dsl.SubstraitBuilder;
 import io.substrait.expression.Expression;
 import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.AdvancedExtension;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.plan.Plan.Root;
+import io.substrait.proto.Expression.Lambda;
+import io.substrait.proto.Type.Nullability;
 import io.substrait.relation.ImmutableVirtualTableScan;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.VirtualTableScan;
@@ -35,6 +38,18 @@ class PlanConverterTest {
     return ImmutableExecutionBehavior.builder()
         .variableEvaluationMode(Plan.ExecutionBehavior.VariableEvaluationMode.PER_PLAN)
         .build();
+  }
+
+  @Test
+  void rejectsUnreferencedNamedLambda() {
+    SubstraitBuilder sb = new SubstraitBuilder();
+    io.substrait.proto.Plan.Builder plan =
+        toProtoConverter.toProto(sb.plan(sb.root(sb.emptyVirtualTableScan()))).toBuilder();
+    Lambda.Builder lambda = plan.addNamedLambdasBuilder().setLambdaAnchor(1).getLambdaBuilder();
+    lambda.getParametersBuilder().setNullability(Nullability.NULLABILITY_REQUIRED);
+    lambda.getBodyBuilder().getLiteralBuilder().setI32(1);
+
+    assertThrows(UnsupportedOperationException.class, () -> fromProtoConverter.from(plan.build()));
   }
 
   @Test

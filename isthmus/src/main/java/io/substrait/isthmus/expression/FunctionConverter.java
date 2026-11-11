@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
@@ -398,7 +399,7 @@ public abstract class FunctionConverter<
      * variant registered under the key that hits — so a plan invoking {@code count(any)} with an
      * {@code i32} operand reconstructs as {@code count(i32)} whenever that variant exists. Without
      * a direct hit it consults the same matchers the reverse direction runs — {@code
-     * signatureMatch} over the argument types and output type, then the singular-wildcard chain
+     * signatureMatches} over the argument types and output type, then the singular-wildcard chain
      * over their least restrictive type — and requires the variant they select to be this
      * declaration.
      *
@@ -433,11 +434,9 @@ public abstract class FunctionConverter<
       // Mirror of attemptMatch's direct lookup: the key is built from the operand type strings, an
       // enum operand spelled "req" — candidateKeys also probes "opt", which no declaration key can
       // contain — and the LAST variant registered under the first key that hits wins.
-      Optional<String> directKey =
-          candidateKeys(arguments).filter(directMap::containsKey).findFirst();
-      if (directKey.isPresent()) {
-        List<F> variants = directMap.get(directKey.get());
-        return variants.get(variants.size() - 1).getAnchor().equals(declaration.getAnchor());
+      Optional<F> direct = directMatch(candidateKeys(arguments), arguments.size());
+      if (direct.isPresent()) {
+        return direct.get().getAnchor().equals(declaration.getAnchor());
       }
       // Without a direct hit the reverse direction runs the coerced and singular-wildcard paths;
       // consult the same matchers it uses and require them to select this declaration. A call
@@ -454,10 +453,7 @@ public abstract class FunctionConverter<
         valueTypes.add(argument.type().orElseThrow(IllegalStateException::new));
       }
       try {
-        // matchCoerced consults signatureMatch with the operand types as they are; note it checks
-        // neither per-variant arity (a shorter declaration matches by repeating its trailing
-        // argument) nor anything a wrapper could veto, so the selected variant is authoritative.
-        Optional<F> bySignature = signatureMatch(valueTypes, outputType);
+        Optional<F> bySignature = signatureMatches(valueTypes, outputType).findFirst();
         if (bySignature.isPresent()) {
           return bySignature.get().getAnchor().equals(declaration.getAnchor());
         }
@@ -477,7 +473,7 @@ public abstract class FunctionConverter<
         Optional<F> bySingular =
             singularInputType
                 .get()
-                .tryMatch(typeConverter.toSubstrait(leastRestrictive), outputType);
+                .tryMatch(typeConverter.toSubstrait(leastRestrictive), arguments.size());
         return bySingular.isPresent()
             && bySingular.get().getAnchor().equals(declaration.getAnchor());
       } catch (RuntimeException e) {
@@ -508,44 +504,17 @@ public abstract class FunctionConverter<
           .map(typeList -> substraitName + ":" + String.join("_", typeList));
     }
 
-    /**
-     * Attempts an exact signature match against required arguments and return type.
-     *
-     * @param inputTypes operand types (Substrait)
-     * @param outputType expected output type (Substrait)
-     * @return matching function variant if found; otherwise empty
-     */
-    private Optional<F> signatureMatch(List<Type> inputTypes, Type outputType) {
-      for (F function : functions) {
-        // Make sure that arguments & return are within bounds and match the types
-        TypeExpression funcReturnType = function.returnType();
-        boolean returnTypeMatches = isReturnTypeMatch(outputType, funcReturnType);
-
-        List<SimpleExtension.Argument> args = function.requiredArguments();
-
-        if (returnTypeMatches && inputTypesMatchDefinedArguments(inputTypes, args)) {
-          return Optional.of(function);
-        }
-      }
-
-      return Optional.empty();
+    private Optional<F> directMatch(Stream<String> keys, int argumentCount) {
+      return keys.flatMap(key -> Lists.reverse(directMap.get(key)).stream())
+          .filter(function -> function.getRange().within(argumentCount))
+          .findFirst();
     }
 
-    private List<F> signatureMatches(List<Type> inputTypes, Type outputType) {
-      List<F> matches = new ArrayList<>();
-      for (F function : functions) {
-        List<SimpleExtension.Argument> args = function.requiredArguments();
-        // A variant without arguments takes no operands; signatureMatch never reaches one here
-        // because it stops at the first match, and the check below would index it at -1.
-        if (args.isEmpty() && !inputTypes.isEmpty()) {
-          continue;
-        }
-        if (isReturnTypeMatch(outputType, function.returnType())
-            && inputTypesMatchDefinedArguments(inputTypes, args)) {
-          matches.add(function);
-        }
-      }
-      return matches;
+    private Stream<F> signatureMatches(List<Type> inputTypes, Type outputType) {
+      return functions.stream()
+          .filter(function -> function.getRange().within(inputTypes.size()))
+          .filter(function -> isReturnTypeMatch(outputType, function.returnType()))
+          .filter(function -> inputTypesMatchDefinedArguments(inputTypes, function.args()));
     }
 
     private boolean isReturnTypeMatch(final Type outputType, final TypeExpression funcReturnType) {
@@ -585,11 +554,11 @@ public abstract class FunctionConverter<
       Map<String, Set<Type>> wildcardToType = new HashMap<>();
       for (int i = 0; i < inputTypes.size(); i++) {
         Type givenType = inputTypes.get(i);
-        SimpleExtension.ValueArgument wantType =
-            (SimpleExtension.ValueArgument)
-                args.get(
-                    // Variadic arguments should match the last argument's type
-                    Integer.min(i, args.size() - 1));
+        SimpleExtension.Argument arg = args.get(Math.min(i, args.size() - 1));
+        if (!(arg instanceof SimpleExtension.ValueArgument)) {
+          return false;
+        }
+        SimpleExtension.ValueArgument wantType = (SimpleExtension.ValueArgument) arg;
 
         if (!isMatch(givenType, wantType.value())) {
           return false;
@@ -663,12 +632,11 @@ public abstract class FunctionConverter<
      *
      * @param function function variant
      * @param type repeated parameter type
-     * @return matcher accepting input/output types
+     * @return matcher accepting the input type and argument count
      */
     private SingularArgumentMatcher<F> singular(F function, ParameterizedType type) {
-      return (inputType, outputType) -> {
-        boolean check = isMatch(inputType, type);
-        if (check) {
+      return (inputType, argumentCount) -> {
+        if (function.getRange().within(argumentCount) && isMatch(inputType, type)) {
           return Optional.of(function);
         }
         return Optional.empty();
@@ -682,9 +650,9 @@ public abstract class FunctionConverter<
      * @return composite matcher
      */
     private SingularArgumentMatcher<F> chained(List<SingularArgumentMatcher<F>> matchers) {
-      return (inputType, outputType) -> {
+      return (inputType, argumentCount) -> {
         for (SingularArgumentMatcher<F> s : matchers) {
-          Optional<F> outcome = s.tryMatch(inputType, outputType);
+          Optional<F> outcome = s.tryMatch(inputType, argumentCount);
           if (outcome.isPresent()) {
             return outcome;
           }
@@ -768,20 +736,12 @@ public abstract class FunctionConverter<
           opTypes.stream().map(t -> t.accept(ToTypeString.INSTANCE)).collect(Collectors.toList());
       Stream<String> possibleKeys = matchKeys(operandsList, typeStrings);
 
-      Optional<String> directMatchKey =
-          possibleKeys
-              .map(argList -> substraitName + ":" + argList)
-              .filter(directMap::containsKey)
-              .findFirst();
+      Optional<F> direct =
+          directMatch(
+              possibleKeys.map(argList -> substraitName + ":" + argList), operandsList.size());
 
-      if (directMatchKey.isPresent()) {
-        List<F> variants = directMap.get(directMatchKey.get());
-        if (variants.isEmpty()) {
-
-          return Optional.empty();
-        }
-
-        F variant = variants.get(variants.size() - 1);
+      if (direct.isPresent()) {
+        F variant = direct.get();
         variant.validateOutputType(operands, outputType);
         List<FunctionArg> funcArgs =
             IntStream.range(0, operandsList.size())
@@ -835,7 +795,7 @@ public abstract class FunctionConverter<
         return Optional.empty();
       }
       Type type = typeConverter.toSubstrait(leastRestrictive);
-      Optional<F> out = singularInputType.orElseThrow().tryMatch(type, outputType);
+      Optional<F> out = singularInputType.orElseThrow().tryMatch(type, operands.size());
 
       List<RelDataType> calciteTypes =
           call.getOperands().map(RexNode::getType).collect(Collectors.toList());
@@ -881,7 +841,7 @@ public abstract class FunctionConverter<
               .collect(Collectors.toList());
 
       // See if all the input types can be made to match the function
-      List<F> candidates = signatureMatches(operandTypes, outputType);
+      List<F> candidates = signatureMatches(operandTypes, outputType).collect(Collectors.toList());
       if (candidates.isEmpty()) {
         return Optional.empty();
       }
@@ -1140,13 +1100,13 @@ public abstract class FunctionConverter<
   @FunctionalInterface
   private interface SingularArgumentMatcher<F> {
     /**
-     * Attempts a match for the provided input/output types.
+     * Matches the common input type and the number of arguments.
      *
      * @param type singular input type
-     * @param outputType expected output type
+     * @param argumentCount number of supplied arguments
      * @return matching function if successful; otherwise empty
      */
-    Optional<F> tryMatch(Type type, Type outputType);
+    Optional<F> tryMatch(Type type, int argumentCount);
   }
 
   /**

@@ -172,6 +172,17 @@ class PrecisionTimestampDatetimeSubtractionTest extends PlanTestBase {
   void precisionTimestampTzSubtractIntervalYear() throws Exception {
     String query = "SELECT event_timestamp_tz - INTERVAL '2' YEAR FROM events";
     assertFullRoundTrip(query, CREATES);
+    Plan plan = assertProtoPlanRoundrip(query, new SqlToSubstrait(), CREATES);
+    Project project = assertInstanceOf(Project.class, plan.getRoots().get(0).getInput());
+    Expression.ScalarFunctionInvocation subtraction =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class, project.getExpressions().get(0));
+    assertEquals("subtract:ptstz_iyear_str", subtraction.declaration().key());
+    assertEquals(3, subtraction.arguments().size());
+    assertInstanceOf(Expression.CurrentTimezone.class, subtraction.arguments().get(2));
+
+    String sql = new SubstraitToSql().convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
+    assertTrue(sql.contains("- INTERVAL"));
   }
 
   @Test

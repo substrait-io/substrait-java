@@ -50,13 +50,6 @@ class ReadProjectionTest extends PlanTestBase {
         SubstraitRelVisitor.convert(relNode, converterProvider).getRecordType());
   }
 
-  /**
-   * A mask that lists its columns out of schema order produces them in the order it lists. That is
-   * the order the model derives the record type in, and the node has to carry the columns the
-   * relation says it carries. Spec v0.102.0 describes a mask as removing columns and asks whether
-   * reordering should be supported at all, so this pins what the model already derives rather than
-   * a rule the specification settles.
-   */
   @Test
   void theColumnsComeOutInTheOrderTheMaskListsThem() {
     NamedScan reordered = NamedScan.builder().from(scan).projection(columns(2, 0)).build();
