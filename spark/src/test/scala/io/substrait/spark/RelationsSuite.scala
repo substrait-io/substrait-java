@@ -1,10 +1,15 @@
 package io.substrait.spark
 
+import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
+
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, NamedExpression}
+import org.apache.spark.sql.catalyst.plans.ExistenceJoin
+import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, Project}
 import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{BooleanType, IntegerType, StringType, StructField, StructType}
 
 class RelationsSuite extends SparkFunSuite with SharedSparkSession with SubstraitPlanTestBase {
 
@@ -42,6 +47,43 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
         val converted = assertSqlSubstraitRelRoundTrip(query)
         assertResult(sorted(expected))(
           sorted(DatasetUtil.fromLogicalPlan(spark, converted).collect().toSeq))
+      }
+  }
+
+  Seq("retained input", "reordered input", "predicate only").foreach {
+    shape =>
+      test(s"nested Project retains a materialized existence column: $shape") {
+        val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(x)").queryExecution.analyzed
+        val right = spark.sql("SELECT * FROM VALUES (1) AS r(x)").queryExecution.analyzed
+        val exists = AttributeReference("exists", BooleanType, nullable = false)()
+        val joined = Join(
+          left,
+          right,
+          ExistenceJoin(exists),
+          Some(EqualTo(left.output.head, right.output.head)),
+          JoinHint.NONE)
+        val columns: Seq[NamedExpression] = shape match {
+          case "retained input" => Seq(left.output.head, exists)
+          case "reordered input" => Seq(exists, left.output.head)
+          case "predicate only" => Seq(exists)
+        }
+        // Keep the existence attribute's ID rather than introducing a fresh alias.
+        val inner = Project(columns, joined)
+        val plan = Project(inner.output, inner)
+        assert(plan.resolved)
+        val expected = shape match {
+          case "retained input" => Seq(Row(1, true), Row(2, false))
+          case "reordered input" => Seq(Row(true, 1), Row(false, 2))
+          case "predicate only" => Seq(Row(true), Row(false))
+        }
+        def sorted(rows: Seq[Row]): Seq[Row] = rows.sortBy(_.toString)
+        assertResult(sorted(expected))(
+          sorted(DatasetUtil.fromLogicalPlan(spark, plan).collect().toSeq))
+        val exported = new ToSubstraitRel().convert(plan)
+        val restored = new ToLogicalPlan(spark).convert(exported)
+        assertResult(plan.schema)(restored.schema)
+        assertResult(sorted(expected))(
+          sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
       }
   }
 
