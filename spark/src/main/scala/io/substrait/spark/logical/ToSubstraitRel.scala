@@ -40,13 +40,14 @@ import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, Data
 import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
 import org.apache.spark.sql.types.{Decimal, DecimalType, NullType, StructField, StructType}
 
-import io.substrait.`type`.{NamedStruct, Type}
+import io.substrait.`type`.{NamedStruct, Type, TypeCreator}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
+import io.substrait.dsl.SubstraitBuilder
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.expression.Expression.StructLiteral
 import io.substrait.expression.proto.NestingDetacher
-import io.substrait.extension.ExtensionCollector
+import io.substrait.extension.{DefaultExtensionCatalog, ExtensionCollector}
 import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutableExecutionBehavior, Plan}
 import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
@@ -456,27 +457,36 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
       case ((_, key), index) => Alias(key, s"key_$index")()
     }
     val projectedHaystack = Project(haystackKeys, right)
-    val nonNullHaystackKeys = haystackKeys
-      .map(key => IsNotNull(key.toAttribute): Expression)
-      .reduceOption(And)
+    val nonNullHaystackKeys = haystackKeys.map(key => IsNotNull(key.toAttribute): Expression)
     val haystack = visit(
-      nonNullHaystackKeys
-        .map(Filter(_, projectedHaystack))
-        .getOrElse(projectedHaystack))
+      if (nonNullHaystackKeys.isEmpty) projectedHaystack
+      else Filter(buildBalancedPredicate(nonNullHaystackKeys, And), projectedHaystack))
 
     val inPredicate =
       SExpression.InPredicate.builder().needles(needles).haystack(haystack).build()
     // Equality joins never match null keys. Guard needles and remove null haystack keys
     // so that IN remains two-valued here, including below NOT.
-    val existencePredicate = keys
-      .map { case (needle, _) => IsNotNull(needle): Expression }
-      .reduceOption(And)
-      .map(
-        nonNull =>
-          ExpressionCreator.ifThenStatement(
-            ExpressionCreator.bool(false, false),
-            ExpressionCreator.ifThenClause(toExpression(left.output)(nonNull), inPredicate)))
-      .getOrElse(inPredicate)
+    val builder = new SubstraitBuilder(SparkExtension.COLLECTION)
+    def balancedConjunction(predicates: Seq[SExpression]): SExpression = {
+      if (predicates.size == 1) predicates.head
+      else {
+        val (left, right) = predicates.splitAt(predicates.size / 2)
+        builder.and(balancedConjunction(left), balancedConjunction(right))
+      }
+    }
+    val nonNullNeedles = needles.asScala.toSeq.map(
+      needle =>
+        builder.scalarFn(
+          DefaultExtensionCatalog.FUNCTIONS_COMPARISON,
+          "is_not_null:any",
+          TypeCreator.REQUIRED.BOOLEAN,
+          needle))
+    val existencePredicate =
+      if (nonNullNeedles.isEmpty) inPredicate
+      else
+        ExpressionCreator.ifThenStatement(
+          ExpressionCreator.bool(false, false),
+          ExpressionCreator.ifThenClause(balancedConjunction(nonNullNeedles), inPredicate))
     existenceJoins.put(exists.exprId.id, inPredicate)
     existencePredicates.put(exists.exprId.id, existencePredicate)
     // return the left child, which will become the child of the enclosing filter

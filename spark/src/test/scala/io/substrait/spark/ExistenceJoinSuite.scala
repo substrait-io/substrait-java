@@ -4,15 +4,18 @@ import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, EqualTo, Or}
+import org.apache.spark.sql.catalyst.expressions.{Add, And, AttributeReference, EqualTo, Expression, Or, ScalarSubquery}
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Join, JoinHint, LogicalPlan, Project}
 import org.apache.spark.sql.classic.DatasetUtil
+import org.apache.spark.sql.execution.LogicalRDD
 import org.apache.spark.sql.test.SharedSparkSession
-import org.apache.spark.sql.types.BooleanType
+import org.apache.spark.sql.types.{BooleanType, IntegerType, StructField, StructType}
 
 import io.substrait.dsl.SubstraitBuilder
+import io.substrait.extension.ExtensionCollector
 import io.substrait.plan.{PlanProtoConverter, ProtoPlanConverter}
+import io.substrait.relation.RelProtoConverter
 
 class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
 
@@ -55,8 +58,11 @@ class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
     assertConverted(optimized, nativeRows)
   }
 
-  private def assertConverted(plan: LogicalPlan, expected: Seq[Row]): Unit = {
-    val exported = new ToSubstraitRel().convert(plan)
+  private def assertConverted(
+      plan: LogicalPlan,
+      expected: Seq[Row],
+      converter: ToSubstraitRel = new ToSubstraitRel()): Unit = {
+    val exported = converter.convert(plan)
     val proto = new PlanProtoConverter().toProto(exported)
     val imported = new ProtoPlanConverter().from(proto)
     val restored = new ToLogicalPlan(spark).convert(imported)
@@ -156,4 +162,54 @@ class ExistenceJoinSuite extends SparkFunSuite with SharedSparkSession {
       assertConverted(plan, expected)
     }
   }
+
+  test("wide existence keys fit the default protobuf nesting limit") {
+    val names = (0 until 40).map(i => s"k$i").mkString(", ")
+    val values = (1 to 40).mkString(", ")
+    val left = spark.sql(s"SELECT * FROM VALUES ($values) AS l($names)").queryExecution.analyzed
+    val right = spark.sql(s"SELECT * FROM VALUES ($values) AS r($names)").queryExecution.analyzed
+    val exists = AttributeReference("exists", BooleanType, nullable = false)()
+    val condition = left.output
+      .zip(right.output)
+      .map { case (l, r) => EqualTo(l, r): Expression }
+      .reduceLeft(And)
+    val joined = Join(left, right, ExistenceJoin(exists), Some(condition), JoinHint.NONE)
+    val plan = Project(left.output.take(1), Filter(exists, joined))
+    assert(plan.resolved)
+
+    val exported = new ToSubstraitRel().visit(plan)
+    val proto = new RelProtoConverter(new ExtensionCollector).toProto(exported)
+    assertResult(proto)(io.substrait.proto.Rel.parseFrom(proto.toByteArray))
+    assertConverted(plan, Seq(Row(1)))
+  }
+
+  test("existence null guard reuses the converted scalar-subquery needle") {
+    withTempView("exists_weights") {
+      spark
+        .createDataFrame(
+          sparkContext.parallelize(Seq(Row(1))),
+          StructType(Seq(StructField("v", IntegerType, nullable = false))))
+        .createOrReplaceTempView("exists_weights")
+      val weights = spark.sql("SELECT MAX(v) FROM exists_weights").queryExecution.analyzed
+      val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(k)").queryExecution.analyzed
+      val right = spark.sql("SELECT * FROM VALUES (2) AS r(k)").queryExecution.analyzed
+      val exists = AttributeReference("exists", BooleanType, nullable = false)()
+      val condition = EqualTo(Add(left.output.head, ScalarSubquery(weights)), right.output.head)
+      val joined = Join(left, right, ExistenceJoin(exists), Some(condition), JoinHint.NONE)
+      val plan = Project(left.output, Filter(exists, joined))
+      assert(plan.resolved)
+      var rddVisits = 0
+      val converter = new ToSubstraitRel {
+        override def default(p: LogicalPlan): io.substrait.relation.Rel = {
+          if (p.isInstanceOf[LogicalRDD]) {
+            rddVisits += 1
+          }
+          super.default(p)
+        }
+      }
+      assertConverted(plan, Seq(Row(1)), converter)
+      assertResult(1)(rddVisits)
+    }
+  }
+
 }
