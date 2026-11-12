@@ -6,7 +6,7 @@ import io.substrait.spark.logical.{ToLogicalPlan, ToSubstraitRel}
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, EqualTo, InSubquery, Literal, NamedExpression, ScalarSubquery}
-import org.apache.spark.sql.catalyst.plans.ExistenceJoin
+import org.apache.spark.sql.catalyst.plans.{Cross, ExistenceJoin, Inner}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Join, JoinHint, Project}
 import org.apache.spark.sql.classic.DatasetUtil
 import org.apache.spark.sql.test.SharedSparkSession
@@ -131,6 +131,84 @@ class RelationsSuite extends SparkFunSuite with SharedSparkSession with Substrai
       assertResult(sorted(expected))(
         sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
     }
+  }
+
+  test("sibling plan preserves an unmaterialized existence mapping") {
+    val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(x)").queryExecution.analyzed
+    val right = spark.sql("SELECT * FROM VALUES (1) AS r(x)").queryExecution.analyzed
+    val exists = AttributeReference("exists", BooleanType, nullable = false)()
+    val joined = Join(
+      left,
+      right,
+      ExistenceJoin(exists),
+      Some(EqualTo(left.output.head, right.output.head)),
+      JoinHint.NONE)
+    val materialized = Project(Seq(exists), joined)
+    val sibling = Project(Seq(Alias(Literal(true), "right_flag")()), materialized)
+    val cross = Join(joined, sibling, Cross, None, JoinHint.NONE)
+    val plan = Project(Seq(Alias(exists, "left_exists")()), cross)
+    assert(plan.resolved)
+    val expected = Seq(Row(false), Row(false), Row(true), Row(true))
+    def sorted(rows: Seq[Row]): Seq[Row] = rows.sortBy(_.toString)
+    assertResult(expected)(sorted(DatasetUtil.fromLogicalPlan(spark, plan).collect().toSeq))
+    val exported = new ToSubstraitRel().convert(plan)
+    val restored = new ToLogicalPlan(spark).convert(exported)
+    assertResult(plan.schema)(restored.schema)
+    assertResult(expected)(sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
+  }
+
+  test("project binds fields after an omitted existence column") {
+    val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(x)").queryExecution.analyzed
+    val right = spark.sql("SELECT * FROM VALUES (1) AS r(x)").queryExecution.analyzed
+    val exists = AttributeReference("exists", BooleanType, nullable = false)()
+    val joined = Join(
+      left,
+      right,
+      ExistenceJoin(exists),
+      Some(EqualTo(left.output.head, right.output.head)),
+      JoinHint.NONE)
+    val sibling = spark.sql("SELECT * FROM VALUES (9) AS s(y)").queryExecution.analyzed
+    val cross = Join(joined, sibling, Cross, None, JoinHint.NONE)
+    val plan = Project(Seq(sibling.output.head), cross)
+    assert(plan.resolved)
+    val expected = Seq(Row(9), Row(9))
+    assertResult(expected)(DatasetUtil.fromLogicalPlan(spark, plan).collect().toSeq)
+    val exported = new ToSubstraitRel().convert(plan)
+    val restored = new ToLogicalPlan(spark).convert(exported)
+    assertResult(plan.schema)(restored.schema)
+    assertResult(expected)(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq)
+  }
+
+  Seq("left", "right").foreach {
+    side =>
+      test(s"conditioned join materializes the $side existence column") {
+        val left = spark.sql("SELECT * FROM VALUES (1), (2) AS l(x)").queryExecution.analyzed
+        val right = spark.sql("SELECT * FROM VALUES (1) AS r(x)").queryExecution.analyzed
+        val exists = AttributeReference("exists", BooleanType, nullable = false)()
+        val joined = Join(
+          left,
+          right,
+          ExistenceJoin(exists),
+          Some(EqualTo(left.output.head, right.output.head)),
+          JoinHint.NONE)
+        val sibling = spark.sql("SELECT * FROM VALUES (1), (2) AS s(y)").queryExecution.analyzed
+        val (first, second) = if (side == "left") (joined, sibling) else (sibling, joined)
+        val join = Join(
+          first,
+          second,
+          Inner,
+          Some(EqualTo(left.output.head, sibling.output.head)),
+          JoinHint.NONE)
+        val plan = Project(Seq(sibling.output.head, left.output.head, exists), join)
+        assert(plan.resolved)
+        val expected = Seq(Row(1, 1, true), Row(2, 2, false))
+        def sorted(rows: Seq[Row]): Seq[Row] = rows.sortBy(_.toString)
+        assertResult(expected)(sorted(DatasetUtil.fromLogicalPlan(spark, plan).collect().toSeq))
+        val exported = new ToSubstraitRel().convert(plan)
+        val restored = new ToLogicalPlan(spark).convert(exported)
+        assertResult(plan.schema)(restored.schema)
+        assertResult(expected)(sorted(DatasetUtil.fromLogicalPlan(spark, restored).collect().toSeq))
+      }
   }
 
   test("local_relation_null") {

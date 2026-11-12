@@ -80,11 +80,14 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
 
-  private[logical] def visitSubquery(p: LogicalPlan): relation.Rel = {
+  private[logical] def visitSubquery(p: LogicalPlan): relation.Rel =
+    withIsolatedExistenceJoins(visit(p))
+
+  private def withIsolatedExistenceJoins(convert: => relation.Rel): relation.Rel = {
     val enclosingExistenceJoins = existenceJoins.toMap
     existenceJoins.clear()
     try {
-      visit(p)
+      convert
     } finally {
       existenceJoins.clear()
       existenceJoins ++= enclosingExistenceJoins
@@ -409,8 +412,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
       case Join(left, right, ExistenceJoin(exists), where, _) =>
         convertExistenceJoin(left, right, where, exists)
       case _ =>
-        val left = visit(p.left)
-        val right = visit(p.right)
+        val left = visitJoinInput(p.left)
+        val right = visitJoinInput(p.right)
         val condition =
           p.condition.map(toExpression(p.left.output ++ p.right.output)).getOrElse(TRUE)
         val joinType = toSubstraitJoin(p.joinType)
@@ -428,6 +431,17 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
             .right(right)
             .build
         }
+    }
+  }
+
+  private def visitJoinInput(p: LogicalPlan): relation.Rel = withIsolatedExistenceJoins {
+    val input = visit(p)
+    if (p.output.exists(column => existenceJoins.contains(column.exprId.id))) {
+      // Join inputs must expose the Spark output in full. Keep predicates local to their
+      // own input and turn existence placeholders into fields before combining the inputs.
+      convertProject(Project(p.output, p), input)
+    } else {
+      input
     }
   }
 
@@ -465,9 +479,12 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
     visit(left)
   }
 
-  override def visitProject(p: Project): relation.Rel = {
-    val child = visit(p.child)
-    val expressions = p.projectList.map(toExpression(p.child.output)).toList
+  override def visitProject(p: Project): relation.Rel = convertProject(p, visit(p.child))
+
+  private def convertProject(p: Project, child: relation.Rel): relation.Rel = {
+    val emittedOutput =
+      p.child.output.filterNot(column => existenceJoins.contains(column.exprId.id))
+    val expressions = p.projectList.map(toExpression(emittedOutput)).toList
     // These attributes are now real Project columns, not existence-join placeholders.
     p.projectList.foreach(column => existenceJoins.remove(column.exprId.id))
     val remap = relation.Rel.Remap.offset(
