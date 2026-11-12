@@ -80,6 +80,20 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
 
+  private[logical] def visitSubquery(p: LogicalPlan): relation.Rel =
+    withIsolatedExistenceJoins(visit(p))
+
+  private def withIsolatedExistenceJoins(convert: => relation.Rel): relation.Rel = {
+    val enclosingExistenceJoins = existenceJoins.toMap
+    existenceJoins.clear()
+    try {
+      convert
+    } finally {
+      existenceJoins.clear()
+      existenceJoins ++= enclosingExistenceJoins
+    }
+  }
+
   override def default(p: LogicalPlan): relation.Rel = p match {
     case c: CommandResult => visit(c.commandLogicalPlan)
     case w: WriteFiles => visit(w.child)
@@ -398,8 +412,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
       case Join(left, right, ExistenceJoin(exists), where, _) =>
         convertExistenceJoin(left, right, where, exists)
       case _ =>
-        val left = visit(p.left)
-        val right = visit(p.right)
+        val left = visitJoinInput(p.left)
+        val right = visitJoinInput(p.right)
         val condition =
           p.condition.map(toExpression(p.left.output ++ p.right.output)).getOrElse(TRUE)
         val joinType = toSubstraitJoin(p.joinType)
@@ -417,6 +431,17 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
             .right(right)
             .build
         }
+    }
+  }
+
+  private def visitJoinInput(p: LogicalPlan): relation.Rel = withIsolatedExistenceJoins {
+    val input = visit(p)
+    if (p.output.exists(column => existenceJoins.contains(column.exprId.id))) {
+      // Join inputs must expose the Spark output in full. Keep predicates local to their
+      // own input and turn existence placeholders into fields before combining the inputs.
+      convertProject(Project(p.output, p), input)
+    } else {
+      input
     }
   }
 
@@ -454,12 +479,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
     visit(left)
   }
 
-  override def visitProject(p: Project): relation.Rel = {
-    val expressions = p.projectList.map(toExpression(p.child.output)).toList
-    val child = visit(p.child)
+  override def visitProject(p: Project): relation.Rel = convertProject(p, visit(p.child))
+
+  private def convertProject(p: Project, child: relation.Rel): relation.Rel = {
+    val emittedOutput =
+      p.child.output.filterNot(column => existenceJoins.contains(column.exprId.id))
+    val expressions = p.projectList.map(toExpression(emittedOutput)).toList
+    // These attributes are now real Project columns, not existence-join placeholders.
+    p.projectList.foreach(column => existenceJoins.remove(column.exprId.id))
     val remap = relation.Rel.Remap.offset(
-      // when calculating the offset, ignore any placeholder 'exists' attributes
-      p.child.output.count(o => !existenceJoins.contains(o.exprId.id)),
+      child.getRecordType.fields().size(),
       expressions.size
     )
 
@@ -921,7 +950,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
   override protected def translateSubQuery(expr: PlanExpression[_]): Option[SExpression] = {
     expr match {
       case s: ScalarSubquery if s.outerAttrs.isEmpty && s.joinCond.isEmpty =>
-        val rel = toSubstraitRel.visit(s.plan)
+        val rel = toSubstraitRel.visitSubquery(s.plan)
         val t =
           s.plan.schema.fields.head // Using this instead of s.dataType/s.nullable to get correct nullability
         Some(
@@ -942,7 +971,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
             SExpression.InPredicate
               .builder()
               .needles(values.toSeq.asJava)
-              .haystack(toSubstraitRel.visit(expr.query.plan))
+              .haystack(toSubstraitRel.visitSubquery(expr.query.plan))
               .build()
           ))
   }
