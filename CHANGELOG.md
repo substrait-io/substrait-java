@@ -1,6 +1,17 @@
 Release Notes
 ---
 
+## [0.108.0](https://github.com/substrait-io/substrait-java/compare/v0.107.1...v0.108.0) (2026-11-15)
+
+### ⚠ BREAKING CHANGES
+
+* **core:** constructing or deserializing a VarCharLiteral whose
+value exceeds its declared length now throws IllegalArgumentException.
+
+### Bug Fixes
+
+* **core:** reject varchar literals exceeding their declared length ([#1447](https://github.com/substrait-io/substrait-java/issues/1447)) ([d0fa78c](https://github.com/substrait-io/substrait-java/commit/d0fa78c094518415c9d0cbd3118ee01ac878692f))
+
 ## [0.107.1](https://github.com/substrait-io/substrait-java/compare/v0.107.0...v0.107.1) (2026-11-01)
 
 ### Bug Fixes
