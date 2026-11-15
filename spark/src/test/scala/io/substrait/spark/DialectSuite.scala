@@ -46,9 +46,9 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
   private def generatorWith(extras: SimpleExtension.ExtensionCollection*): DialectGenerator =
     new DialectGenerator(
       SparkExtension.SparkScalarFunctions,
-      SparkExtension.StandardAggregateFunctions ++
+      SparkExtension.AggregateFunctions ++
         extras.flatMap(_.aggregateFunctions().asScala.toSeq),
-      SparkExtension.StandardWindowFunctions
+      SparkExtension.WindowFunctions
     )
 
   override def beforeAll(): Unit = {
@@ -63,6 +63,19 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
       jsonSchemaFactory.getSchema(DialectGenerator.schemaStream(), InputFormat.YAML)
     val errors = schema.validate(published, InputFormat.YAML)
     assertResult(java.util.List.of())(errors)
+  }
+
+  test("Spark function declarations satisfy the extension schema") {
+    val registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
+    val schemaStream = getClass.getResourceAsStream("/substrait/text/simple_extensions_schema.yaml")
+    val schema =
+      try registry.getSchema(schemaStream, InputFormat.YAML)
+      finally schemaStream.close()
+    val source = Source.fromInputStream(getClass.getResourceAsStream("/spark.yml"))
+    val definitions =
+      try source.mkString
+      finally source.close()
+    assertResult(java.util.List.of())(schema.validate(definitions, InputFormat.YAML))
   }
 
   test("the CLI writes the published dialect to the file it is given") {
@@ -162,26 +175,45 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
         "'extension:io.substrait:functions_extra'")(error.getMessage)
   }
 
-  test("no aggregate or window function outside the standard extensions is advertised") {
-    // The runtime converters bind aggregates and windows against the standard extensions only, so
-    // a dialect derived from a wider set -- the collection merged with spark.yml -- would advertise
-    // functions that then fail with "Unable to find binding for call". Sourced from the catalog
-    // rather than from SparkExtension so that rewiring the generator to the merged collection is
-    // what this fails on. It cannot fail while spark.yml declares no aggregate or window function,
-    // which is exactly the condition that makes the bug latent rather than live.
+  test(
+    "aggregate and window declarations include the Spark contracts without stale standard variants") {
     val standard = DefaultExtensionCatalog.DEFAULT_COLLECTION
-    val declared: Set[(String, String)] =
-      (standard.aggregateFunctions().asScala.toSeq.map(f => (f.urn(), f.key())) ++
-        standard.windowFunctions().asScala.toSeq.map(f => (f.urn(), f.key()))).toSet
-
+    val sparkUrn = "extension:substrait:spark"
+    val sparkKeys = Set("sum:dec", "avg:dec", "sum:i64", "avg:i64")
+    val replaced = Set(
+      (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "sum:dec"),
+      (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC_DECIMAL, "avg:dec"),
+      (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "sum:i64"),
+      (DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "avg:i64")
+    )
+    val declaredAggregate =
+      standard.aggregateFunctions().asScala.toSeq.map(f => (f.urn(), f.key())).toSet -- replaced ++
+        sparkKeys.map(key => (sparkUrn, key))
+    val declaredWindow =
+      standard.windowFunctions().asScala.toSeq.map(f => (f.urn(), f.key())).toSet -- replaced ++
+        sparkKeys.map(key => (sparkUrn, key))
     val dialect = DialectGenerator.generate()
     val urns = dialect.dependencies().asScala
-    val advertised = (dialect.supportedAggregateFunctions().asScala.toSeq ++
-      dialect.supportedWindowFunctions().asScala.toSeq).flatMap {
-      f => f.supportedImpls().asScala.toSeq.map(impl => (urns(f.source()), s"${f.name()}:$impl"))
+    for (
+      (functions, declared) <- Seq(
+        dialect.supportedAggregateFunctions() -> declaredAggregate,
+        dialect.supportedWindowFunctions() -> declaredWindow)
+    ) {
+      val advertised = functions.asScala.toSeq.flatMap {
+        f => f.supportedImpls().asScala.toSeq.map(impl => (urns(f.source()), s"${f.name()}:$impl"))
+      }.toSet
+      assert(advertised.subsetOf(declared))
+      assert(sparkKeys.map(key => (sparkUrn, key)).subsetOf(advertised))
+      assert(advertised.intersect(replaced).isEmpty)
     }
-
-    assert(advertised.nonEmpty)
-    assertResult(Seq.empty)(advertised.filterNot(declared.contains))
+    val windowAdvertised = dialect
+      .supportedWindowFunctions()
+      .asScala
+      .toSeq
+      .flatMap {
+        f => f.supportedImpls().asScala.toSeq.map(impl => (urns(f.source()), s"${f.name()}:$impl"))
+      }
+      .toSet
+    assert(windowAdvertised.contains((DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "max:i64")))
   }
 }

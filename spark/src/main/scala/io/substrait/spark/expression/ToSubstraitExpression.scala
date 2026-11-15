@@ -173,7 +173,6 @@ abstract class ToSubstraitExpression extends HasOutputStack[Seq[Attribute]] {
         translateUp(child)
           .map(ExpressionCreator
             .cast(ToSubstraitType.apply(dataType, c.nullable), _, FailureBehavior.THROW_EXCEPTION))
-      case UnscaledValue(value) => translateUp(Cast(value, LongType))
       case c @ CheckOverflow(child, dataType, _) =>
         // CheckOverflow similar with cast
         translateUp(child)

@@ -1,8 +1,8 @@
 package io.substrait.spark.utils
 
 import io.substrait.spark.SparkExtension
+import io.substrait.spark.expression.{Sig, ToScalarFunction}
 import io.substrait.spark.expression.FunctionMappings.{AGGREGATE_SIGS, SCALAR_SIGS, WINDOW_SIGS}
-import io.substrait.spark.expression.Sig
 
 import org.apache.spark.sql.catalyst.expressions.{BinaryOperator, Expression, Literal}
 import org.apache.spark.sql.types.{ByteType, DateType, DayTimeIntervalType, DoubleType, FloatType, IntegerType, LongType, ShortType, TimestampNTZType, TimestampType, YearMonthIntervalType}
@@ -43,9 +43,24 @@ class DialectGenerator(
   }
 
   def generate(): Dialect = {
-    val scalars = SCALAR_SIGS.flatMap(supportedFunctions(scalarFunctions))
+    // Type arguments have no Catalyst literal for the generic signature probe.
+    val decimalConstructors = scalarFunctions.filter(ToScalarFunction.isDecimalConstructor).map {
+      f =>
+        SourcedFunction(
+          f.urn(),
+          DialectFunction
+            .builder()
+            .source(dependencyAlias(f.urn()))
+            .name(f.name())
+            .systemMetadata(
+              SystemFunctionMetadata.builder().name(f.name()).notation(Notation.FUNCTION).build())
+            .addSupportedImpls("i64_type")
+            .build()
+        )
+    }
+    val scalars = SCALAR_SIGS.flatMap(supportedFunctions(scalarFunctions)) ++ decimalConstructors
     val aggregates = AGGREGATE_SIGS.flatMap(supportedFunctions(aggregateFunctions))
-    val windows = WINDOW_SIGS.flatMap(supportedFunctions(windowFunctions))
+    val windows = (WINDOW_SIGS ++ AGGREGATE_SIGS).flatMap(supportedFunctions(windowFunctions))
 
     val builder = Dialect
       .builder()
@@ -331,8 +346,8 @@ class DialectGenerator(
 object DialectGenerator
   extends DialectGenerator(
     SparkExtension.SparkScalarFunctions,
-    SparkExtension.StandardAggregateFunctions,
-    SparkExtension.StandardWindowFunctions) {
+    SparkExtension.AggregateFunctions,
+    SparkExtension.WindowFunctions) {
 
   def main(args: Array[String]): Unit = {
     val yaml = generateYaml()

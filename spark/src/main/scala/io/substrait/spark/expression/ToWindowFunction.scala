@@ -41,6 +41,8 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       arguments: Seq[FunctionArg],
       outputType: Type): WindowRelFunctionInvocation = {
 
+    SparkAggregateFunctions.validateResult(function, arguments, outputType)
+
     val (frameType, lower, upper) = sparkExp match {
       case WindowExpression(
             _,
@@ -56,7 +58,7 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       case _ => throw new UnsupportedOperationException(s"Unsupported window expression: $sparkExp")
     }
 
-    ExpressionCreator.windowRelFunction(
+    val invocation = ExpressionCreator.windowRelFunction(
       function,
       outputType,
       SExpression.AggregationPhase.INITIAL_TO_RESULT, // use defaults...
@@ -66,18 +68,29 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
       upper,
       arguments.asJava
     )
+    val options = sparkExp match {
+      case WindowExpression(aggregate: AggregateExpression, _) =>
+        SparkAggregateFunctions.options(aggregate, function)
+      case _ => Seq.empty
+    }
+    WindowRelFunctionInvocation.builder().from(invocation).addAllOptions(options.asJava).build()
   }
 
   def convert(
       expression: WindowExpression,
       operands: Seq[SExpression]): Option[WindowRelFunctionInvocation] = {
-    val cls = expression.windowFunction match {
+    val native = expression.windowFunction match {
+      case agg: AggregateExpression =>
+        expression.copy(windowFunction = SparkAggregateFunctions.unwrap(agg))
+      case _ => expression
+    }
+    val cls = native.windowFunction match {
       case agg: AggregateExpression => agg.aggregateFunction.getClass
       case other => other.getClass
     }
 
     Option(signatures.get(cls))
-      .flatMap(m => m.attemptMatch(expression, operands))
+      .flatMap(m => m.attemptMatch(native, operands))
   }
 
   def apply(

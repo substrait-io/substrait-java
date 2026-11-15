@@ -16,6 +16,42 @@
 ---
 urn: extension:substrait:spark
 scalar_functions:
+  - name: unscaled_value
+    description: >-
+      Return the decimal's unscaled integer as a signed i64. Return null for
+      null input and raise an error if the unscaled integer does not fit i64.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,S>
+        nullability: MIRROR
+        return: i64
+  - name: make_decimal
+    description: >-
+      Interpret an i64 as an unscaled decimal with the precision and scale of
+      the type argument. Return null for null input and raise an error when
+      the unscaled value exceeds the target precision.
+    impls:
+      - args:
+          - name: value
+            value: i64
+          - name: target
+            type: DECIMAL<P,S>
+        nullability: MIRROR
+        return: DECIMAL<P,S>
+  - name: try_make_decimal
+    description: >-
+      Interpret an i64 as an unscaled decimal with the precision and scale of
+      the type argument. Return null for null input or when the unscaled value
+      exceeds the target precision.
+    impls:
+      - args:
+          - name: value
+            value: i64
+          - name: target
+            type: DECIMAL<P,S>
+        nullability: DECLARED_OUTPUT
+        return: DECIMAL?<P,S>
   - name: add
     description: >-
       Adds days to a date
@@ -26,3 +62,69 @@ scalar_functions:
           - name: days
             value: i32
         return: date
+
+aggregate_functions:
+  - name: sum
+    description: >-
+      Spark sum. Decimal inputs have a decimal<min(P+10,38),S> buffer type
+      and result; i64 inputs use an i64 accumulator and result. Ignore null
+      inputs and return null for an empty or all-null group. Overflow returns
+      null for NULL, raises an error for ERROR, or wraps for WRAP (i64 only).
+      Decimal updates and merges do not check the buffer's declared precision.
+      Finalization checks the result precision. An out-of-range live decimal
+      buffer can therefore recover after cancellation, even after an earlier
+      window result was null. Materialization that checks the buffer precision
+      can instead store null; a stored null propagates through updates and merges
+      and is handled by the overflow option at finalization. Decimal overflow
+      outcomes can depend on physical buffer materialization. For i64 with NULL,
+      overflow during addition makes the accumulator remain null. Only
+      INITIAL_TO_RESULT is supported.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,S>
+        options:
+          overflow:
+            values: ["NULL", ERROR]
+        nullability: DECLARED_OUTPUT
+        decomposable: NONE
+        return: DECIMAL?<min(P+10,38),S>
+      - args:
+          - name: x
+            value: i64
+        options:
+          overflow:
+            values: [WRAP, "NULL", ERROR]
+        nullability: DECLARED_OUTPUT
+        decomposable: NONE
+        return: i64?
+  - name: avg
+    description: >-
+      Spark average. Decimal inputs use a decimal<min(P+10,38),S> sum
+      buffer and an i64 count, then divide with HALF_UP rounding to
+      decimal<min(P+4,38),min(S+4,38)>. i64 inputs use an fp64 sum and i64
+      count and return fp64. Ignore null inputs and return null for an empty
+      or all-null group. The decimal sum buffer has the same unchecked updates,
+      merges and materialization behavior as sum:dec. A null sum buffer or result
+      overflow returns null for NULL and raises an error for ERROR at finalization.
+      Decimal overflow outcomes can depend on physical buffer materialization.
+      Only INITIAL_TO_RESULT is supported.
+    impls:
+      - args:
+          - name: x
+            value: DECIMAL<P,S>
+        options:
+          overflow:
+            values: ["NULL", ERROR]
+        nullability: DECLARED_OUTPUT
+        decomposable: NONE
+        return: DECIMAL?<min(P+4,38),min(S+4,38)>
+      - args:
+          - name: x
+            value: i64
+        options:
+          overflow:
+            values: ["NULL", ERROR]
+        nullability: DECLARED_OUTPUT
+        decomposable: NONE
+        return: fp64?

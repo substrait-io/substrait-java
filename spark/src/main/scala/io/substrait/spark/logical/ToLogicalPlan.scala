@@ -92,7 +92,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
       arguments = ArrayBuffer(Literal(1)).toSeq
     }
 
-    val aggregateFunction = SparkExtension.toAggregateFunction
+    val mappedAggregateFunction = SparkExtension.toAggregateFunction
       .getSparkExpressionFromSubstraitFunc(function.declaration.key, arguments)
       .map(_.asInstanceOf[AggregateFunction])
       .getOrElse({
@@ -110,6 +110,13 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
         )
         throw new IllegalArgumentException(msg)
       })
+
+    val aggregateFunction = SparkAggregateFunctions.configure(
+      mappedAggregateFunction,
+      function.declaration(),
+      function.options(),
+      function.aggregationPhase(),
+      function.outputType())
 
     if (function.sort().asScala.exists(!_.direction().isPresent)) {
       throw new UnsupportedOperationException(
@@ -179,8 +186,14 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
               .map {
                 case win: WindowFunction => win
                 case agg: AggregateFunction =>
-                  AggregateExpression(
+                  val configured = SparkAggregateFunctions.configure(
                     agg,
+                    func.declaration(),
+                    func.options(),
+                    func.aggregationPhase(),
+                    func.outputType())
+                  AggregateExpression(
+                    configured,
                     ToAggregateFunction.toSpark(func.aggregationPhase()),
                     ToAggregateFunction.toSpark(func.invocation()),
                     None)
