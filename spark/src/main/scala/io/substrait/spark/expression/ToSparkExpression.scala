@@ -291,7 +291,7 @@ class ToSparkExpression(
       case "or" if args.size > 2 => args.reduceLeft((left, right) => Or(left, right))
       case _ =>
         scalarFunctionConverter
-          .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
+          .getSparkExpressionFromSubstraitFunc(expr, args)
           .getOrElse({
             val msg = String.format(
               "Unable to convert scalar function %s(%s).",
