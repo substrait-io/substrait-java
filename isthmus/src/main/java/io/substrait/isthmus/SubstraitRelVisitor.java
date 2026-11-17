@@ -24,6 +24,7 @@ import io.substrait.relation.Filter;
 import io.substrait.relation.ImmutableAggregate;
 import io.substrait.relation.ImmutableFetch;
 import io.substrait.relation.ImmutableMeasure.Builder;
+import io.substrait.relation.ImmutableNamedScan;
 import io.substrait.relation.Join;
 import io.substrait.relation.Join.JoinType;
 import io.substrait.relation.NamedDdl;
@@ -47,6 +48,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.calcite.interpreter.Bindables.BindableTableScan;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -145,6 +147,20 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
    */
   @Override
   public Rel visit(org.apache.calcite.rel.core.TableScan scan) {
+    if (scan instanceof BindableTableScan) {
+      BindableTableScan bindable = (BindableTableScan) scan;
+      ImmutableNamedScan.Builder builder =
+          NamedScan.builder()
+              .initialSchema(typeConverter.toNamedStruct(scan.getTable().getRowType()))
+              .addAllNames(scan.getTable().getQualifiedName());
+      if (!bindable.filters.isEmpty()) {
+        builder.filter(toExpression(RexUtil.composeConjunction(rexBuilder, bindable.filters)));
+      }
+      if (!bindable.projects.equals(scan.identity())) {
+        builder.remap(Remap.of(bindable.projects));
+      }
+      return builder.build();
+    }
     NamedStruct type = typeConverter.toNamedStruct(scan.getRowType());
     return NamedScan.builder()
         .initialSchema(type)
