@@ -664,7 +664,8 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   private def convertFileFormat(
       fileFormat: DSFileFormat,
       options: Map[String, String]): FileFormat = fileFormat match {
-    case _: CSVFileFormat =>
+    // Subclasses can require metadata that plain file reads and writes do not carry.
+    case format: CSVFileFormat if format.getClass == classOf[CSVFileFormat] =>
       // default values for options specified here:
       // https://spark.apache.org/docs/latest/sql-data-sources-csv.html#data-source-option
       FileFormat.DelimiterSeparatedTextReadOptions
@@ -676,10 +677,13 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
         .escape(options.getOrElse("escape", "\\"))
         .valueTreatedAsNull(Optional.ofNullable(options.get("nullValue").orNull))
         .build()
-    case _: ParquetFileFormat => FileFormat.ParquetReadOptions.builder().build()
-    case _: OrcFileFormat => FileFormat.OrcReadOptions.builder().build()
+    case format: ParquetFileFormat if format.getClass == classOf[ParquetFileFormat] =>
+      FileFormat.ParquetReadOptions.builder().build()
+    case format: OrcFileFormat if format.getClass == classOf[OrcFileFormat] =>
+      FileFormat.OrcReadOptions.builder().build()
     case format =>
-      throw new UnsupportedOperationException(s"File format not currently supported: $format")
+      throw new UnsupportedOperationException(
+        s"File format not currently supported: ${format.getClass.getName}")
   }
 
   /** Read Operator: https://substrait.io/relations/logical_relations/#read-operator */
