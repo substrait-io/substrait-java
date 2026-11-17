@@ -2,11 +2,14 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.expression.ExpressionCreator;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.isthmus.SubstraitRelNodeConverter.Context;
 import io.substrait.relation.NamedScan;
+import io.substrait.relation.NamedUpdate;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.RelProtoConverter;
@@ -22,7 +25,9 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -35,6 +40,7 @@ import org.apache.calcite.tools.RelRunners;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class BindableTableScanTest extends PlanTestBase {
   private final CalciteSchema schema = CalciteSchema.createRootSchema(false);
@@ -173,6 +179,50 @@ class BindableTableScanTest extends PlanTestBase {
         assertInstanceOf(NamedScan.class, SubstraitRelVisitor.convert(scan, converterProvider));
     assertTrue(exported.getFilter().isEmpty());
     assertTrue(exported.getRemap().isEmpty());
+  }
+
+  private RelNode update(RelNode input) {
+    return LogicalTableModify.create(
+        scan.getTable(),
+        null,
+        input,
+        TableModify.Operation.UPDATE,
+        List.of("V"),
+        List.of(runtimeBuilder.literal(100)),
+        false);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void rejectsUpdateWithPushedFilter(boolean outerFilter) {
+    RexNode predicate =
+        runtimeBuilder.greaterThan(
+            runtimeBuilder.getRexBuilder().makeInputRef(scan, 0), runtimeBuilder.literal(5));
+    RelNode input =
+        BindableTableScan.create(
+            scan.getCluster(), scan.getTable(), List.of(predicate), List.of(0, 1, 2));
+    if (outerFilter) {
+      input =
+          runtimeBuilder
+              .push(input)
+              .filter(runtimeBuilder.lessThan(runtimeBuilder.field(1), runtimeBuilder.literal(80)))
+              .build();
+    }
+    RelNode modification = update(input);
+    UnsupportedOperationException error =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> SubstraitRelVisitor.convert(modification, converterProvider));
+    assertEquals("UPDATE cannot convert a scan with pushed filters", error.getMessage());
+  }
+
+  @Test
+  void preservesUpdateOverUnfilteredBindableScan() {
+    BindableTableScan input = BindableTableScan.create(scan.getCluster(), scan.getTable());
+    NamedUpdate exported =
+        assertInstanceOf(
+            NamedUpdate.class, SubstraitRelVisitor.convert(update(input), converterProvider));
+    assertEquals(ExpressionCreator.bool(false, true), exported.getCondition());
   }
 
   private static class RuntimeTable extends AbstractTable implements ProjectableFilterableTable {

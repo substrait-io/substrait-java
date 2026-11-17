@@ -947,6 +947,11 @@ public class SubstraitRelVisitor extends RelNodeVisitor<Rel, RuntimeException> {
             throw new UnsupportedOperationException(
                 "UPDATE target scan schema must match the target table schema");
           }
+          if (input instanceof BindableTableScan
+              && !((BindableTableScan) input).filters.isEmpty()) {
+            throw new UnsupportedOperationException(
+                "UPDATE cannot convert a scan with pushed filters");
+          }
           if (!conditions.isEmpty() && RexOver.containsOver(sourceExpressions, null)) {
             // The spec does not define the rows a window in an UpdateRel transformation ranges
             // over, so only an unfiltered update, where it can only be every row, is converted.
