@@ -555,6 +555,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   }
 
   private def buildLocalFileScan(fsRelation: HadoopFsRelation): relation.AbstractReadRel = {
+    val format = convertFileFormat(fsRelation.fileFormat, fsRelation.options)
     val files =
       fsRelation.location.listFiles(Nil, Nil).flatMap(_.files.map(f => (f.getPath, f.getLen)))
     if (files.isEmpty) {
@@ -563,7 +564,7 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
       buildLocalFileScan(
         ToSubstraitType.toNamedStruct(fsRelation.schema),
         files,
-        convertFileFormat(fsRelation.fileFormat, fsRelation.options)
+        format
       )
     }
   }

@@ -45,6 +45,30 @@ class FileFormatSuite extends SharedSparkSession {
           }
       }
 
+      test(s"empty $format sources still reject subclasses") {
+        withTempPath {
+          directory =>
+            assert(directory.mkdirs())
+            val data = spark.read.format(format).schema("id INT").load(directory.getAbsolutePath)
+            val logical = data.queryExecution.optimizedPlan.collect {
+              case relation: LogicalRelation => relation
+            }.head
+            val relation = logical.relation.asInstanceOf[HadoopFsRelation]
+            assert(relation.partitionSchema.isEmpty)
+            assert(relation.location.listFiles(Nil, Nil).flatMap(_.files).isEmpty)
+            val plain = new ToSubstraitRel().convert(logical)
+            val converted = new ToLogicalPlan(spark).convert(plain)
+            assert(DatasetUtil.fromLogicalPlan(spark, converted).collect().isEmpty)
+
+            val unsupported = subclass(): FileFormat
+            val plan = logical.copy(relation = relation.copy(fileFormat = unsupported)(spark))
+            val error = intercept[UnsupportedOperationException] {
+              new ToSubstraitRel().convert(plan)
+            }
+            assert(error.getMessage.contains(unsupported.getClass.getName))
+        }
+      }
+
       test(s"reject $format subclasses on file writes") {
         withTempPath {
           directory =>
