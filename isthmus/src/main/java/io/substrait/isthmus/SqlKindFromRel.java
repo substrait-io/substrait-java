@@ -246,31 +246,31 @@ public class SqlKindFromRel
   @Override
   public SqlKind visit(ScatterExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
-    return SqlKind.OTHER_DDL;
+    return QUERY_KIND;
   }
 
   @Override
   public SqlKind visit(SingleBucketExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
-    return SqlKind.OTHER_DDL;
+    return QUERY_KIND;
   }
 
   @Override
   public SqlKind visit(MultiBucketExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
-    return SqlKind.OTHER_DDL;
+    return QUERY_KIND;
   }
 
   @Override
   public SqlKind visit(RoundRobinExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
-    return SqlKind.OTHER_DDL;
+    return QUERY_KIND;
   }
 
   @Override
   public SqlKind visit(BroadcastExchange exchange, EmptyVisitationContext context)
       throws RuntimeException {
-    return SqlKind.OTHER_DDL;
+    return QUERY_KIND;
   }
 
   @Override
