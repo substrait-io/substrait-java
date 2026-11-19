@@ -4,13 +4,13 @@ import io.substrait.expression.Expression;
 import io.substrait.expression.proto.DetachedSubtrees;
 import io.substrait.expression.proto.ProtoExpressionConverter;
 import io.substrait.extension.DefaultExtensionCatalog;
-import io.substrait.extension.ExtensionCollector;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.ImmutableExtensionLookup;
 import io.substrait.extension.SimpleExtension;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.NamedStruct;
 import io.substrait.relation.ProtoAggregateFunctionConverter;
+import io.substrait.relation.ProtoRelConverter;
 import io.substrait.type.proto.ProtoTypeConverter;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +19,6 @@ import java.util.Optional;
 /** Converts from {@link io.substrait.proto.ExtendedExpression} to {@link ExtendedExpression} */
 public class ProtoExtendedExpressionConverter {
   private final SimpleExtension.ExtensionCollection extensionCollection;
-
-  private final ProtoTypeConverter protoTypeConverter =
-      new ProtoTypeConverter(
-          new ExtensionCollector(), SimpleExtension.ExtensionCollection.builder().build());
 
   /** Creates a converter using the default extension collection. */
   public ProtoExtendedExpressionConverter() {
@@ -58,12 +54,16 @@ public class ProtoExtendedExpressionConverter {
     NamedStruct baseSchemaProto = extendedExpression.getBaseSchema();
 
     io.substrait.type.NamedStruct namedStruct =
-        io.substrait.type.NamedStruct.fromProto(baseSchemaProto, protoTypeConverter);
+        io.substrait.type.NamedStruct.fromProto(
+            baseSchemaProto, new ProtoTypeConverter(functionLookup, extensionCollection));
 
-    DetachedSubtrees detachedSubtrees = DetachedSubtrees.of(extendedExpression);
+    ProtoRelConverter relConverter =
+        ProtoRelConverter.forExtendedExpression(
+            functionLookup, extensionCollection, extendedExpression);
+    DetachedSubtrees detachedSubtrees = relConverter.detachedSubtrees();
     ProtoExpressionConverter protoExpressionConverter =
         new ProtoExpressionConverter(
-            functionLookup, this.extensionCollection, namedStruct.struct(), null, detachedSubtrees);
+            functionLookup, this.extensionCollection, namedStruct.struct(), relConverter);
 
     List<ExtendedExpression.ExpressionReferenceBase> expressionReferences = new ArrayList<>();
 
@@ -107,15 +107,21 @@ public class ProtoExtendedExpressionConverter {
     ImmutableExtendedExpression.Builder builder =
         ImmutableExtendedExpression.builder()
             .referredExpressions(expressionReferences)
+            .expectedTypeUrls(extendedExpression.getExpectedTypeUrlsList())
             .advancedExtension(
                 Optional.ofNullable(
                     extendedExpression.hasAdvancedExtensions()
                         ? extendedExpression.getAdvancedExtensions()
                         : null))
             .baseSchema(namedStruct);
-    if (extendedExpression.hasAdvancedExtensions()) {
-      // The advanced extension stays raw, so the entries its ordinals may name keep their ordinals.
+    if (extendedExpression.hasVersion()) {
+      builder.version(extendedExpression.getVersion());
+    }
+    if (detachedSubtrees.needsRetainedEntries()) {
       builder.retainedDetachedExpressions(detachedSubtrees.unresolvedPrefix());
+      builder.retainedDetachedRelations(detachedSubtrees.unresolvedRelationPrefix());
+      builder.retainedExtensionUrns(extendedExpression.getExtensionUrnsList());
+      builder.retainedExtensions(extendedExpression.getExtensionsList());
     }
 
     return builder.build();

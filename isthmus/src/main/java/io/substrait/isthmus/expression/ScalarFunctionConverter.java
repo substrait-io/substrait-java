@@ -85,7 +85,7 @@ public class ScalarFunctionConverter
 
     mappers =
         List.of(
-            new DatetimeSubtractionFunctionMapper(functions),
+            new DatetimeArithmeticFunctionMapper(functions, rexBuilder),
             new ConcatFunctionMapper(functions),
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions, typeFactory),

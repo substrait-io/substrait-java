@@ -1,9 +1,11 @@
 package io.substrait.extendedexpression;
 
 import io.substrait.expression.Expression;
+import io.substrait.plan.Plan;
 import io.substrait.proto.AdvancedExtension;
 import io.substrait.relation.Aggregate;
 import io.substrait.type.NamedStruct;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
@@ -15,6 +17,22 @@ import org.immutables.value.Value;
  */
 @Value.Immutable
 public abstract class ExtendedExpression {
+
+  /**
+   * Returns the declared Substrait version, including the producer metadata.
+   *
+   * @return the declared version, defaulting to the specification used by this build
+   */
+  @Value.Default
+  public io.substrait.proto.Version getVersion() {
+    Plan.Version version = Plan.Version.DEFAULT_VERSION;
+    return io.substrait.proto.Version.newBuilder()
+        .setMajorNumber(version.getMajor())
+        .setMinorNumber(version.getMinor())
+        .setPatchNumber(version.getPatch())
+        .setProducer(version.getProducer().orElse(""))
+        .build();
+  }
 
   /**
    * Returns the list of referred expression references.
@@ -45,17 +63,41 @@ public abstract class ExtendedExpression {
   public abstract Optional<AdvancedExtension> getAdvancedExtension();
 
   /**
-   * Returns the {@code detached_expressions} entries that ordinals inside the {@link
-   * #getAdvancedExtension() advanced extension} may still refer to, at their original ordinals.
-   *
-   * <p>The advanced extension is kept as the raw proto, so an ordinal inside it is not resolved;
-   * the spec requires its target to keep its ordinal. Reading an extended expression that has an
-   * advanced extension retains every entry up to the last one no referred expression resolved, and
-   * writing one places them back at the same ordinals. Empty otherwise.
+   * Returns the detached expressions that an opaque payload may reference.
    *
    * @return the retained detached expressions, indexed by ordinal
    */
   public abstract List<io.substrait.proto.Expression> getRetainedDetachedExpressions();
+
+  /**
+   * Returns the detached relations that an opaque payload may reference.
+   *
+   * @return retained relations at their original ordinals
+   */
+  @Value.Default
+  public List<io.substrait.proto.Rel> getRetainedDetachedRelations() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Returns the original extension URNs for raw detached subtrees.
+   *
+   * @return the retained URNs with their original anchors
+   */
+  @Value.Default
+  public List<io.substrait.proto.SimpleExtensionURN> getRetainedExtensionUrns() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Returns the original extension declarations for raw detached subtrees.
+   *
+   * @return the retained declarations with their original anchors
+   */
+  @Value.Default
+  public List<io.substrait.proto.SimpleExtensionDeclaration> getRetainedExtensions() {
+    return Collections.emptyList();
+  }
 
   /**
    * Creates a builder for {@link ExtendedExpression}.
