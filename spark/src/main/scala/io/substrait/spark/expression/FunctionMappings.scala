@@ -38,6 +38,13 @@ case class GenericSig(expClass: Class[_], name: String, builder: Seq[Expression]
   }
 }
 
+/**
+ * Thrown by a signature that cannot build a Spark call from the arguments it is given. It is the
+ * UnsupportedOperationException callers already handle, but a type of its own, so that the dialect
+ * generator can tell a call Spark does not support from a fault.
+ */
+class UnsupportedCallException(message: String) extends UnsupportedOperationException(message)
+
 case class SpecialSig(
     expClass: Class[_],
     name: String,
@@ -107,7 +114,7 @@ class FunctionMappings {
         case DateFunction(expr) => expr
         case TrimFunction(expr) => expr
         case _ =>
-          throw new UnsupportedOperationException(s"Cannot convert $signature with arguments $args")
+          throw new UnsupportedCallException(s"Cannot convert $signature with arguments $args")
       }
     SpecialSig(scala.reflect.classTag[T].runtimeClass, name, key, builder)
   }
