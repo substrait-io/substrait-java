@@ -40,13 +40,14 @@ import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, Data
 import org.apache.spark.sql.hive.execution.{CreateHiveTableAsSelectCommand, InsertIntoHiveTable}
 import org.apache.spark.sql.types.{Decimal, DecimalType, NullType, StructField, StructType}
 
-import io.substrait.`type`.{NamedStruct, Type}
+import io.substrait.`type`.{NamedStruct, Type, TypeCreator}
 import io.substrait.{proto, relation}
 import io.substrait.debug.TreePrinter
+import io.substrait.dsl.SubstraitBuilder
 import io.substrait.expression.{Expression => SExpression, ExpressionCreator}
 import io.substrait.expression.Expression.StructLiteral
 import io.substrait.expression.proto.NestingDetacher
-import io.substrait.extension.ExtensionCollector
+import io.substrait.extension.{DefaultExtensionCatalog, ExtensionCollector}
 import io.substrait.hint.Hint
 import io.substrait.plan.{ImmutableExecutionBehavior, Plan}
 import io.substrait.plan.Plan.ExecutionBehavior.VariableEvaluationMode
@@ -73,12 +74,16 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
   private val TRUE = ExpressionCreator.bool(false, true)
 
   private val existenceJoins = scala.collection.mutable.Map[Long, SExpression.InPredicate]()
+  private val existencePredicates = scala.collection.mutable.Map[Long, SExpression]()
 
   private var _rddLimit = 100
   def rddLimit: Int = _rddLimit
   def rddLimit_=(rddLimit: Int): Unit = _rddLimit = rddLimit
 
   def getExistenceJoin(id: Long): Option[SExpression.InPredicate] = existenceJoins.get(id)
+
+  private[logical] def getExistencePredicate(id: Long): Option[SExpression] =
+    existencePredicates.get(id)
 
   override def default(p: LogicalPlan): relation.Rel = p match {
     case c: CommandResult => visit(c.commandLogicalPlan)
@@ -431,25 +436,59 @@ class ToSubstraitRel extends AbstractLogicalPlanVisitor with Logging with Predic
 
     // The 'exists' attribute in the parent filter condition will be associated with this.
 
-    // extract the needle expressions from the join condition
-    def findNeedles(expr: Expression): Iterable[Expression] = expr match {
-      case And(lhs, rhs) => findNeedles(lhs) ++ findNeedles(rhs)
-      case EqualTo(lhs, _) => Seq(lhs)
+    // Keep both sides of each key so the needles and haystack have the same order.
+    def findKeys(expr: Expression): Iterable[(Expression, Expression)] = expr match {
+      case And(lhs, rhs) => findKeys(lhs) ++ findKeys(rhs)
+      case EqualTo(lhs, rhs) if canEvaluate(lhs, left) && canEvaluate(rhs, right) =>
+        Seq((lhs, rhs))
+      case EqualTo(lhs, rhs) if canEvaluate(rhs, left) && canEvaluate(lhs, right) =>
+        Seq((rhs, lhs))
       case _ =>
         throw new UnsupportedOperationException(
           s"Unable to convert the ExistenceJoin condition: $expr")
     }
-    val needles = condition.toSeq
-      .flatMap(w => findNeedles(w))
+    val keys = condition.toSeq.flatMap(findKeys)
+    val needles = keys
+      .map(_._1)
       .map(toExpression(left.output))
       .asJava
 
-    val haystack = visit(right)
+    val haystackKeys = keys.zipWithIndex.map {
+      case ((_, key), index) => Alias(key, s"key_$index")()
+    }
+    val projectedHaystack = Project(haystackKeys, right)
+    val nonNullHaystackKeys = haystackKeys.map(key => IsNotNull(key.toAttribute): Expression)
+    val haystack = visit(
+      if (nonNullHaystackKeys.isEmpty) projectedHaystack
+      else Filter(buildBalancedPredicate(nonNullHaystackKeys, And), projectedHaystack))
 
     val inPredicate =
       SExpression.InPredicate.builder().needles(needles).haystack(haystack).build()
-    // put this in a map exists->inPredicate for later lookup
+    // Equality joins never match null keys. Guard needles and remove null haystack keys
+    // so that IN remains two-valued here, including below NOT.
+    val builder = new SubstraitBuilder(SparkExtension.COLLECTION)
+    def balancedConjunction(predicates: Seq[SExpression]): SExpression = {
+      if (predicates.size == 1) predicates.head
+      else {
+        val (left, right) = predicates.splitAt(predicates.size / 2)
+        builder.and(balancedConjunction(left), balancedConjunction(right))
+      }
+    }
+    val nonNullNeedles = needles.asScala.toSeq.map(
+      needle =>
+        builder.scalarFn(
+          DefaultExtensionCatalog.FUNCTIONS_COMPARISON,
+          "is_not_null:any",
+          TypeCreator.REQUIRED.BOOLEAN,
+          needle))
+    val existencePredicate =
+      if (nonNullNeedles.isEmpty) inPredicate
+      else
+        ExpressionCreator.ifThenStatement(
+          ExpressionCreator.bool(false, false),
+          ExpressionCreator.ifThenClause(balancedConjunction(nonNullNeedles), inPredicate))
     existenceJoins.put(exists.exprId.id, inPredicate)
+    existencePredicates.put(exists.exprId.id, existencePredicate)
     // return the left child, which will become the child of the enclosing filter
     visit(left)
   }
@@ -948,7 +987,7 @@ private[logical] class WithLogicalSubQuery(toSubstraitRel: ToSubstraitRel)
   }
 
   override protected def translateAttribute(a: AttributeReference): Option[SExpression] = {
-    toSubstraitRel.getExistenceJoin(a.exprId.id) match {
+    toSubstraitRel.getExistencePredicate(a.exprId.id) match {
       case Some(exists) => Some(exists)
       case None => super.translateAttribute(a)
     }
