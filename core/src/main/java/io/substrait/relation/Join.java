@@ -106,15 +106,15 @@ public abstract class Join extends BiRel implements HasExtension {
   }
 
   /**
-   * Derives the output record type of a join from its type and inputs. Shared with {@link
-   * LateralJoin}, which has the same output-schema semantics.
+   * Derives the direct output record type of a logical, lateral or physical join from its type and
+   * inputs, before emit remapping.
    *
    * @param joinType the join type
    * @param left the left input
    * @param right the right input
    * @return the derived output record type
    */
-  static Type.Struct deriveRecordType(JoinType joinType, Rel left, Rel right) {
+  public static Type.Struct deriveRecordType(JoinType joinType, Rel left, Rel right) {
     Stream<Type> leftTypes = leftTypes(joinType, left);
     Stream<Type> rightTypes = rightTypes(joinType, right);
     Stream<Type> markType = markType(joinType);

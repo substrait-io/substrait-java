@@ -4,11 +4,10 @@ import io.substrait.expression.Expression;
 import io.substrait.proto.NestedLoopJoinRel;
 import io.substrait.relation.BiRel;
 import io.substrait.relation.HasExtension;
+import io.substrait.relation.Join;
 import io.substrait.relation.RelVisitor;
 import io.substrait.type.Type;
-import io.substrait.type.TypeCreator;
 import io.substrait.util.VisitationContext;
-import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 /** A physical join relation that evaluates the condition for every pair of left and right rows. */
@@ -48,7 +47,15 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
     /** Left anti join: left rows that have no match on the right. */
     LEFT_ANTI(NestedLoopJoinRel.JoinType.JOIN_TYPE_LEFT_ANTI),
     /** Right anti join: right rows that have no match on the left. */
-    RIGHT_ANTI(NestedLoopJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI);
+    RIGHT_ANTI(NestedLoopJoinRel.JoinType.JOIN_TYPE_RIGHT_ANTI),
+    /** Left single join: left rows with at most one matching right row. */
+    LEFT_SINGLE(NestedLoopJoinRel.JoinType.JOIN_TYPE_LEFT_SINGLE),
+    /** Right single join: right rows with at most one matching left row. */
+    RIGHT_SINGLE(NestedLoopJoinRel.JoinType.JOIN_TYPE_RIGHT_SINGLE),
+    /** Left mark join: left fields followed by a nullable boolean mark. */
+    LEFT_MARK(NestedLoopJoinRel.JoinType.JOIN_TYPE_LEFT_MARK),
+    /** Right mark join: right fields followed by a nullable boolean mark. */
+    RIGHT_MARK(NestedLoopJoinRel.JoinType.JOIN_TYPE_RIGHT_MARK);
 
     private NestedLoopJoinRel.JoinType proto;
 
@@ -85,35 +92,8 @@ public abstract class NestedLoopJoin extends BiRel implements HasExtension {
 
   @Override
   protected Type.Struct deriveRecordType() {
-    Stream<Type> leftTypes = getLeftTypes();
-    Stream<Type> rightTypes = getRightTypes();
-    return TypeCreator.REQUIRED.struct(Stream.concat(leftTypes, rightTypes));
-  }
-
-  private Stream<Type> getLeftTypes() {
-    switch (getJoinType()) {
-      case RIGHT:
-      case OUTER:
-        return getLeft().getRecordType().fields().stream().map(TypeCreator::asNullable);
-      case RIGHT_ANTI:
-      case RIGHT_SEMI:
-        return Stream.empty();
-      default:
-        return getLeft().getRecordType().fields().stream();
-    }
-  }
-
-  private Stream<Type> getRightTypes() {
-    switch (getJoinType()) {
-      case LEFT:
-      case OUTER:
-        return getRight().getRecordType().fields().stream().map(TypeCreator::asNullable);
-      case LEFT_ANTI:
-      case LEFT_SEMI:
-        return Stream.empty();
-      default:
-        return getRight().getRecordType().fields().stream();
-    }
+    return Join.deriveRecordType(
+        Join.JoinType.valueOf(getJoinType().name()), getLeft(), getRight());
   }
 
   @Override
