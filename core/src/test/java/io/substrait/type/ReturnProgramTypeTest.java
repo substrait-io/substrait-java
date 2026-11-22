@@ -35,14 +35,15 @@ class ReturnProgramTypeTest {
     "multiply,10,2,5,1,16,3",
     "multiply,38,10,38,10,38,6",
     "multiply,30,20,30,20,38,17",
-    "divide,10,2,5,1,21,8",
+    "divide,10,2,5,1,17,8",
+    "divide,10,2,9,0,20,12",
+    "divide,28,10,10,2,38,18",
+    "divide,32,0,1,0,38,6",
     "divide,38,10,38,10,38,6",
     "modulus,10,2,5,1,6,2"
   })
   void decimalProgramsDeriveTheCatalogFormula(
       String name, int p1, int s1, int p2, int s2, int precision, int scale) {
-    // Expected types follow the extension's spec v0.102.0 formulas. In particular, divide's
-    // precision uses P2, where the separate prose example uses S2.
     assertEquals(
         R.decimal(precision, scale),
         resolve(name + ":dec_dec", R.decimal(p1, s1), R.decimal(p2, s2)));
@@ -51,6 +52,9 @@ class ReturnProgramTypeTest {
   @Test
   void decimalProgramsPreserveMirrorNullabilityAndLiteralConstraints() {
     assertEquals(N.decimal(11, 2), resolve("add:dec_dec", N.decimal(10, 2), R.decimal(5, 1)));
+    assertEquals(N.decimal(17, 8), resolve("divide:dec_dec", N.decimal(10, 2), R.decimal(5, 1)));
+    assertEquals(N.decimal(17, 8), resolve("divide:dec_dec", R.decimal(10, 2), N.decimal(5, 1)));
+    assertEquals(N.decimal(17, 8), resolve("divide:dec_dec", N.decimal(10, 2), N.decimal(5, 1)));
     for (String name : List.of("bitwise_and", "bitwise_or", "bitwise_xor")) {
       assertEquals(
           R.decimal(20, 0), resolve(name + ":dec_dec", R.decimal(10, 0), R.decimal(20, 0)));

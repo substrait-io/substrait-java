@@ -266,7 +266,7 @@ public class SubstraitTypeSystem extends RelDataTypeSystemImpl {
         type2,
         (p1, s1, p2, s2) -> {
           int scale = Math.max(6, s1 + p2 + 1);
-          return new int[] {p1 - s1 + p2 + scale, scale};
+          return new int[] {p1 - s1 + s2 + scale, scale};
         });
   }
 
