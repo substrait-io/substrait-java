@@ -1,6 +1,12 @@
 Release Notes
 ---
 
+## [0.108.1](https://github.com/substrait-io/substrait-java/compare/v0.108.0...v0.108.1) (2026-11-22)
+
+### Bug Fixes
+
+* **spark:** list the functions the dialect generator dropped ([#1461](https://github.com/substrait-io/substrait-java/issues/1461)) ([2b5c71e](https://github.com/substrait-io/substrait-java/commit/2b5c71e0bbaefce5ee2ed0014f917d777252bcbe))
+
 ## [0.108.0](https://github.com/substrait-io/substrait-java/compare/v0.107.1...v0.108.0) (2026-11-15)
 
 ### ⚠ BREAKING CHANGES
