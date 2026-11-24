@@ -123,9 +123,8 @@ public class LiteralConverter {
       return ExpressionCreator.string(nullable, value);
     }
     if (type instanceof Type.VarChar) {
-      // Unlike a fixedchar, a varchar literal carries a length of its own, so a value shorter than
-      // it is what the type means. A value longer than it is malformed, and nothing rejects it --
-      // here or in the POJO that holds it.
+      // A varchar literal carries its declared maximum length. The builder rejects values with
+      // more Unicode code points than that length.
       return ExpressionCreator.varChar(nullable, value, ((Type.VarChar) type).length());
     }
     if (type instanceof Type.FixedChar) {
