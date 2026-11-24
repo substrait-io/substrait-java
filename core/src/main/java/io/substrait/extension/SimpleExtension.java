@@ -5,9 +5,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -19,9 +22,11 @@ import io.substrait.function.TypeExpression;
 import io.substrait.type.Deserializers;
 import io.substrait.type.TypeExpressionEvaluator;
 import io.substrait.util.Util;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -54,8 +58,16 @@ public class SimpleExtension {
   private static final Predicate<String> URN_CHECKER =
       Pattern.compile("^extension:[^:]+:[^:]+$").asPredicate();
 
-  // `\A` means beginning of input. Using it as a delimiter in a scanner reads in the whole file.
-  private static Pattern READ_WHOLE_FILE = Pattern.compile("\\A");
+  private static final YAMLFactory YAML_FACTORY = new YAMLFactory();
+
+  private static final ObjectMapper YAML_MAPPER =
+      new ObjectMapper(YAML_FACTORY)
+          .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+          .registerModule(new Jdk8Module())
+          .registerModule(Deserializers.MODULE);
+
+  private static final ObjectReader EXTENSION_SIGNATURES_READER =
+      YAML_MAPPER.readerFor(ExtensionSignatures.class);
 
   private static void validateUrn(String urn) {
     if (urn == null || urn.trim().isEmpty()) {
@@ -67,15 +79,37 @@ public class SimpleExtension {
     }
   }
 
-  private static ObjectMapper objectMapper(String urn) {
-    InjectableValues.Std iv = new InjectableValues.Std();
-    iv.addValue(URN_LOCATOR_KEY, urn);
+  private static String extractUrn(String content) throws IOException {
+    if (content == null) {
+      throw new IllegalArgumentException("Extension YAML content must not be null");
+    }
+    try (JsonParser parser = YAML_FACTORY.createParser(content)) {
+      if (parser.nextToken() != JsonToken.START_OBJECT) {
+        throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
+      }
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        String fieldName = parser.currentName();
+        JsonToken valueToken = parser.nextToken();
+        if (URN_LOCATOR_KEY.equals(fieldName)) {
+          if (valueToken == null || !valueToken.isScalarValue()) {
+            return "";
+          }
+          return parser.getValueAsString();
+        }
+        parser.skipChildren();
+      }
+    }
+    throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
+  }
 
-    return new ObjectMapper(new YAMLFactory())
-        .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-        .registerModule(new Jdk8Module())
-        .registerModule(Deserializers.MODULE)
-        .setInjectableValues(iv);
+  private static String readUtf8(InputStream stream) throws IOException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream(8192);
+    byte[] buffer = new byte[8192];
+    int bytesRead;
+    while ((bytesRead = stream.read(buffer)) != -1) {
+      out.write(buffer, 0, bytesRead);
+    }
+    return out.toString(StandardCharsets.UTF_8.name());
   }
 
   /** Enumerates the supported nullability values. */
@@ -1429,26 +1463,36 @@ public class SimpleExtension {
       throw new IllegalArgumentException("Require at least one resource path.");
     }
 
-    List<ExtensionCollection> extensions =
-        resourcePaths.stream()
-            .map(
-                path -> {
-                  try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
-                    if (stream == null) {
-                      throw new IllegalArgumentException(
-                          "Extension resource not found on classpath: " + path);
-                    }
-                    return load(stream);
-                  } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                  }
-                })
-            .collect(Collectors.toList());
-    ExtensionCollection complete = extensions.get(0);
-    for (int i = 1; i < extensions.size(); i++) {
-      complete = complete.merge(extensions.get(i));
+    ImmutableSimpleExtension.ExtensionCollection.Builder builder =
+        ImmutableSimpleExtension.ExtensionCollection.builder();
+    Map<String, Map<String, Object>> extMetadata = new HashMap<>();
+    for (String path : resourcePaths) {
+      try (InputStream stream = ExtensionCollection.class.getResourceAsStream(path)) {
+        if (stream == null) {
+          throw new IllegalArgumentException("Extension resource not found on classpath: " + path);
+        }
+        ExtensionSignatures doc = loadSignatures(readUtf8(stream));
+        appendSignatures(doc, builder, extMetadata);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
-    return complete;
+    builder.extensionMetadata(extMetadata);
+    return builder.build();
+  }
+
+  private static ExtensionSignatures loadSignatures(String content) {
+    try {
+      String urn = extractUrn(content);
+      validateUrn(urn);
+
+      InjectableValues.Std iv = new InjectableValues.Std();
+      iv.addValue(URN_LOCATOR_KEY, urn);
+
+      return EXTENSION_SIGNATURES_READER.with(iv).readValue(content);
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   /**
@@ -1458,23 +1502,7 @@ public class SimpleExtension {
    * @return the load
    */
   public static ExtensionCollection load(String content) {
-    try {
-      // Parse with basic YAML mapper first to extract URN
-      ObjectMapper basicYamlMapper = new ObjectMapper(new YAMLFactory());
-      com.fasterxml.jackson.databind.JsonNode rootNode = basicYamlMapper.readTree(content);
-      com.fasterxml.jackson.databind.JsonNode urnNode = rootNode.get("urn");
-      if (urnNode == null) {
-        throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
-      }
-      String urn = urnNode.asText();
-      validateUrn(urn);
-
-      ExtensionSignatures doc = objectMapper(urn).readValue(content, ExtensionSignatures.class);
-
-      return buildExtensionCollection(doc);
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
+    return buildExtensionCollection(loadSignatures(content));
   }
 
   /**
@@ -1492,10 +1520,10 @@ public class SimpleExtension {
               + " Class.getResourceAsStream returns null for a resource that is not on the"
               + " classpath.");
     }
-    try (Scanner scanner = new Scanner(stream)) {
-      scanner.useDelimiter(READ_WHOLE_FILE);
-      String content = scanner.next();
-      return load(content);
+    try (InputStream in = stream) {
+      return load(readUtf8(in));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -1507,57 +1535,65 @@ public class SimpleExtension {
    */
   public static ExtensionCollection buildExtensionCollection(
       ExtensionSignatures extensionSignatures) {
+    ImmutableSimpleExtension.ExtensionCollection.Builder builder =
+        ImmutableSimpleExtension.ExtensionCollection.builder();
+    Map<String, Map<String, Object>> extMetadata = new HashMap<>();
+    appendSignatures(extensionSignatures, builder, extMetadata);
+    builder.extensionMetadata(extMetadata);
+    return builder.build();
+  }
+
+  private static void appendSignatures(
+      ExtensionSignatures extensionSignatures,
+      ImmutableSimpleExtension.ExtensionCollection.Builder builder,
+      Map<String, Map<String, Object>> extMetadata) {
     String urn = extensionSignatures.urn();
     validateUrn(urn);
-    List<ScalarFunctionVariant> scalarFunctionVariants =
-        extensionSignatures.scalars().stream()
-            .flatMap(t -> t.resolve(urn))
-            .collect(Collectors.toList());
 
-    List<AggregateFunctionVariant> aggregateFunctionVariants =
-        extensionSignatures.aggregates().stream()
-            .flatMap(t -> t.resolve(urn))
-            .collect(Collectors.toList());
+    int scalarCount = 0;
+    for (ScalarFunction sf : extensionSignatures.scalars()) {
+      for (ScalarFunctionVariant impl : sf.impls()) {
+        builder.addScalarFunctions(
+            impl.resolve(urn, sf.name(), sf.description(), sf.metadata(), sf.deprecated()));
+        scalarCount++;
+      }
+    }
 
-    Stream<WindowFunctionVariant> windowFunctionVariants =
-        extensionSignatures.windows().stream().flatMap(t -> t.resolve(urn));
+    for (WindowFunction wf : extensionSignatures.windows()) {
+      for (WindowFunctionVariant impl : wf.impls()) {
+        builder.addWindowFunctions(
+            impl.resolve(urn, wf.name(), wf.description(), wf.metadata(), wf.deprecated()));
+      }
+    }
 
-    // Aggregate functions can be used as Window Functions
-    Stream<WindowFunctionVariant> windowAggFunctionVariants =
-        aggregateFunctionVariants.stream()
-            .map(
-                afi ->
-                    WindowFunctionVariant.builder()
-                        // Sets all fields declared in the Function interface
-                        .from(afi)
-                        // Set WindowFunctionVariant fields
-                        .decomposability(afi.decomposability())
-                        .intermediate(afi.intermediate())
-                        // Aggregate Functions used in Windows have WindowType Streaming
-                        .windowType(SimpleExtension.WindowType.STREAMING)
-                        .build());
+    int aggregateCount = 0;
+    for (AggregateFunction af : extensionSignatures.aggregates()) {
+      for (AggregateFunctionVariant impl : af.impls()) {
+        AggregateFunctionVariant resolved =
+            impl.resolve(urn, af.name(), af.description(), af.metadata(), af.deprecated());
+        builder.addAggregateFunctions(resolved);
+        // Aggregate functions can be used as Window Functions
+        builder.addWindowFunctions(
+            WindowFunctionVariant.builder()
+                // Sets all fields declared in the Function interface
+                .from(resolved)
+                // Set WindowFunctionVariant fields
+                .decomposability(resolved.decomposability())
+                .intermediate(resolved.intermediate())
+                // Aggregate Functions used in Windows have WindowType Streaming
+                .windowType(SimpleExtension.WindowType.STREAMING)
+                .build());
+        aggregateCount++;
+      }
+    }
 
-    List<WindowFunctionVariant> allWindowFunctionVariants =
-        Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
-            .collect(Collectors.toList());
-
-    Map<String, Map<String, Object>> extMetadata = new HashMap<>();
+    builder.addAllTypes(extensionSignatures.types());
     extensionSignatures.metadata().ifPresent(m -> extMetadata.put(urn, m));
-
-    ImmutableSimpleExtension.ExtensionCollection collection =
-        ImmutableSimpleExtension.ExtensionCollection.builder()
-            .scalarFunctions(scalarFunctionVariants)
-            .aggregateFunctions(aggregateFunctionVariants)
-            .windowFunctions(allWindowFunctionVariants)
-            .addAllTypes(extensionSignatures.types())
-            .extensionMetadata(extMetadata)
-            .build();
 
     LOGGER.atDebug().log(
         "Loaded {} aggregate functions and {} scalar functions from {}.",
-        collection.aggregateFunctions().size(),
-        collection.scalarFunctions().size(),
-        extensionSignatures.urn());
-    return collection;
+        aggregateCount,
+        scalarCount,
+        urn);
   }
 }
