@@ -101,6 +101,14 @@ public class ParseToPojo {
       this.urn = urn;
     }
 
+    VisitorType getVisitorType() {
+      return expressionType;
+    }
+
+    String getUrn() {
+      return urn;
+    }
+
     enum VisitorType {
       SIMPLE,
       PARAMETERIZED,
