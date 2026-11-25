@@ -87,19 +87,23 @@ public class SimpleExtension {
       if (parser.nextToken() != JsonToken.START_OBJECT) {
         throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
       }
+      // Read to the end because the last value of a repeated key is the one that Jackson binds to
+      // ExtensionSignatures.urn().
+      String urn = null;
       while (parser.nextToken() == JsonToken.FIELD_NAME) {
-        String fieldName = parser.currentName();
-        JsonToken valueToken = parser.nextToken();
-        if (URN_LOCATOR_KEY.equals(fieldName)) {
-          if (valueToken == null || !valueToken.isScalarValue()) {
-            return "";
-          }
-          return parser.getValueAsString();
+        boolean isUrn = URN_LOCATOR_KEY.equals(parser.currentName());
+        parser.nextToken();
+        if (isUrn) {
+          // Null and non-scalar values map to the empty string, which validateUrn rejects.
+          urn = parser.getValueAsString("");
         }
         parser.skipChildren();
       }
+      if (urn == null) {
+        throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
+      }
+      return urn;
     }
-    throw new IllegalArgumentException("Extension YAML file must contain a 'urn' field");
   }
 
   private static String readUtf8(InputStream stream) throws IOException {

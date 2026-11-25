@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.substrait.type.Type;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -110,6 +111,27 @@ class SimpleExtensionLoadTest {
         collection.getScalarFunction(
             SimpleExtension.FunctionAnchor.of("extension:test:late_urn", "bar:u!custom_t"));
     assertEquals("extension:test:late_urn", fn.urn());
+  }
+
+  @Test
+  void loadWithRepeatedUrnUsesLastValue() {
+    String yaml =
+        "urn: extension:test:first\n"
+            + "types:\n"
+            + "  - name: custom_t\n"
+            + "scalar_functions:\n"
+            + "  - name: bar\n"
+            + "    impls:\n"
+            + "      - args:\n"
+            + "          - value: u!custom_t\n"
+            + "        return: u!custom_t\n"
+            + "urn: extension:test:last\n";
+    SimpleExtension.ExtensionCollection collection = SimpleExtension.load(yaml);
+    assertEquals("extension:test:last", collection.types().get(0).urn());
+    SimpleExtension.ScalarFunctionVariant fn = collection.scalarFunctions().get(0);
+    assertEquals("extension:test:last", fn.urn());
+    SimpleExtension.ValueArgument arg = (SimpleExtension.ValueArgument) fn.args().get(0);
+    assertEquals("extension:test:last", ((Type.UserDefined) arg.value()).urn());
   }
 
   @Test
