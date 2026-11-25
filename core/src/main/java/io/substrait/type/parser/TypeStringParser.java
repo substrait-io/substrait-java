@@ -97,9 +97,16 @@ public class TypeStringParser {
     return false;
   }
 
+  /**
+   * Adds an entry unless the cache is full. Every insertion holds the cache's monitor, so
+   * concurrent misses cannot exceed {@link #MAX_CACHE_SIZE}. Reads and parsing do not take the
+   * monitor.
+   */
   private static <T> void cacheIfBounded(ConcurrentHashMap<String, T> cache, String key, T value) {
-    if (cache.size() < MAX_CACHE_SIZE) {
-      cache.putIfAbsent(key, value);
+    synchronized (cache) {
+      if (cache.size() < MAX_CACHE_SIZE) {
+        cache.putIfAbsent(key, value);
+      }
     }
   }
 
