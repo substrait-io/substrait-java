@@ -741,6 +741,30 @@ class CustomFunctionTest extends PlanTestBase {
   }
 
   @Test
+  void aggregateThatDoesNotBindItsOperandsKeepsItsBinding() {
+    // custom_overlap(fixedchar<2>, any1) is the first declaration the reverse signature matcher
+    // finds for two fixedchar<3> operands, but the matcher prefers (any, any), which binds them.
+    Rel input =
+        sb.namedScan(
+            List.of("example"), List.of("a", "b"), List.of(R.fixedChar(3), R.fixedChar(3)));
+    Rel rel =
+        sb.aggregate(
+            i -> sb.grouping(i, 0),
+            i ->
+                List.of(
+                    sb.measure(
+                        sb.aggregateFn(
+                            URN,
+                            "custom_overlap:fchar_any",
+                            R.I64,
+                            sb.fieldReference(i, 0),
+                            sb.fieldReference(i, 1)))),
+            input);
+
+    assertEquals(rel, calciteToSubstrait.apply(substraitToCalcite.convert(rel)));
+  }
+
+  @Test
   void divergentReturnTypeAggregateKeepsItsBinding() {
     // custom_mix(any, string) declares an i32 return, while the plan declares i64 — permitted
     // under FunctionBindingValidation.NONE and equal to the operator's inference, so nothing about

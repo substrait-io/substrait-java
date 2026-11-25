@@ -455,7 +455,9 @@ public abstract class FunctionConverter<
       try {
         Optional<F> bySignature = signatureMatches(valueTypes, outputType).findFirst();
         if (bySignature.isPresent()) {
-          return bySignature.get().getAnchor().equals(declaration.getAnchor());
+          // matchCoerced prefers a later candidate over one that does not bind the operands.
+          return bySignature.get().getAnchor().equals(declaration.getAnchor())
+              && bindsTypes(bySignature.get(), valueTypes, outputType);
         }
         // matchByLeastRestrictive consults the singular-wildcard chain with the operands' least
         // restrictive type; it ignores the output type entirely.
@@ -932,7 +934,14 @@ public abstract class FunctionConverter<
    */
   private static boolean binds(
       SimpleExtension.Function declaration, List<Expression> arguments, Type outputType) {
-    List<Type> types = arguments.stream().map(Expression::getType).collect(Collectors.toList());
+    return bindsTypes(
+        declaration,
+        arguments.stream().map(Expression::getType).collect(Collectors.toList()),
+        outputType);
+  }
+
+  private static boolean bindsTypes(
+      SimpleExtension.Function declaration, List<Type> types, Type outputType) {
     try {
       TypeExpressionEvaluator.checkBindings(declaration.args(), declaration.variadic(), types);
     } catch (UnsupportedOperationException e) {
