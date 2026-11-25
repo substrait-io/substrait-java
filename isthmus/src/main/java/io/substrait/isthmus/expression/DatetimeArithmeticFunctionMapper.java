@@ -7,6 +7,7 @@ import io.substrait.extension.SimpleExtension.ScalarFunctionVariant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
@@ -21,9 +22,21 @@ import org.apache.calcite.sql.type.SqlTypeName;
 final class DatetimeArithmeticFunctionMapper implements ScalarFunctionMapper {
   private final Map<String, List<ScalarFunctionVariant>> datetimeFunctions;
   private final RexBuilder rexBuilder;
+  private final BiPredicate<SqlOperator, List<RexNode>> hasDirectMatch;
 
-  DatetimeArithmeticFunctionMapper(List<ScalarFunctionVariant> functions, RexBuilder rexBuilder) {
+  /**
+   * Creates a mapper for the datetime functions among the given variants.
+   *
+   * @param functions available Substrait scalar function variants
+   * @param rexBuilder builder for the timezone argument
+   * @param hasDirectMatch whether default matching finds a declaration of exactly the operand types
+   */
+  DatetimeArithmeticFunctionMapper(
+      List<ScalarFunctionVariant> functions,
+      RexBuilder rexBuilder,
+      BiPredicate<SqlOperator, List<RexNode>> hasDirectMatch) {
     this.rexBuilder = rexBuilder;
+    this.hasDirectMatch = hasDirectMatch;
     datetimeFunctions =
         functions.stream()
             .filter(function -> DefaultExtensionCatalog.FUNCTIONS_DATETIME.equals(function.urn()))
@@ -48,6 +61,10 @@ final class DatetimeArithmeticFunctionMapper implements ScalarFunctionMapper {
     }
     List<RexNode> operands = call.getOperands();
     if (operands.size() == 2 && isZonedCalendarArithmetic(operands.get(0), operands.get(1))) {
+      if (hasDirectMatch.test(operator, operands)) {
+        // Another extension declares these two operands without a timezone.
+        return Optional.empty();
+      }
       // Calendar arithmetic uses the timezone of the session that executes the plan.
       operands =
           List.of(
@@ -77,15 +94,26 @@ final class DatetimeArithmeticFunctionMapper implements ScalarFunctionMapper {
         && expression.arguments().get(2) instanceof Expression.CurrentTimezone) {
       if (operator == FunctionMappings.DATETIME_SUBTRACT
           && "subtract:ptstz_iyear_str".equals(expression.declaration().key())) {
-        return Optional.of(
-            builder.makeCall(returnType, SqlStdOperatorTable.MINUS, arguments.subList(0, 2)));
+        return withoutTimezone(SqlStdOperatorTable.MINUS, arguments, returnType, builder);
       }
       if (operator == SqlStdOperatorTable.DATETIME_PLUS
           && "add:ptstz_iyear_str".equals(expression.declaration().key())) {
-        return Optional.of(builder.makeCall(returnType, operator, arguments.subList(0, 2)));
+        return withoutTimezone(operator, arguments, returnType, builder);
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Drops the timezone argument, which {@link #toSubstrait} restores. The argument stays when the
+   * two remaining operands would convert to another extension's declaration instead.
+   */
+  private Optional<RexNode> withoutTimezone(
+      SqlOperator operator, List<RexNode> arguments, RelDataType returnType, RexBuilder builder) {
+    List<RexNode> operands = arguments.subList(0, 2);
+    return hasDirectMatch.test(operator, operands)
+        ? Optional.empty()
+        : Optional.of(builder.makeCall(returnType, operator, operands));
   }
 
   @Override

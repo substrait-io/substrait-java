@@ -504,6 +504,20 @@ public abstract class FunctionConverter<
           .map(typeList -> substraitName + ":" + String.join("_", typeList));
     }
 
+    /**
+     * Returns whether a declaration takes exactly these types, without a wildcard or a coercion.
+     *
+     * @param operandTypes operand types (Substrait)
+     * @return {@code true} if the direct lookup finds a declaration
+     */
+    boolean hasDirectMatch(List<Type> operandTypes) {
+      String key =
+          operandTypes.stream()
+              .map(type -> type.accept(ToTypeString.INSTANCE))
+              .collect(Collectors.joining("_", substraitName + ":", ""));
+      return directMatch(Stream.of(key), operandTypes.size()).isPresent();
+    }
+
     private Optional<F> directMatch(Stream<String> keys, int argumentCount) {
       return keys.flatMap(key -> Lists.reverse(directMap.get(key)).stream())
           .filter(function -> function.getRange().within(argumentCount))
