@@ -287,7 +287,7 @@ class ToSparkExpression(
 
     // ToScalarFunction rewrites an `and` or `or` with other than two arguments.
     scalarFunctionConverter
-      .getSparkExpressionFromSubstraitFunc(expr.declaration.key, args)
+      .getSparkExpressionFromSubstraitFunc(expr, args)
       .getOrElse({
         val msg = String.format(
           "Unable to convert scalar function %s(%s).",
