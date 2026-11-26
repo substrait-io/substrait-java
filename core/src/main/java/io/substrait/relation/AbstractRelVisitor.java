@@ -96,6 +96,11 @@ public abstract class AbstractRelVisitor<O, C extends VisitationContext, E exten
   }
 
   @Override
+  public O visit(TableFunction tableFunction, C context) throws E {
+    return visitFallback(tableFunction, context);
+  }
+
+  @Override
   public O visit(ExtensionLeaf extensionLeaf, C context) throws E {
     return visitFallback(extensionLeaf, context);
   }

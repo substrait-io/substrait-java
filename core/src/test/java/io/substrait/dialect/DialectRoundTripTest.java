@@ -18,6 +18,7 @@ class DialectRoundTripTest {
         .name("Round Trip Dialect")
         .putDependencies("arithmetic", "extension:io.substrait:functions_arithmetic")
         .putDependencies("spark", "extension:substrait:spark")
+        .putDependencies("table", "extension:io.substrait:functions_table")
         // Types: bare, precision (max_precision), system_metadata, and user-defined.
         .addSupportedTypes(SupportedType.of(TypeKind.BOOL))
         .addSupportedTypes(SupportedType.of(TypeKind.FUNC))
@@ -40,6 +41,7 @@ class DialectRoundTripTest {
         // Relations: bare, join, read, set, write, ddl, exchange, expand, extension.
         .addSupportedRelations(SupportedRelation.of(RelationKind.FILTER))
         .addSupportedRelations(SupportedRelation.of(RelationKind.TOP_N))
+        .addSupportedRelations(SupportedRelation.of(RelationKind.TABLE_FUNCTION))
         .addSupportedRelations(
             SupportedRelation.builder()
                 .relation(RelationKind.JOIN)
@@ -104,7 +106,7 @@ class DialectRoundTripTest {
                 .expression(ExpressionKind.EXECUTION_CONTEXT_VARIABLE)
                 .addVariableTypes(VariableType.CURRENT_DATE, VariableType.CURRENT_TIMESTAMP)
                 .build())
-        // Functions across the three categories.
+        // Functions across the four categories.
         .addSupportedScalarFunctions(
             DialectFunction.builder()
                 .source("arithmetic")
@@ -124,6 +126,12 @@ class DialectRoundTripTest {
                 .source("arithmetic")
                 .name("row_number")
                 .addSupportedImpls("")
+                .build())
+        .addSupportedTableFunctions(
+            DialectFunction.builder()
+                .source("table")
+                .name("generate_series")
+                .addSupportedImpls("i64_i64_i64")
                 .build())
         .supportedExecutionBehavior(
             ExecutionBehavior.builder()

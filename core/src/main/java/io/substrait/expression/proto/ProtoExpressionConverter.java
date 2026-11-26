@@ -7,6 +7,7 @@ import io.substrait.expression.FieldReference.ReferenceSegment;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.LambdaBuilder;
+import io.substrait.expression.TableFunctionInvocation;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.ExtensionLookup;
 import io.substrait.extension.SimpleExtension;
@@ -500,6 +501,40 @@ public class ProtoExpressionConverter {
         .upperBound(upperBound)
         .invocation(Expression.AggregationInvocation.fromProto(windowRelFunction.getInvocation()))
         .options(options)
+        .build();
+  }
+
+  /**
+   * Converts a proto table function call into its POJO {@link TableFunctionInvocation}.
+   *
+   * @param tableFunction the proto table function call to convert
+   * @return the converted table function invocation
+   * @throws IllegalArgumentException if the call does not declare its schema
+   */
+  public TableFunctionInvocation fromTableFunction(io.substrait.proto.TableFunction tableFunction) {
+    if (!tableFunction.hasSchema()) {
+      throw new IllegalArgumentException("Table function call must declare its schema");
+    }
+    SimpleExtension.TableFunctionVariant declaration =
+        lookup.getTableFunction(tableFunction.getFunctionReference(), extensions);
+    FunctionArg.ProtoFrom argVisitor = new FunctionArg.ProtoFrom(this, protoTypeConverter);
+
+    List<FunctionArg> args =
+        fromFunctionArgumentList(
+            tableFunction.getArgumentsCount(),
+            argVisitor,
+            declaration,
+            tableFunction::getArguments);
+    List<FunctionOption> options =
+        tableFunction.getOptionsList().stream()
+            .map(ProtoExpressionConverter::fromFunctionOption)
+            .collect(Collectors.toList());
+
+    return TableFunctionInvocation.builder()
+        .declaration(declaration)
+        .arguments(args)
+        .options(options)
+        .schema(protoTypeConverter.fromStruct(tableFunction.getSchema()))
         .build();
   }
 

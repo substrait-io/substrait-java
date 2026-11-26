@@ -15,6 +15,7 @@ import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
 import io.substrait.expression.FunctionOption;
 import io.substrait.expression.StatisticalDistribution;
+import io.substrait.expression.TableFunctionInvocation;
 import io.substrait.expression.WindowBound;
 import io.substrait.extension.DefaultExtensionCatalog;
 import io.substrait.extension.FunctionBindingResolver;
@@ -40,6 +41,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.TableFunction;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.ComparisonJoinKey;
 import io.substrait.relation.physical.HashJoin;
@@ -732,6 +734,29 @@ public class SubstraitBuilder {
   public VirtualTableScan emptyVirtualTableScan() {
     return VirtualTableScan.builder()
         .initialSchema(NamedStruct.of(Collections.emptyList(), R.struct()))
+        .build();
+  }
+
+  /**
+   * Creates a table function relation that produces the records of a single table function call.
+   *
+   * @param urn the URN of the extension containing the table function
+   * @param key the function key (name and signature)
+   * @param schema the non-nullable schema of the records the call produces
+   * @param args the arguments to pass to the function
+   * @return a new {@link TableFunction} relation
+   */
+  public TableFunction tableFunction(
+      String urn, String key, Type.Struct schema, FunctionArg... args) {
+    SimpleExtension.TableFunctionVariant declaration =
+        extensions.getTableFunction(SimpleExtension.FunctionAnchor.of(urn, key));
+    return TableFunction.builder()
+        .function(
+            TableFunctionInvocation.builder()
+                .declaration(declaration)
+                .schema(schema)
+                .arguments(Arrays.asList(args))
+                .build())
         .build();
   }
 

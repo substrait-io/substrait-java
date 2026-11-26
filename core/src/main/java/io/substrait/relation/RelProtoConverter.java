@@ -3,6 +3,7 @@ package io.substrait.relation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.TableFunctionInvocation;
 import io.substrait.expression.proto.ExpressionProtoConverter;
 import io.substrait.expression.proto.MaskExpressionProtoConverter;
 import io.substrait.extension.ExtensionCollector;
@@ -40,6 +41,7 @@ import io.substrait.proto.RelCommon.Hint.Stats;
 import io.substrait.proto.RelRoot;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.TableFunctionRel;
 import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
@@ -885,6 +887,46 @@ public class RelProtoConverter
         .getExtension()
         .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
     return Rel.newBuilder().setRead(builder).build();
+  }
+
+  @Override
+  public Rel visit(TableFunction tableFunction, EmptyVisitationContext context)
+      throws RuntimeException {
+    TableFunctionRel.Builder builder =
+        TableFunctionRel.newBuilder()
+            .setCommon(common(tableFunction))
+            .setFunction(toProto(tableFunction.getFunction()));
+
+    tableFunction
+        .getExtension()
+        .ifPresent(ae -> builder.setAdvancedExtension(extensionProtoConverter.toProto(ae)));
+    return Rel.newBuilder().setTableFunction(builder).build();
+  }
+
+  private io.substrait.proto.TableFunction toProto(TableFunctionInvocation function) {
+    FunctionArg.FuncArgVisitor<
+            io.substrait.proto.FunctionArgument, EmptyVisitationContext, RuntimeException>
+        argVisitor = FunctionArg.toProto(typeProtoConverter, exprProtoConverter);
+    List<FunctionArg> args = function.arguments();
+    return io.substrait.proto.TableFunction.newBuilder()
+        .setFunctionReference(extensionCollector.getFunctionReference(function.declaration()))
+        .addAllArguments(
+            IntStream.range(0, args.size())
+                .mapToObj(
+                    i ->
+                        args.get(i)
+                            .accept(
+                                function.declaration(),
+                                i,
+                                argVisitor,
+                                EmptyVisitationContext.INSTANCE))
+                .collect(Collectors.toList()))
+        .addAllOptions(
+            function.options().stream()
+                .map(ExpressionProtoConverter::from)
+                .collect(Collectors.toList()))
+        .setSchema(toProto(function.schema()).getStruct())
+        .build();
   }
 
   @Override

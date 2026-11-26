@@ -63,6 +63,18 @@ public abstract class AbstractExtensionLookup implements ExtensionLookup {
   }
 
   @Override
+  public SimpleExtension.TableFunctionVariant getTableFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions) {
+    SimpleExtension.FunctionAnchor anchor = functionAnchorMap.get(reference);
+    if (anchor == null) {
+      throw new IllegalArgumentException(
+          "Unknown function id. Make sure that the function id provided was shared in the extensions section of the plan.");
+    }
+
+    return extensions.getTableFunction(anchor);
+  }
+
+  @Override
   public SimpleExtension.Type getType(
       int reference, SimpleExtension.ExtensionCollection extensions) {
     SimpleExtension.TypeAnchor anchor = typeAnchorMap.get(reference);

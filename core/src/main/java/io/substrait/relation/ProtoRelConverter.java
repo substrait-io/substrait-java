@@ -38,6 +38,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.TableFunctionRel;
 import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
@@ -103,7 +104,7 @@ public class ProtoRelConverter {
    */
   private final Map<Integer, Type.Struct> anchorScopes = new HashMap<>();
 
-  /** The detached subtrees of the {@code PlanRel} being converted, if any. */
+  /** The detached subtrees of the current PlanRel or ExtendedExpression. */
   private DetachedSubtrees detachedSubtrees = DetachedSubtrees.none();
 
   /**
@@ -182,6 +183,9 @@ public class ProtoRelConverter {
    * @return the converted result
    */
   public Rel from(io.substrait.proto.Rel rel) {
+    if (rel.hasDetachedRelOrdinal()) {
+      return detachedSubtrees.resolveRelation(rel.getDetachedRelOrdinal(), this::from);
+    }
     Rel converted = dispatch(rel);
     // Track the correlation scope each rel_anchor exposes so that id-based outer references
     // (rel_reference) nested deeper in the plan are typed against the correct enclosing schema
@@ -207,7 +211,9 @@ public class ProtoRelConverter {
     }
     DetachedSubtrees enclosing = enter(planRel);
     try {
-      return from(planRel.getRoot());
+      Plan.Root root = from(planRel.getRoot());
+      checkOpaquePlanRel();
+      return root;
     } finally {
       this.detachedSubtrees = enclosing;
     }
@@ -228,7 +234,9 @@ public class ProtoRelConverter {
     }
     DetachedSubtrees enclosing = enter(planRel);
     try {
-      return from(planRel.getRel());
+      Rel rel = from(planRel.getRel());
+      checkOpaquePlanRel();
+      return rel;
     } finally {
       this.detachedSubtrees = enclosing;
     }
@@ -243,15 +251,35 @@ public class ProtoRelConverter {
     return enclosing;
   }
 
+  private void checkOpaquePlanRel() {
+    if (detachedSubtrees.needsRetainedEntries()) {
+      throw new UnsupportedOperationException(
+          "Cannot preserve detached entries that an opaque payload in this PlanRel may reference");
+    }
+  }
+
   /**
-   * Returns the detached subtrees that expressions converted for the current relation resolve their
-   * ordinals against: those of the {@code PlanRel} being converted by {@link
-   * #from(io.substrait.proto.PlanRel)} or {@link #fromRel(io.substrait.proto.PlanRel)}, or a
-   * resolver that rejects every ordinal outside such a conversion.
+   * Creates a relation converter for subqueries in one extended expression. All subqueries share
+   * that container's relation and expression ordinal tables.
    *
-   * <p>The resolver records each entry it resolves so that it can reject a second reference to it,
-   * so it is meant for the expression converters of the current conversion only: resolving an
-   * ordinal through it from elsewhere makes the conversion's own reference to that entry fail.
+   * @param lookup resolves the extended expression's extension references
+   * @param extensions the extension collection
+   * @param container the containing extended expression
+   * @return the converter for its subqueries
+   */
+  public static ProtoRelConverter forExtendedExpression(
+      ExtensionLookup lookup,
+      ExtensionCollection extensions,
+      io.substrait.proto.ExtendedExpression container) {
+    ProtoRelConverter converter = new ProtoRelConverter(lookup, extensions);
+    converter.detachedSubtrees = DetachedSubtrees.of(container);
+    return converter;
+  }
+
+  /**
+   * Returns the resolver for the current PlanRel or ExtendedExpression. All relation and expression
+   * converters in that container share its record of referenced entries. Outside a container the
+   * resolver rejects every ordinal.
    *
    * @return the current detached subtrees
    */
@@ -308,6 +336,8 @@ public class ProtoRelConverter {
         return newExchange(rel.getExchange());
       case TOP_N:
         return newTopN(rel.getTopN());
+      case TABLE_FUNCTION:
+        return newTableFunction(rel.getTableFunction());
       default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
     }
@@ -1058,6 +1088,24 @@ public class ProtoRelConverter {
     if (rel.hasCount()) {
       builder.count(converter.from(rel.getCount()));
     }
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return applyRelCommon(builder.build(), rel.getCommon());
+  }
+
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
+  protected TableFunction newTableFunction(TableFunctionRel rel) {
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, ProtoExpressionConverter.EMPTY_TYPE, this);
+    ImmutableTableFunction.Builder builder =
+        TableFunction.builder().function(converter.fromTableFunction(rel.getFunction()));
 
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));

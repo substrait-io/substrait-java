@@ -5,11 +5,12 @@ import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.WireFormat;
-import io.substrait.proto.Expression.RexTypeCase;
+import io.substrait.proto.Expression;
 import io.substrait.proto.ExtendedExpression;
 import io.substrait.proto.PlanRel;
+import io.substrait.proto.Rel;
+import io.substrait.proto.Version;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,23 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Bounds the protobuf nesting depth of a {@code PlanRel} or {@code ExtendedExpression} by moving
- * expression subtrees into its {@code detached_expressions} and referring to them by {@code
- * Expression.detached_expression_ordinal} (spec v0.105.0).
+ * Bounds the protobuf nesting depth of a {@code PlanRel} or {@code ExtendedExpression}. The writer
+ * first moves expression subtrees into {@code detached_expressions} (spec v0.105.0). If the
+ * relation tree is still too deep, it uses {@code detached_rels} as well (spec v0.107.0).
  *
- * <p>Protobuf parsers limit how deeply messages may nest; protobuf-java, for one, rejects a message
- * nested more than {@value #DEFAULT_MAX_DEPTH} levels below the root it parses. A container already
- * within the limit is returned unchanged. Otherwise, an expression that does not fit at its
- * position is detached once it lies deeper than half the limit, and its subtree is processed again
- * from its new position directly below the container. If that leaves the container too deep, for
- * instance because the deep part is a chain of relations below a shallow subquery, detachment is
- * retried with every expression below the container eligible. Ordinals are assigned in the order
- * the subtrees are detached, so a detached entry refers only to entries after it.
+ * <p>Protobuf parsers limit how deeply messages may nest. The writer leaves a container unchanged
+ * if it fits. It first tries to detach subtrees below half the limit, then tries shallower
+ * subtrees. Each ordinal refers to an entry in the corresponding table in the same container.
+ * Existing entries keep their ordinal positions.
  *
- * <p>Detachment shortens expression nesting only, not nesting within a chain of relations, a
- * literal or type, or a {@code google.protobuf.Any} payload. A container that still exceeds the
- * limit after both attempts is returned unchanged, so that it does not need a consumer that reads
- * detached expressions without gaining one that parses it.
+ * <p>If nesting inside a literal, type, or other indivisible message prevents the container from
+ * fitting the limit, the writer returns the original container.
  */
 public final class NestingDetacher {
   /** The default parse recursion limit of protobuf-java, and of the C++ and upb runtimes. */
@@ -69,7 +64,7 @@ public final class NestingDetacher {
   }
 
   /**
-   * Returns a detacher that never detaches an expression.
+   * Returns a detacher that leaves relations and expressions inline.
    *
    * @return a detacher that leaves every container unchanged
    */
@@ -102,39 +97,63 @@ public final class NestingDetacher {
   }
 
   /**
-   * Detaches expressions of a {@code PlanRel} that is parsed as part of a {@code Plan}.
+   * Bounds the nesting of a {@code PlanRel} that is parsed as part of a {@code Plan}.
    *
    * @param planRel the relation to bound
-   * @return {@code planRel} itself if it fits, otherwise a copy with detached expressions
+   * @return {@code planRel} itself if it fits, otherwise a bounded copy if its subtrees can be
+   *     detached
    */
   public PlanRel detach(PlanRel planRel) {
-    return bound(planRel, PLAN_REL_DEPTH, planRel.getDetachedExpressionsList());
+    return bound(planRel, PLAN_REL_DEPTH);
   }
 
   /**
-   * Detaches expressions of an {@code ExtendedExpression} that is parsed as the root message.
+   * Bounds the nesting of an {@code ExtendedExpression} that is parsed as the root message.
    *
    * @param extendedExpression the extended expression to bound
-   * @return {@code extendedExpression} itself if it fits, otherwise a copy with detached
-   *     expressions
+   * @return {@code extendedExpression} itself if it fits, otherwise a bounded copy if its subtrees
+   *     can be detached
    */
   public ExtendedExpression detach(ExtendedExpression extendedExpression) {
-    return bound(extendedExpression, 0, extendedExpression.getDetachedExpressionsList());
+    return bound(extendedExpression, 0);
   }
 
-  private <M extends Message> M bound(
-      M container, int containerDepth, List<io.substrait.proto.Expression> existing) {
+  /**
+   * Raises the declared version when the serialized container uses a newer detached table.
+   *
+   * @param declared the producer's declared version
+   * @param expressionCount the number of detached expressions
+   * @param relationCount the number of detached relations
+   * @return the original version or the earliest version that supports the tables
+   */
+  public static Version versionForTables(Version declared, int expressionCount, int relationCount) {
+    int requiredMinor = relationCount > 0 ? 107 : expressionCount > 0 ? 105 : 0;
+    if (declared.getMajorNumber() == 0
+        && Integer.compareUnsigned(declared.getMinorNumber(), requiredMinor) < 0) {
+      return declared.toBuilder()
+          .setMinorNumber(requiredMinor)
+          .setPatchNumber(0)
+          .clearGitHash()
+          .build();
+    }
+    return declared;
+  }
+
+  private <M extends Message> M bound(M container, int containerDepth) {
     int entryDepth = containerDepth + 1;
     if (everyExpression) {
-      return new Pass(containerDepth, entryDepth, existing).run(container);
+      return new Pass<>(container, entryDepth, entryDepth, false).run();
     }
     if (maxDepth == Integer.MAX_VALUE || fitsWhole(container, containerDepth)) {
       return container;
     }
-    for (int threshold : new int[] {Math.max(maxDepth / 2, entryDepth), entryDepth}) {
-      M detached = new Pass(containerDepth, threshold, existing).run(container);
-      if (fitsWhole(detached, containerDepth)) {
-        return detached;
+    // Prefer the older expression-only encoding whenever it can meet the parser limit.
+    for (boolean detachRelations : new boolean[] {false, true}) {
+      for (int threshold : new int[] {Math.max(maxDepth / 2, entryDepth), entryDepth}) {
+        M detached = new Pass<>(container, entryDepth, threshold, detachRelations).run();
+        if (fitsWhole(detached, containerDepth)) {
+          return detached;
+        }
       }
     }
     return container;
@@ -145,45 +164,42 @@ public final class NestingDetacher {
   }
 
   /** One detachment of one container. */
-  private final class Pass {
-    private final int containerDepth;
+  private final class Pass<M extends Message> {
+    private final M container;
+    private final Message.Builder output;
+    private final int entryDepth;
     private final int threshold;
-    private final int existingEntries;
-    private final List<io.substrait.proto.Expression> entries;
+    private final boolean detachRelations;
+    private final FieldDescriptor expressionTable;
+    private final FieldDescriptor relationTable;
     private final Map<Message, Integer> heights = new IdentityHashMap<>();
 
-    /**
-     * @param threshold the depth an expression must lie below to be detached
-     */
-    Pass(int containerDepth, int threshold, List<io.substrait.proto.Expression> existing) {
-      this.containerDepth = containerDepth;
+    Pass(M container, int entryDepth, int threshold, boolean detachRelations) {
+      this.container = container;
+      this.output = container.toBuilder();
+      this.entryDepth = entryDepth;
       this.threshold = threshold;
-      this.existingEntries = existing.size();
-      this.entries = new ArrayList<>(existing);
+      this.detachRelations = detachRelations;
+      Descriptor descriptor = container.getDescriptorForType();
+      this.expressionTable = descriptor.findFieldByName("detached_expressions");
+      this.relationTable = descriptor.findFieldByName("detached_rels");
     }
 
     @SuppressWarnings("unchecked")
-    <M extends Message> M run(M container) {
-      FieldDescriptor detachedField =
-          container.getDescriptorForType().findFieldByName("detached_expressions");
-      Message.Builder builder = container.toBuilder().clearField(detachedField);
-      // An existing entry is not moved, so the ordinals referring to it keep their target.
-      for (int i = 0; i < existingEntries; i++) {
-        entries.set(i, (io.substrait.proto.Expression) children(entries.get(i), entryDepth()));
-      }
+    M run() {
       for (FieldDescriptor field : messageFields(container)) {
-        if (!field.equals(detachedField)) {
-          copyRewritten(container, builder, field, containerDepth + 1);
+        if (field.equals(expressionTable) || field.equals(relationTable)) {
+          // Keep the root of each existing entry at its ordinal. Its children can still be
+          // detached.
+          for (int i = 0; i < container.getRepeatedFieldCount(field); i++) {
+            Message entry = (Message) container.getRepeatedField(field, i);
+            output.setRepeatedField(field, i, children(entry, entryDepth));
+          }
+        } else {
+          copyRewritten(container, output, field, entryDepth);
         }
       }
-      for (io.substrait.proto.Expression entry : entries) {
-        builder.addRepeatedField(detachedField, entry);
-      }
-      return (M) builder.build();
-    }
-
-    private int entryDepth() {
-      return containerDepth + 1;
+      return (M) output.build();
     }
 
     private boolean fits(Message message, int depth) {
@@ -195,18 +211,26 @@ public final class NestingDetacher {
       if (fits(message, depth)) {
         return message;
       }
-      if (message instanceof io.substrait.proto.Expression
-          && depth > threshold
-          && ((io.substrait.proto.Expression) message).getRexTypeCase()
-              != RexTypeCase.DETACHED_EXPRESSION_ORDINAL) {
-        int ordinal = entries.size();
-        entries.add(null);
-        entries.set(ordinal, (io.substrait.proto.Expression) children(message, entryDepth()));
-        return io.substrait.proto.Expression.newBuilder()
-            .setDetachedExpressionOrdinal(ordinal)
-            .build();
+      if (depth > threshold) {
+        if (message instanceof Expression
+            && !((Expression) message).hasDetachedExpressionOrdinal()) {
+          return Expression.newBuilder()
+              .setDetachedExpressionOrdinal(store(message, expressionTable))
+              .build();
+        }
+        if (detachRelations && message instanceof Rel && !((Rel) message).hasDetachedRelOrdinal()) {
+          return Rel.newBuilder().setDetachedRelOrdinal(store(message, relationTable)).build();
+        }
       }
       return children(message, depth);
+    }
+
+    private int store(Message message, FieldDescriptor table) {
+      int ordinal = output.getRepeatedFieldCount(table);
+      // Reserve the ordinal before rewriting children, which can append entries to the same table.
+      output.addRepeatedField(table, message);
+      output.setRepeatedField(table, ordinal, children(message, entryDepth));
+      return ordinal;
     }
 
     /** Returns the message at {@code depth} with each child message rewritten. */

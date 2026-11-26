@@ -23,6 +23,7 @@ import io.substrait.relation.Project;
 import io.substrait.relation.RelVisitor;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.TableFunction;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
@@ -131,6 +132,13 @@ public class SqlKindFromRel
       throws RuntimeException {
     // A virtual table scan corresponds to a VALUES clause.
     return SqlKind.VALUES;
+  }
+
+  @Override
+  public SqlKind visit(TableFunction tableFunction, EmptyVisitationContext context)
+      throws RuntimeException {
+    // A table function call corresponds to a TABLE(fn(...)) clause.
+    return SqlKind.COLLECTION_TABLE;
   }
 
   @Override

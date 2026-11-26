@@ -88,8 +88,12 @@ public class ProtoPlanConverter {
    * @return the converted Plan POJO
    * @throws IllegalArgumentException if the plan contains invalid data or if the execution behavior
    *     validation fails
+   * @throws UnsupportedOperationException if the plan defines named lambdas
    */
   public Plan from(io.substrait.proto.Plan plan) {
+    if (plan.getNamedLambdasCount() > 0) {
+      throw new UnsupportedOperationException("The Java plan model does not support named lambdas");
+    }
     ExtensionLookup functionLookup = ImmutableExtensionLookup.builder().from(plan).build();
     ProtoRelConverter relConverter = getProtoRelConverter(functionLookup);
     List<Plan.Root> roots = new ArrayList<>();

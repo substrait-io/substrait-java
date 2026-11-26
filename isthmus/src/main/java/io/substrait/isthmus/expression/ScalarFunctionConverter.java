@@ -85,7 +85,7 @@ public class ScalarFunctionConverter
 
     mappers =
         List.of(
-            new DatetimeSubtractionFunctionMapper(functions),
+            new DatetimeArithmeticFunctionMapper(functions, rexBuilder, this::hasDirectMatch),
             new ConcatFunctionMapper(functions),
             new TrimFunctionMapper(functions),
             new SqrtFunctionMapper(functions, typeFactory),
@@ -129,6 +129,16 @@ public class ScalarFunctionConverter
         .filter(Optional::isPresent)
         .findFirst()
         .orElse(Optional.empty());
+  }
+
+  private boolean hasDirectMatch(SqlOperator operator, List<RexNode> operands) {
+    FunctionFinder finder = signatures.get(operator);
+    return finder != null
+        && finder.hasDirectMatch(
+            operands.stream()
+                .map(RexNode::getType)
+                .map(typeConverter::toSubstrait)
+                .collect(Collectors.toList()));
   }
 
   /** Application of the more complex mappings. */

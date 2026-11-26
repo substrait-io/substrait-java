@@ -1,0 +1,17 @@
+%YAML 1.2
+---
+urn: extension:test:table_function_extensions
+table_functions:
+  - name: "unnest_list"
+    description: "Produces one record per element of a list."
+    impls:
+      - args:
+          - name: list
+            value: list<any1>
+        schema: struct<any1>
+  - name: "read_json"
+    description: "Reads records from a JSON document, with a schema the producer determines."
+    impls:
+      - args:
+          - name: document
+            value: string

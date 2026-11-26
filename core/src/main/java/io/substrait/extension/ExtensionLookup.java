@@ -37,6 +37,19 @@ public interface ExtensionLookup {
       int reference, SimpleExtension.ExtensionCollection extensions);
 
   /**
+   * Resolves a table function reference to its corresponding function variant.
+   *
+   * @param reference the function reference ID
+   * @param extensions the extension collection to search
+   * @return the table function variant
+   * @throws UnsupportedOperationException unless the implementation resolves table functions
+   */
+  default SimpleExtension.TableFunctionVariant getTableFunction(
+      int reference, SimpleExtension.ExtensionCollection extensions) {
+    throw new UnsupportedOperationException(getClass() + " does not resolve table functions");
+  }
+
+  /**
    * Resolves a type reference to its corresponding type.
    *
    * @param reference the type reference ID

@@ -96,11 +96,7 @@ public class ProtoTypeConverter {
                     .collect(java.util.stream.Collectors.toList()),
                 from(type.getFunc().getReturnType()));
       case STRUCT:
-        return n(type.getStruct().getNullability())
-            .struct(
-                type.getStruct().getTypesList().stream()
-                    .map(this::from)
-                    .collect(java.util.stream.Collectors.toList()));
+        return fromStruct(type.getStruct());
       case LIST:
         return fromList(type.getList());
       case MAP:
@@ -126,6 +122,20 @@ public class ProtoTypeConverter {
       default:
         throw new UnsupportedOperationException("Unsupported type: " + type.getKindCase());
     }
+  }
+
+  /**
+   * Converts a proto struct type into its POJO {@link Type.Struct}.
+   *
+   * @param struct the proto struct type to convert
+   * @return the converted struct type
+   */
+  public Type.Struct fromStruct(io.substrait.proto.Type.Struct struct) {
+    return n(struct.getNullability())
+        .struct(
+            struct.getTypesList().stream()
+                .map(this::from)
+                .collect(java.util.stream.Collectors.toList()));
   }
 
   /**

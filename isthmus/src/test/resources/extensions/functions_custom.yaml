@@ -153,6 +153,16 @@ aggregate_functions:
         return: i64
       - args:
           - name: x
+            value: fixedchar<2>
+        return: i64
+      - args:
+          - name: x
+            value: fixedchar<2>
+          - name: y
+            value: any1
+        return: i64
+      - args:
+          - name: x
             value: any
           - name: y
             value: any

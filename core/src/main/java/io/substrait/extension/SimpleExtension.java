@@ -1021,6 +1021,148 @@ public class SimpleExtension {
     }
   }
 
+  /** Describes a table function provided by a simple extension. */
+  @JsonDeserialize(as = ImmutableSimpleExtension.TableFunction.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.TableFunction.class)
+  @Value.Immutable
+  public abstract static class TableFunction {
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
+    public abstract String name();
+
+    /**
+     * Returns the description.
+     *
+     * @return the description
+     */
+    @Nullable
+    public abstract String description();
+
+    /**
+     * Returns the metadata.
+     *
+     * @return the metadata
+     */
+    public abstract Optional<Map<String, Object>> metadata();
+
+    /**
+     * Returns the deprecated.
+     *
+     * @return the deprecated
+     */
+    public abstract Optional<DeprecationStatus> deprecated();
+
+    /**
+     * Returns the impls.
+     *
+     * @return the impls
+     */
+    public abstract List<TableFunctionVariant> impls();
+
+    /**
+     * Returns the resolve for the given arguments.
+     *
+     * @param urn the urn
+     * @return the resolve
+     */
+    public Stream<TableFunctionVariant> resolve(String urn) {
+      return impls().stream()
+          .map(f -> f.resolve(urn, name(), description(), metadata(), deprecated()));
+    }
+  }
+
+  /**
+   * Describes a table function variant provided by a simple extension. A table function produces
+   * zero or more rows per invocation; its {@link #returnType()} is the YAML {@code schema}
+   * expression describing those rows.
+   */
+  @JsonDeserialize(as = ImmutableSimpleExtension.TableFunctionVariant.class)
+  @JsonSerialize(as = ImmutableSimpleExtension.TableFunctionVariant.class)
+  @Value.Immutable
+  public abstract static class TableFunctionVariant extends Function {
+
+    /**
+     * Returns the {@code schema} type expression that the output schema of a call must match once
+     * evaluated with the bound argument types, or null when the implementation omits it and the
+     * producer determines the schema of each call.
+     *
+     * @return the schema expression, or null if the implementation declares none
+     */
+    @Override
+    @Nullable
+    @JsonProperty("schema")
+    public abstract TypeExpression returnType();
+
+    /**
+     * Returns {@link io.substrait.extension.SimpleExtension.Nullability#DECLARED_OUTPUT}, which
+     * table functions always follow.
+     *
+     * @return {@link io.substrait.extension.SimpleExtension.Nullability#DECLARED_OUTPUT}
+     */
+    @Override
+    @Value.Derived
+    public Nullability nullability() {
+      return Nullability.DECLARED_OUTPUT;
+    }
+
+    /**
+     * Evaluates the {@code schema} expression with the given argument types.
+     *
+     * @param argumentTypes the actual types of the non-enum arguments
+     * @return the output schema
+     * @throws UnsupportedOperationException if the implementation declares no {@code schema}, or
+     *     the expression cannot be evaluated
+     */
+    @Override
+    public io.substrait.type.Type resolveType(List<io.substrait.type.Type> argumentTypes) {
+      if (returnType() == null) {
+        throw new UnsupportedOperationException(
+            String.format(
+                "Table function %s declares no schema; the producer determines the schema of each"
+                    + " call",
+                key()));
+      }
+      return super.resolveType(argumentTypes);
+    }
+
+    @Override
+    public String toString() {
+      return super.toString();
+    }
+
+    TableFunctionVariant resolve(
+        String urn,
+        String name,
+        String description,
+        Optional<Map<String, Object>> metadata,
+        Optional<DeprecationStatus> deprecated) {
+      return ImmutableSimpleExtension.TableFunctionVariant.builder()
+          .urn(urn)
+          .name(name)
+          .description(resolveDescription(description))
+          .args(args())
+          .options(options())
+          .metadata(metadata)
+          .deprecated(deprecated().isPresent() ? deprecated() : deprecated)
+          .ordered(ordered())
+          .variadic(variadic())
+          .returnType(returnType())
+          .build();
+    }
+
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
+    public static ImmutableSimpleExtension.TableFunctionVariant.Builder builder() {
+      return ImmutableSimpleExtension.TableFunctionVariant.builder();
+    }
+  }
+
   /** Describes a type provided by a simple extension. */
   @JsonDeserialize(as = ImmutableSimpleExtension.Type.class)
   @JsonSerialize(as = ImmutableSimpleExtension.Type.class)
@@ -1145,6 +1287,14 @@ public class SimpleExtension {
     public abstract List<WindowFunction> windows();
 
     /**
+     * Returns the table functions.
+     *
+     * @return the table functions
+     */
+    @JsonProperty("table_functions")
+    public abstract List<TableFunction> tableFunctions();
+
+    /**
      * Returns the metadata.
      *
      * @return the metadata
@@ -1161,7 +1311,8 @@ public class SimpleExtension {
       return (types() == null ? 0 : types().size())
           + (scalars() == null ? 0 : scalars().size())
           + (aggregates() == null ? 0 : aggregates().size())
-          + (windows() == null ? 0 : windows().size());
+          + (windows() == null ? 0 : windows().size())
+          + (tableFunctions() == null ? 0 : tableFunctions().size());
     }
 
     /**
@@ -1171,13 +1322,20 @@ public class SimpleExtension {
      * @return the resolve
      */
     public Stream<SimpleExtension.Function> resolve(String urn) {
-      return Stream.concat(
-          Stream.concat(
-              scalars() == null ? Stream.of() : scalars().stream().flatMap(f -> f.resolve(urn)),
+      return Stream.of(
+              scalars() == null
+                  ? Stream.<Function>of()
+                  : scalars().stream().flatMap(f -> f.resolve(urn)),
               aggregates() == null
-                  ? Stream.of()
-                  : aggregates().stream().flatMap(f -> f.resolve(urn))),
-          windows() == null ? Stream.of() : windows().stream().flatMap(f -> f.resolve(urn)));
+                  ? Stream.<Function>of()
+                  : aggregates().stream().flatMap(f -> f.resolve(urn)),
+              windows() == null
+                  ? Stream.<Function>of()
+                  : windows().stream().flatMap(f -> f.resolve(urn)),
+              tableFunctions() == null
+                  ? Stream.<Function>of()
+                  : tableFunctions().stream().flatMap(f -> f.resolve(urn)))
+          .flatMap(s -> s);
     }
   }
 
@@ -1193,11 +1351,12 @@ public class SimpleExtension {
     private final Supplier<Set<String>> urnSupplier =
         Util.memoize(
             () -> {
-              return Stream.concat(
-                      Stream.concat(
-                          scalarFunctions().stream().map(Function::urn),
-                          aggregateFunctions().stream().map(Function::urn)),
-                      windowFunctions().stream().map(Function::urn))
+              return Stream.of(
+                      scalarFunctions().stream().map(Function::urn),
+                      aggregateFunctions().stream().map(Function::urn),
+                      windowFunctions().stream().map(Function::urn),
+                      tableFunctions().stream().map(Function::urn))
+                  .flatMap(s -> s)
                   .collect(Collectors.toSet());
             });
 
@@ -1229,6 +1388,15 @@ public class SimpleExtension {
         Util.memoize(
             () -> {
               return windowFunctions().stream()
+                  .collect(
+                      Collectors.toMap(
+                          Function::getAnchor, java.util.function.Function.identity()));
+            });
+
+    private final Supplier<Map<FunctionAnchor, TableFunctionVariant>> tableFunctionsLookup =
+        Util.memoize(
+            () -> {
+              return tableFunctions().stream()
                   .collect(
                       Collectors.toMap(
                           Function::getAnchor, java.util.function.Function.identity()));
@@ -1271,6 +1439,13 @@ public class SimpleExtension {
      * @return the window Functions
      */
     public abstract List<WindowFunctionVariant> windowFunctions();
+
+    /**
+     * Returns the table Functions.
+     *
+     * @return the table Functions
+     */
+    public abstract List<TableFunctionVariant> tableFunctions();
 
     /**
      * Creates a new builder.
@@ -1391,6 +1566,25 @@ public class SimpleExtension {
     }
 
     /**
+     * Returns the table Function for the given arguments.
+     *
+     * @param anchor the anchor
+     * @return the table Function
+     */
+    public TableFunctionVariant getTableFunction(FunctionAnchor anchor) {
+      TableFunctionVariant variant = tableFunctionsLookup.get().get(anchor);
+      if (variant != null) {
+        return variant;
+      }
+      checkUrn(anchor.urn());
+      throw new IllegalArgumentException(
+          String.format(
+              "Unexpected table function with key %s. The URN %s is loaded "
+                  + "but no table function with this key was found.",
+              anchor.key(), anchor.urn()));
+    }
+
+    /**
      * Creates the corresponding merge instance.
      *
      * @param extensionCollection the extension Collection
@@ -1409,6 +1603,8 @@ public class SimpleExtension {
           .addAllScalarFunctions(extensionCollection.scalarFunctions())
           .addAllWindowFunctions(windowFunctions())
           .addAllWindowFunctions(extensionCollection.windowFunctions())
+          .addAllTableFunctions(tableFunctions())
+          .addAllTableFunctions(extensionCollection.tableFunctions())
           .addAllTypes(types())
           .addAllTypes(extensionCollection.types())
           .extensionMetadata(mergedExtensionMetadata)
@@ -1541,6 +1737,11 @@ public class SimpleExtension {
         Stream.concat(windowFunctionVariants, windowAggFunctionVariants)
             .collect(Collectors.toList());
 
+    List<TableFunctionVariant> tableFunctionVariants =
+        extensionSignatures.tableFunctions().stream()
+            .flatMap(t -> t.resolve(urn))
+            .collect(Collectors.toList());
+
     Map<String, Map<String, Object>> extMetadata = new HashMap<>();
     extensionSignatures.metadata().ifPresent(m -> extMetadata.put(urn, m));
 
@@ -1549,6 +1750,7 @@ public class SimpleExtension {
             .scalarFunctions(scalarFunctionVariants)
             .aggregateFunctions(aggregateFunctionVariants)
             .windowFunctions(allWindowFunctionVariants)
+            .tableFunctions(tableFunctionVariants)
             .addAllTypes(extensionSignatures.types())
             .extensionMetadata(extMetadata)
             .build();

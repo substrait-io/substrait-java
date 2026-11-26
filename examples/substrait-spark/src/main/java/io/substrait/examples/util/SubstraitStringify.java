@@ -26,6 +26,7 @@ import io.substrait.relation.Rel.Remap;
 import io.substrait.relation.RelVisitor;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.TableFunction;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.files.FileOrFiles;
 import io.substrait.relation.physical.BroadcastExchange;
@@ -328,6 +329,16 @@ public class SubstraitStringify extends ParentStringify
   public String visit(VirtualTableScan virtualTableScan, EmptyVisitationContext context)
       throws RuntimeException {
     StringBuilder sb = getIndent().append("VirtualTableScan:: ");
+    return getOutdent(sb);
+  }
+
+  @Override
+  public String visit(TableFunction tableFunction, EmptyVisitationContext context)
+      throws RuntimeException {
+    StringBuilder sb =
+        getIndent()
+            .append("TableFunction:: ")
+            .append(tableFunction.getFunction().declaration().key());
     return getOutdent(sb);
   }
 
