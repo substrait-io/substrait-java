@@ -36,7 +36,10 @@ class DefaultExtensionCatalogTest {
           "functions_aggregate_decimal_output.yaml",
           // functions_geometry.yaml defines user-defined types (u!geometry) that are not
           // supported by Calcite's type conversion in isthmus.
-          "functions_geometry.yaml");
+          "functions_geometry.yaml",
+          // functions_table.yaml only declares table_functions, which the extension model does
+          // not read yet.
+          "functions_table.yaml");
 
   private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 

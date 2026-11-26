@@ -93,6 +93,11 @@ class GenericRoundtripTest extends TestBase {
       String value = (String) l.get(1);
       l.set(2, value.codePointCount(0, value.length()));
     }
+    if (m.getReturnType().equals(Expression.UUIDLiteral.class) && l.get(1) instanceof ByteString) {
+      byte[] uuid = new byte[16];
+      rand.nextBytes(uuid);
+      l.set(1, ByteString.copyFrom(uuid));
+    }
     return l;
   }
 

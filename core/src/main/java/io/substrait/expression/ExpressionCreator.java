@@ -334,10 +334,15 @@ public class ExpressionCreator {
    * Creates a UUID literal expression from a ByteString.
    *
    * @param nullable whether the literal can be null
-   * @param uuid the UUID value as a ByteString
+   * @param uuid the UUID value as 16 bytes in network byte order (big-endian)
    * @return a UUIDLiteral expression
+   * @throws IllegalArgumentException if {@code uuid} is not exactly 16 bytes
    */
   public static Expression.UUIDLiteral uuid(boolean nullable, ByteString uuid) {
+    if (uuid.size() != 16) {
+      throw new IllegalArgumentException(
+          "UUID literal must be exactly 16 bytes, but has " + uuid.size());
+    }
     ByteBuffer bb = uuid.asReadOnlyByteBuffer();
     return Expression.UUIDLiteral.builder()
         .nullable(nullable)

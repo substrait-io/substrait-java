@@ -31,5 +31,7 @@ public enum ExpressionKind {
   /** A lambda invocation expression. */
   LAMBDA_INVOCATION,
   /** An execution-context variable expression. */
-  EXECUTION_CONTEXT_VARIABLE
+  EXECUTION_CONTEXT_VARIABLE,
+  /** A reference to a plan-level named lambda as a function value. */
+  NAMED_LAMBDA_REFERENCE
 }
