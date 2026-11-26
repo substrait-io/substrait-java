@@ -39,6 +39,22 @@ class PredicateSuite extends SparkFunSuite with SubstraitExpressionTestBase {
     runTest("and:bool", And(Literal(true), Literal(false)))
   }
 
+  test("AND and OR with no arguments are their identities") {
+    // The boolean extension declares both with a minimum of no arguments.
+    assertResult(Literal(true))(sb.and().accept(toSparkExpression, EmptyVisitationContext.INSTANCE))
+    assertResult(Literal(false))(sb.or().accept(toSparkExpression, EmptyVisitationContext.INSTANCE))
+  }
+
+  test("AND and OR with one argument are that argument") {
+    // Each argument is the opposite of its operator's identity, so returning the identity fails.
+    assertResult(Literal(false))(
+      sb.and(ExpressionCreator.bool(false, false))
+        .accept(toSparkExpression, EmptyVisitationContext.INSTANCE))
+    assertResult(Literal(true))(
+      sb.or(ExpressionCreator.bool(false, true))
+        .accept(toSparkExpression, EmptyVisitationContext.INSTANCE))
+  }
+
   test("Multivariate AND with 3 arguments") {
     // Create a substrait AND expression with 3 boolean arguments: a AND b AND c
     val boolA = ExpressionCreator.bool(false, true)

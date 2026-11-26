@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.expression
 
-import org.apache.spark.sql.catalyst.expressions.{Add, EvalMode, Expression, Multiply, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, And, EvalMode, Expression, Literal, Multiply, Or, Subtract}
 
 import io.substrait.`type`.Type
 import io.substrait.expression.{Expression => SExpression, FunctionArg}
@@ -39,6 +39,23 @@ abstract class ToScalarFunction(functions: Seq[SimpleExtension.ScalarFunctionVar
       .addAllArguments(arguments.asJava)
       .build()
   }
+
+  /**
+   * Substrait's `and` and `or` take any number of arguments, but Spark's take two. A call with more
+   * is folded into nested calls, one with a single argument is that argument, and one with none is
+   * the operator's identity: true for `and` and false for `or`.
+   */
+  override def getSparkExpressionFromSubstraitFunc(
+      key: String,
+      args: Seq[Expression]): Option[Expression] =
+    (key.takeWhile(_ != ':'), args) match {
+      case ("and", Seq()) => Some(Literal(true))
+      case ("or", Seq()) => Some(Literal(false))
+      case ("and" | "or", Seq(only)) => Some(only)
+      case ("and", _) if args.size > 2 => Some(args.reduceLeft(And(_, _)))
+      case ("or", _) if args.size > 2 => Some(args.reduceLeft(Or(_, _)))
+      case _ => super.getSparkExpressionFromSubstraitFunc(key, args)
+    }
 
   def convert(expression: Expression, operands: Seq[FunctionArg]): Option[SExpression] = {
     Option(signatures.get(expression.getClass))
