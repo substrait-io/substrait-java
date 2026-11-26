@@ -16,7 +16,7 @@
  */
 package io.substrait.spark
 
-import io.substrait.spark.expression.{ToAggregateFunction, ToWindowFunction}
+import io.substrait.spark.expression.{SparkAggregateFunctions, ToAggregateFunction, ToWindowFunction}
 
 import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 
@@ -42,19 +42,23 @@ object SparkExtension {
     ret.toSeq
   }
 
-  /**
-   * Standard extensions only: `spark.yml` declares no aggregates or windows, and
-   * [[toAggregateFunction]] / [[toWindowFunction]] bind against these same collections, so a
-   * `spark.yml` aggregate would be neither advertised in the dialect nor bindable at runtime.
-   */
   lazy val StandardAggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant] =
     EXTENSION_COLLECTION.aggregateFunctions().asScala.toSeq
 
-  /** @see [[StandardAggregateFunctions]] */
   lazy val StandardWindowFunctions: Seq[SimpleExtension.WindowFunctionVariant] =
     EXTENSION_COLLECTION.windowFunctions().asScala.toSeq
 
-  val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(StandardAggregateFunctions)
+  /** Functions bound by both the runtime converters and the generated dialect. */
+  lazy val AggregateFunctions: Seq[SimpleExtension.AggregateFunctionVariant] =
+    StandardAggregateFunctions.filterNot(SparkAggregateFunctions.replaces) ++
+      SparkImpls.aggregateFunctions().asScala
 
-  val toWindowFunction: ToWindowFunction = ToWindowFunction(StandardWindowFunctions)
+  lazy val WindowFunctions: Seq[SimpleExtension.WindowFunctionVariant] =
+    StandardWindowFunctions.filterNot(SparkAggregateFunctions.replaces) ++
+      SparkImpls.windowFunctions().asScala
+
+  val toAggregateFunction: ToAggregateFunction = ToAggregateFunction(AggregateFunctions)
+
+  val toWindowFunction: ToWindowFunction = ToWindowFunction(WindowFunctions)
+
 }

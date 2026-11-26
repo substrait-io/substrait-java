@@ -43,8 +43,9 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
       outputType: Type): AggregateFunctionInvocation = {
 
     val sparkAggregate = sparkExp.asInstanceOf[AggregateExpression]
+    SparkAggregateFunctions.validateResult(function, arguments, outputType)
 
-    ExpressionCreator.aggregateFunction(
+    val invocation = ExpressionCreator.aggregateFunction(
       function,
       outputType,
       ToAggregateFunction.fromSpark(sparkAggregate.mode),
@@ -52,13 +53,19 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
       ToAggregateFunction.fromSpark(sparkAggregate.isDistinct),
       arguments.asJava
     )
+    AggregateFunctionInvocation
+      .builder()
+      .from(invocation)
+      .addAllOptions(SparkAggregateFunctions.options(sparkAggregate, function).asJava)
+      .build()
   }
 
   def convert(
       expression: AggregateExpression,
       operands: Seq[SExpression]): Option[AggregateFunctionInvocation] = {
-    Option(signatures.get(expression.aggregateFunction.getClass))
-      .flatMap(m => m.attemptMatch(expression, operands))
+    val native = SparkAggregateFunctions.unwrap(expression)
+    Option(signatures.get(native.aggregateFunction.getClass))
+      .flatMap(m => m.attemptMatch(native, operands))
   }
 
   def apply(

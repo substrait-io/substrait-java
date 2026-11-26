@@ -49,7 +49,23 @@ class DialectGenerator(
   }
 
   def generate(): Dialect = {
-    val scalars = supportedFunctions(scalarFunctions, ToScalarFunction(scalarFunctions))
+    // Type arguments have no Catalyst literal for the generic signature probe.
+    val decimalConstructors = scalarFunctions.filter(ToScalarFunction.isDecimalConstructor).map {
+      f =>
+        SourcedFunction(
+          f.urn(),
+          DialectFunction
+            .builder()
+            .source(dependencyAlias(f.urn()))
+            .name(f.name())
+            .systemMetadata(
+              SystemFunctionMetadata.builder().name(f.name()).notation(Notation.FUNCTION).build())
+            .addSupportedImpls("i64_type")
+            .build()
+        )
+    }
+    val scalars =
+      supportedFunctions(scalarFunctions, ToScalarFunction(scalarFunctions)) ++ decimalConstructors
     val aggregates = supportedFunctions(aggregateFunctions, ToAggregateFunction(aggregateFunctions))
     val windows = supportedFunctions(windowFunctions, ToWindowFunction(windowFunctions))
 
@@ -422,8 +438,8 @@ class DialectGenerator(
 object DialectGenerator
   extends DialectGenerator(
     SparkExtension.SparkScalarFunctions,
-    SparkExtension.StandardAggregateFunctions,
-    SparkExtension.StandardWindowFunctions) {
+    SparkExtension.AggregateFunctions,
+    SparkExtension.WindowFunctions) {
 
   def main(args: Array[String]): Unit = {
     val yaml = generateYaml()

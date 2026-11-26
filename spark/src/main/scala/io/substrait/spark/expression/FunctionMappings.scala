@@ -120,6 +120,7 @@ class FunctionMappings {
   }
 
   val SCALAR_SIGS: Seq[Sig] = Seq(
+    s[UnscaledValue]("unscaled_value"),
     s[Add]("add"),
     s[Subtract]("subtract"),
     s[Multiply]("multiply"),
