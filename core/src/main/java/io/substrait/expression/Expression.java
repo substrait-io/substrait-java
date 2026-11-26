@@ -823,6 +823,23 @@ public interface Expression extends FunctionArg {
      */
     public abstract int length();
 
+    /**
+     * Validates that the value fits within the declared maximum length in Unicode code points.
+     *
+     * @throws IllegalArgumentException if the value exceeds the declared length
+     */
+    @Value.Check
+    protected void check() {
+      int characters = value().codePointCount(0, value().length());
+      if (characters > length()) {
+        throw new IllegalArgumentException(
+            "VarCharLiteral value has "
+                + characters
+                + " characters, exceeding declared length "
+                + length());
+      }
+    }
+
     @Override
     public Type getType() {
       return Type.withNullability(nullable()).varChar(length());

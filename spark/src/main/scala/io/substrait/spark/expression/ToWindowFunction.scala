@@ -35,6 +35,11 @@ abstract class ToWindowFunction(functions: Seq[SimpleExtension.WindowFunctionVar
   extends FunctionConverter[SimpleExtension.WindowFunctionVariant, WindowRelFunctionInvocation](
     functions) {
 
+  override def getSparkExpressionFromSubstraitFunc(
+      key: String,
+      args: Seq[Expression]): Option[Expression] =
+    super.getSparkExpressionFromSubstraitFunc(key, ToAggregateFunction.sparkArguments(key, args))
+
   override def generateBinding(
       sparkExp: Expression,
       function: SimpleExtension.WindowFunctionVariant,

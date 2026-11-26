@@ -413,12 +413,37 @@ supported_scalar_functions:
   supported_impls:
   - "dec_dec"
 - source: "boolean"
+  name: "and"
+  system_metadata:
+    name: "AND"
+    notation: "INFIX"
+  supported_impls:
+  - "bool"
+  variadic: {}
+- source: "boolean"
   name: "not"
   system_metadata:
     name: "not"
     notation: "FUNCTION"
   supported_impls:
   - "bool"
+- source: "boolean"
+  name: "or"
+  system_metadata:
+    name: "OR"
+    notation: "INFIX"
+  supported_impls:
+  - "bool"
+  variadic: {}
+- source: "comparison"
+  name: "coalesce"
+  system_metadata:
+    name: "coalesce"
+    notation: "FUNCTION"
+  supported_impls:
+  - "any"
+  variadic:
+    min: 2
 - source: "comparison"
   name: "equal"
   system_metadata:
@@ -475,6 +500,14 @@ supported_scalar_functions:
     notation: "INFIX"
   supported_impls:
   - "any_any"
+- source: "datetime"
+  name: "extract"
+  system_metadata:
+    name: "extract"
+    notation: "FUNCTION"
+  supported_impls:
+  - "req_date"
+  - "req_req_date"
 - source: "datetime"
   name: "gt"
   system_metadata:
@@ -609,6 +642,16 @@ supported_scalar_functions:
   supported_impls:
   - "dec"
 - source: "string"
+  name: "concat"
+  system_metadata:
+    name: "concat"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str"
+  - "vchar"
+  variadic:
+    min: 1
+- source: "string"
   name: "contains"
   system_metadata:
     name: "contains"
@@ -664,6 +707,14 @@ supported_scalar_functions:
   - "str_i32_str"
   - "vchar_i32_vchar"
 - source: "string"
+  name: "ltrim"
+  system_metadata:
+    name: "ltrim"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str_str"
+  - "vchar_vchar"
+- source: "string"
   name: "rpad"
   system_metadata:
     name: "rpad"
@@ -671,6 +722,14 @@ supported_scalar_functions:
   supported_impls:
   - "str_i32_str"
   - "vchar_i32_vchar"
+- source: "string"
+  name: "rtrim"
+  system_metadata:
+    name: "rtrim"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str_str"
+  - "vchar_vchar"
 - source: "string"
   name: "starts_with"
   system_metadata:
@@ -692,9 +751,20 @@ supported_scalar_functions:
     name: "substring"
     notation: "FUNCTION"
   supported_impls:
+  - "fchar_i32"
   - "fchar_i32_i32"
+  - "str_i32"
   - "str_i32_i32"
+  - "vchar_i32"
   - "vchar_i32_i32"
+- source: "string"
+  name: "trim"
+  system_metadata:
+    name: "trim"
+    notation: "FUNCTION"
+  supported_impls:
+  - "str_str"
+  - "vchar_vchar"
 - source: "string"
   name: "upper"
   system_metadata:
@@ -718,6 +788,14 @@ supported_aggregate_functions:
     name: "first"
     notation: "FUNCTION"
   supported_impls:
+  - "any"
+- source: "aggregate_generic"
+  name: "count"
+  system_metadata:
+    name: "count"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
   - "any"
 - source: "arithmetic"
   name: "avg"
@@ -839,6 +917,14 @@ supported_window_functions:
     notation: "FUNCTION"
   supported_impls:
   - "any"
+- source: "aggregate_generic"
+  name: "count"
+  system_metadata:
+    name: "count"
+    notation: "FUNCTION"
+  supported_impls:
+  - ""
+  - "any"
 - source: "arithmetic"
   name: "avg"
   system_metadata:
@@ -870,6 +956,8 @@ supported_window_functions:
     name: "lag"
     notation: "FUNCTION"
   supported_impls:
+  - "any"
+  - "any_i32"
   - "any_i32_any"
 - source: "arithmetic"
   name: "lead"
@@ -877,6 +965,8 @@ supported_window_functions:
     name: "lead"
     notation: "FUNCTION"
   supported_impls:
+  - "any"
+  - "any_i32"
   - "any_i32_any"
 - source: "arithmetic"
   name: "max"

@@ -6,10 +6,11 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.test.SharedSparkSession
 
 import com.networknt.schema.{InputFormat, SchemaRegistry, SpecificationVersion}
-import io.substrait.dialect.{Dialect, DialectFunction}
+import io.substrait.dialect.{Dialect, DialectFunction, Variadic}
 import io.substrait.extension.{DefaultExtensionCatalog, SimpleExtension}
 
 import java.io.File
+import java.util.Optional
 
 import scala.io.Source
 import scala.jdk.CollectionConverters._
@@ -42,6 +43,27 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
                             |        intermediate: i64?
                             |        return: i64?
                             |""".stripMargin)
+
+  /**
+   * What the generator lists from an extension declaring only these scalar functions: each entry's
+   * name, implementations and argument counts.
+   */
+  private def listed(functions: String): Seq[(String, Seq[String], Optional[Variadic])] = {
+    val extension = SimpleExtension.load(
+      "urn: extension:io.substrait:functions_probe\nscalar_functions:\n" + functions.stripMargin)
+    new DialectGenerator(extension.scalarFunctions().asScala.toSeq, Seq.empty, Seq.empty)
+      .generate()
+      .supportedScalarFunctions()
+      .asScala
+      .toSeq
+      .map(f => (f.name(), f.supportedImpls().asScala.toSeq, f.variadic()))
+  }
+
+  private def variadic(min: Int, max: Option[Int] = None): Optional[Variadic] = {
+    val builder = Variadic.builder().min(min)
+    max.foreach(m => builder.max(m))
+    Optional.of(builder.build())
+  }
 
   private def generatorWith(extras: SimpleExtension.ExtensionCollection*): DialectGenerator =
     new DialectGenerator(
@@ -215,5 +237,86 @@ class DialectSuite extends SparkFunSuite with SharedSparkSession with SubstraitP
       }
       .toSet
     assert(windowAdvertised.contains((DefaultExtensionCatalog.FUNCTIONS_ARITHMETIC, "max:i64")))
+  }
+
+  test("a variadic function with no declared maximum is unbounded if Spark accepts any number") {
+    assertResult(Seq(("coalesce", Seq("any"), variadic(1))))(listed("""  - name: coalesce
+                                                                    |    impls:
+                                                                    |      - args:
+                                                                    |          - value: any1
+                                                                    |        variadic:
+                                                                    |          min: 1
+                                                                    |        return: any1
+                                                                    |"""))
+  }
+
+  test("a variadic function with a declared maximum is tried with every number up to it") {
+    // More than are tried for a function with no declared maximum.
+    assertResult(Seq(("coalesce", Seq("any"), variadic(1, Some(40)))))(listed("""  - name: coalesce
+               |    impls:
+               |      - args:
+               |          - value: any1
+               |        variadic:
+               |          min: 1
+               |          max: 40
+               |        return: any1
+               |"""))
+  }
+
+  test("a variadic function is listed with the numbers of arguments Spark accepts") {
+    // Spark's substring takes a string and a position, and optionally a length. The counts include
+    // the argument before the repeated one.
+    assertResult(Seq(("substring", Seq("str_i32"), variadic(2, Some(3)))))(
+      listed("""  - name: substring
+               |    impls:
+               |      - args:
+               |          - value: string
+               |          - value: i32
+               |        variadic:
+               |          min: 1
+               |        return: string
+               |"""))
+  }
+
+  test("a variadic function Spark accepts only at its declared size is listed as fixed") {
+    assertResult(Seq(("add", Seq("i64_i64"), Optional.empty[Variadic]())))(listed("""  - name: add
+               |    impls:
+               |      - args:
+               |          - value: i64
+               |          - value: i64
+               |        variadic:
+               |          min: 1
+               |        return: i64
+               |"""))
+  }
+
+  test("an implementation with an enum argument is listed if any of its options converts") {
+    // Spark converts extract's YEAR component, but not ISO_YEAR.
+    assertResult(Seq(("extract", Seq("req_date"), Optional.empty[Variadic]())))(
+      listed("""  - name: extract
+               |    impls:
+               |      - args:
+               |          - name: component
+               |            options: [ YEAR, ISO_YEAR ]
+               |          - value: date
+               |        return: i64
+               |      - args:
+               |          - name: component
+               |            options: [ ISO_YEAR ]
+               |          - value: precision_timestamp<P>
+               |        return: i64
+               |"""))
+  }
+
+  test("an implementation whose call leaves an enum argument unconverted is not listed") {
+    // Spark's is_null takes any one argument, so it builds a call holding the enum placeholder,
+    // which cannot be evaluated.
+    assertResult(Seq.empty)(listed("""  - name: is_null
+                                     |    impls:
+                                     |      - args:
+                                     |          - name: mode
+                                     |            options: [ A, B ]
+                                     |        return: boolean
+                                     |"""))
   }
 }
