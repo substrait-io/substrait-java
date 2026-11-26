@@ -30,6 +30,8 @@ public enum RelationKind {
   DDL,
   /** The update relation. */
   UPDATE,
+  /** The table function relation. */
+  TABLE_FUNCTION,
   /** The hash join relation. */
   HASH_JOIN,
   /** The merge join relation. */

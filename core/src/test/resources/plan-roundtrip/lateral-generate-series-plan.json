@@ -1,0 +1,124 @@
+{
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_table"
+    }
+  ],
+  "extensions": [
+    {
+      "extensionFunction": {
+        "functionAnchor": 1,
+        "name": "generate_series:i64_i64_i64",
+        "extensionUrnReference": 1
+      }
+    }
+  ],
+  "relations": [
+    {
+      "root": {
+        "input": {
+          "lateralJoin": {
+            "common": {
+              "direct": {},
+              "relAnchor": 7
+            },
+            "left": {
+              "read": {
+                "common": {
+                  "direct": {}
+                },
+                "baseSchema": {
+                  "names": [
+                    "n"
+                  ],
+                  "struct": {
+                    "types": [
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      }
+                    ],
+                    "nullability": "NULLABILITY_REQUIRED"
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "series_bounds"
+                  ]
+                }
+              }
+            },
+            "right": {
+              "tableFunction": {
+                "common": {
+                  "direct": {}
+                },
+                "function": {
+                  "functionReference": 1,
+                  "arguments": [
+                    {
+                      "value": {
+                        "literal": {
+                          "i64": "1"
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 0
+                            }
+                          },
+                          "outerReference": {
+                            "relReference": 7
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "literal": {
+                          "i64": "1"
+                        }
+                      }
+                    }
+                  ],
+                  "schema": {
+                    "types": [
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_REQUIRED"
+                        }
+                      }
+                    ],
+                    "nullability": "NULLABILITY_REQUIRED"
+                  }
+                }
+              }
+            },
+            "expression": {
+              "literal": {
+                "boolean": true
+              }
+            },
+            "type": "JOIN_TYPE_INNER"
+          }
+        },
+        "names": [
+          "n",
+          "value"
+        ]
+      }
+    }
+  ],
+  "version": {
+    "minorNumber": 109
+  },
+  "executionBehavior": {
+    "variableEvalMode": "VARIABLE_EVALUATION_MODE_PER_PLAN"
+  }
+}

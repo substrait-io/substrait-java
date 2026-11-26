@@ -52,7 +52,11 @@ class PlanRoundtripTest {
         Arguments.of(
             "zero-anchor",
             "plan-roundtrip/zero-anchor-input-plan.json",
-            "plan-roundtrip/zero-anchor-expected-plan.json"));
+            "plan-roundtrip/zero-anchor-expected-plan.json"),
+        Arguments.of(
+            "lateral-generate-series",
+            "plan-roundtrip/lateral-generate-series-plan.json",
+            "plan-roundtrip/lateral-generate-series-plan.json"));
   }
 
   @ParameterizedTest(name = "{0}")

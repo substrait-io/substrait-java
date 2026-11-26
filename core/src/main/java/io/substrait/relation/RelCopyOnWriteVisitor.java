@@ -8,6 +8,7 @@ import io.substrait.expression.AggregateFunctionInvocation;
 import io.substrait.expression.Expression;
 import io.substrait.expression.FieldReference;
 import io.substrait.expression.FunctionArg;
+import io.substrait.expression.TableFunctionInvocation;
 import io.substrait.expression.WindowBound;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.ComparisonJoinKey;
@@ -592,6 +593,30 @@ public class RelCopyOnWriteVisitor<E extends Exception>
             .from(virtualTableScan)
             .filter(or(filter, virtualTableScan::getFilter))
             .build());
+  }
+
+  @Override
+  public Optional<Rel> visit(TableFunction tableFunction, EmptyVisitationContext context) throws E {
+    return inInputScope(
+            recordTypeOf(),
+            () -> visitTableFunctionInvocation(tableFunction.getFunction(), context))
+        .map(function -> TableFunction.builder().from(tableFunction).function(function).build());
+  }
+
+  /**
+   * Rewrites a table function invocation, returning a new one if anything changed.
+   *
+   * @param invocation the table function invocation to rewrite
+   * @param context the visitation context
+   * @return the rewritten invocation, or empty if unchanged
+   * @throws E if the visit fails
+   */
+  protected Optional<TableFunctionInvocation> visitTableFunctionInvocation(
+      TableFunctionInvocation invocation, EmptyVisitationContext context) throws E {
+    return visitFunctionArguments(invocation.arguments(), context)
+        .map(
+            arguments ->
+                TableFunctionInvocation.builder().from(invocation).arguments(arguments).build());
   }
 
   @Override

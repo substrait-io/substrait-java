@@ -38,6 +38,7 @@ import io.substrait.proto.ProjectRel;
 import io.substrait.proto.ReadRel;
 import io.substrait.proto.SetRel;
 import io.substrait.proto.SortRel;
+import io.substrait.proto.TableFunctionRel;
 import io.substrait.proto.TopNRel;
 import io.substrait.proto.UpdateRel;
 import io.substrait.proto.WriteRel;
@@ -335,6 +336,8 @@ public class ProtoRelConverter {
         return newExchange(rel.getExchange());
       case TOP_N:
         return newTopN(rel.getTopN());
+      case TABLE_FUNCTION:
+        return newTableFunction(rel.getTableFunction());
       default:
         throw new UnsupportedOperationException("Unsupported RelTypeCase of " + relType);
     }
@@ -1085,6 +1088,24 @@ public class ProtoRelConverter {
     if (rel.hasCount()) {
       builder.count(converter.from(rel.getCount()));
     }
+
+    if (rel.hasAdvancedExtension()) {
+      builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));
+    }
+    return applyRelCommon(builder.build(), rel.getCommon());
+  }
+
+  /**
+   * Converts the corresponding protobuf message to its POJO representation.
+   *
+   * @param rel the protobuf value to convert
+   * @return the converted result
+   */
+  protected TableFunction newTableFunction(TableFunctionRel rel) {
+    ProtoExpressionConverter converter =
+        new ProtoExpressionConverter(lookup, extensions, ProtoExpressionConverter.EMPTY_TYPE, this);
+    ImmutableTableFunction.Builder builder =
+        TableFunction.builder().function(converter.fromTableFunction(rel.getFunction()));
 
     if (rel.hasAdvancedExtension()) {
       builder.extension(protoExtensionConverter.fromProto(rel.getAdvancedExtension()));

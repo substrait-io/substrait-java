@@ -33,6 +33,7 @@ import io.substrait.relation.Rel;
 import io.substrait.relation.RelVisitor;
 import io.substrait.relation.Set;
 import io.substrait.relation.Sort;
+import io.substrait.relation.TableFunction;
 import io.substrait.relation.VirtualTableScan;
 import io.substrait.relation.physical.BroadcastExchange;
 import io.substrait.relation.physical.HashJoin;
@@ -138,6 +139,15 @@ public class RelSamples {
     // is
     // non-empty here too. from(detail) seeds the schema, so the override has to follow it.
     samples.put(ExtensionTable.class, ExtensionTable.from(detail).initialSchema(schema).build());
+    samples.put(
+        TableFunction.class,
+        sb.tableFunction(
+            DefaultExtensionCatalog.FUNCTIONS_TABLE,
+            "generate_series:i64_i64_i64",
+            R.struct(R.I64),
+            ExpressionCreator.i64(false, 1),
+            ExpressionCreator.i64(false, 10),
+            ExpressionCreator.i64(false, 1)));
 
     // Logical relations
     samples.put(

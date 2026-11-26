@@ -151,6 +151,16 @@ public interface RelVisitor<O, C extends VisitationContext, E extends Exception>
   O visit(VirtualTableScan virtualTableScan, C context) throws E;
 
   /**
+   * Visit a table function relation.
+   *
+   * @param tableFunction the table function node
+   * @param context visitation context
+   * @return visit result
+   * @throws E on visit failure
+   */
+  O visit(TableFunction tableFunction, C context) throws E;
+
+  /**
    * Visit an extension leaf relation.
    *
    * @param extensionLeaf the extension leaf node

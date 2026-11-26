@@ -60,6 +60,9 @@ public class DefaultExtensionCatalog {
   /** Extension identifier for string functions. */
   public static final String FUNCTIONS_STRING = "extension:io.substrait:functions_string";
 
+  /** Extension identifier for table functions. */
+  public static final String FUNCTIONS_TABLE = "extension:io.substrait:functions_table";
+
   /** Extension identifier for unsigned integer types and functions. */
   public static final String UNSIGNED_INTEGERS = "extension:io.substrait:unsigned_integers";
 
@@ -87,7 +90,8 @@ public class DefaultExtensionCatalog {
                 "rounding",
                 "rounding_decimal",
                 "set",
-                "string")
+                "string",
+                "table")
             .stream()
             .map(c -> String.format("/substrait/extensions/functions_%s.yaml", c))
             .collect(Collectors.toList());

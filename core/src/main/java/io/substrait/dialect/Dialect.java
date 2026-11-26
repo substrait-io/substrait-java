@@ -97,6 +97,14 @@ public abstract class Dialect {
   public abstract List<DialectFunction> supportedWindowFunctions();
 
   /**
+   * The table functions supported by the dialect.
+   *
+   * @return the supported table functions
+   */
+  @JsonProperty("supported_table_functions")
+  public abstract List<DialectFunction> supportedTableFunctions();
+
+  /**
    * The execution-behavior configuration of the dialect, if any.
    *
    * @return the optional execution behavior
