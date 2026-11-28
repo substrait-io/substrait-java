@@ -75,22 +75,35 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
 
   Stream<Arguments> samples() {
     return relSamples.entrySet().stream()
-        .map(sample -> Arguments.of(sample.getKey().getSimpleName(), sample.getValue()));
+        .flatMap(
+            sample -> {
+              String name = sample.getKey().getSimpleName();
+              Rel rel = sample.getValue();
+              return Stream.of(Arguments.of(name, rel, false), Arguments.of(name, rel, true));
+            });
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "{0}, detach relations = {2}")
   @MethodSource("samples")
-  void everyRelationRoundtripsWithEveryExpressionDetached(String relationType, Rel rel) {
+  void everyRelationRoundtripsWithDetachedSubtrees(
+      String relationType, Rel rel, boolean detachRelations) {
     io.substrait.proto.Rel protoRel =
         new StringHolderHandlingRelProtoConverter(functionCollector).toProto(rel);
+    NestingDetacher detacher = detachRelations ? NestingDetacher.everySubtree() : DETACH_ALL;
     PlanRel detached =
-        DETACH_ALL.detach(
+        detacher.detach(
             PlanRel.newBuilder()
                 .setRoot(io.substrait.proto.RelRoot.newBuilder().setInput(protoRel))
                 .build());
 
-    if (containsExpression(protoRel)) {
-      assertTrue(detached.getDetachedExpressionsCount() > 0, "no expression was detached");
+    assertEquals(detachRelations, detached.getRoot().getInput().hasDetachedRelOrdinal());
+    assertEquals(
+        detachRelations ? count(protoRel, io.substrait.proto.Rel.class) : 0,
+        detached.getDetachedRelsCount());
+    assertEquals(
+        count(protoRel, io.substrait.proto.Expression.class),
+        detached.getDetachedExpressionsCount());
+    if (detached.getDetachedExpressionsCount() > 0) {
       assertNotEquals(protoRel, detached.getRoot().getInput());
     }
     Rel returned =
@@ -575,11 +588,19 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
   void aStepsOutReferenceResolvesAgainstTheEnclosingQuery() {
     Rel subquery =
         correlated(FieldReference.newRootStructOuterReference(1, orders.getRecordType(), 1));
-    assertDetachedRoundTrip(
+    Rel rel =
         sb.project(
             input -> List.of(sb.fieldReference(input, 0), sb.scalarSubquery(subquery, R.I64)),
             Remap.of(List.of(2, 3)),
-            orders));
+            orders);
+    assertDetachedRoundTrip(rel);
+
+    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+    PlanRel detached =
+        NestingDetacher.everySubtree().detach(PlanRel.newBuilder().setRel(protoRel).build());
+    assertTrue(detached.getRel().hasDetachedRelOrdinal());
+    assertEquals(count(protoRel, io.substrait.proto.Rel.class), detached.getDetachedRelsCount());
+    assertEquals(rel, protoRelConverter.fromRel(detached));
   }
 
   @Test
@@ -709,11 +730,9 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
         DefaultExtensionCatalog.DEFAULT_COLLECTION, new ExtensionProtoConverter<>(), detacher);
   }
 
-  private static boolean containsExpression(Message message) {
-    if (message instanceof io.substrait.proto.Expression) {
-      return true;
-    }
-    return children(message).anyMatch(DetachedExpressionRoundtripTest::containsExpression);
+  private static int count(Message message, Class<? extends Message> type) {
+    return (type.isInstance(message) ? 1 : 0)
+        + children(message).mapToInt(child -> count(child, type)).sum();
   }
 
   /** Returns how many levels of messages nest below {@code message}, as a parser counts them. */

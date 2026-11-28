@@ -34,9 +34,17 @@ public final class NestingDetacher {
   /** The default parse recursion limit of protobuf-java, and of the C++ and upb runtimes. */
   public static final int DEFAULT_MAX_DEPTH = 100;
 
-  private static final NestingDetacher DEFAULT = new NestingDetacher(DEFAULT_MAX_DEPTH, false);
-  private static final NestingDetacher DISABLED = new NestingDetacher(Integer.MAX_VALUE, false);
-  private static final NestingDetacher EVERY_EXPRESSION = new NestingDetacher(0, true);
+  private enum Mode {
+    BOUNDED,
+    EVERY_EXPRESSION,
+    EVERY_SUBTREE
+  }
+
+  private static final NestingDetacher DEFAULT = withMaxDepth(DEFAULT_MAX_DEPTH);
+  private static final NestingDetacher DISABLED = withMaxDepth(Integer.MAX_VALUE);
+  private static final NestingDetacher EVERY_EXPRESSION =
+      new NestingDetacher(0, Mode.EVERY_EXPRESSION);
+  private static final NestingDetacher EVERY_SUBTREE = new NestingDetacher(0, Mode.EVERY_SUBTREE);
 
   /** Nesting depth of a {@code PlanRel} below the {@code Plan} it is parsed as part of. */
   private static final int PLAN_REL_DEPTH = 1;
@@ -46,11 +54,11 @@ public final class NestingDetacher {
       new ConcurrentHashMap<>();
 
   private final int maxDepth;
-  private final boolean everyExpression;
+  private final Mode mode;
 
-  private NestingDetacher(int maxDepth, boolean everyExpression) {
+  private NestingDetacher(int maxDepth, Mode mode) {
     this.maxDepth = maxDepth;
-    this.everyExpression = everyExpression;
+    this.mode = mode;
   }
 
   /**
@@ -83,6 +91,16 @@ public final class NestingDetacher {
   }
 
   /**
+   * Returns a detacher that moves every inline relation and expression into its detached table,
+   * regardless of nesting depth. Existing table entries keep their ordinals.
+   *
+   * @return a detacher for exercising both detached tables
+   */
+  public static NestingDetacher everySubtree() {
+    return EVERY_SUBTREE;
+  }
+
+  /**
    * Returns a detacher for a consumer that parses up to {@code maxDepth} levels of nesting below
    * the root message, the root itself being at depth 0.
    *
@@ -93,7 +111,7 @@ public final class NestingDetacher {
     if (maxDepth < 0) {
       throw new IllegalArgumentException("maxDepth must not be negative: " + maxDepth);
     }
-    return new NestingDetacher(maxDepth, false);
+    return new NestingDetacher(maxDepth, Mode.BOUNDED);
   }
 
   /**
@@ -141,8 +159,9 @@ public final class NestingDetacher {
 
   private <M extends Message> M bound(M container, int containerDepth) {
     int entryDepth = containerDepth + 1;
-    if (everyExpression) {
-      return new Pass<>(container, entryDepth, entryDepth, false).run();
+    if (mode != Mode.BOUNDED) {
+      // A bare PlanRel.rel is only one level below the container.
+      return new Pass<>(container, entryDepth, containerDepth, mode == Mode.EVERY_SUBTREE).run();
     }
     if (maxDepth == Integer.MAX_VALUE || fitsWhole(container, containerDepth)) {
       return container;
