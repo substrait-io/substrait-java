@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.protobuf.Any;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -27,13 +28,16 @@ import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
 import io.substrait.proto.FilterRel;
 import io.substrait.proto.PlanRel;
+import io.substrait.relation.Extension;
 import io.substrait.relation.Filter;
 import io.substrait.relation.NamedScan;
 import io.substrait.relation.ProtoRelConverter;
 import io.substrait.relation.Rel;
 import io.substrait.relation.Rel.Remap;
 import io.substrait.type.NamedStruct;
+import io.substrait.type.Type;
 import io.substrait.utils.RelSamples;
+import io.substrait.utils.StringHolder;
 import io.substrait.utils.StringHolderHandlingProtoRelConverter;
 import io.substrait.utils.StringHolderHandlingRelProtoConverter;
 import java.util.List;
@@ -45,6 +49,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Verifies detached expression subtrees (spec v0.105.0): the writer moves expressions into {@code
@@ -71,22 +76,35 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
 
   Stream<Arguments> samples() {
     return relSamples.entrySet().stream()
-        .map(sample -> Arguments.of(sample.getKey().getSimpleName(), sample.getValue()));
+        .flatMap(
+            sample -> {
+              String name = sample.getKey().getSimpleName();
+              Rel rel = sample.getValue();
+              return Stream.of(Arguments.of(name, rel, false), Arguments.of(name, rel, true));
+            });
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "{0}, detach relations = {2}")
   @MethodSource("samples")
-  void everyRelationRoundtripsWithEveryExpressionDetached(String relationType, Rel rel) {
+  void everyRelationRoundtripsWithDetachedSubtrees(
+      String relationType, Rel rel, boolean detachRelations) {
     io.substrait.proto.Rel protoRel =
         new StringHolderHandlingRelProtoConverter(functionCollector).toProto(rel);
+    NestingDetacher detacher = detachRelations ? NestingDetacher.everySubtree() : DETACH_ALL;
     PlanRel detached =
-        DETACH_ALL.detach(
+        detacher.detach(
             PlanRel.newBuilder()
                 .setRoot(io.substrait.proto.RelRoot.newBuilder().setInput(protoRel))
                 .build());
 
-    if (containsExpression(protoRel)) {
-      assertTrue(detached.getDetachedExpressionsCount() > 0, "no expression was detached");
+    assertEquals(detachRelations, detached.getRoot().getInput().hasDetachedRelOrdinal());
+    assertEquals(
+        detachRelations ? count(protoRel, io.substrait.proto.Rel.class) : 0,
+        detached.getDetachedRelsCount());
+    assertEquals(
+        count(protoRel, io.substrait.proto.Expression.class),
+        detached.getDetachedExpressionsCount());
+    if (detached.getDetachedExpressionsCount() > 0) {
       assertNotEquals(protoRel, detached.getRoot().getInput());
     }
     Rel returned =
@@ -222,7 +240,11 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
 
   @Test
   void aContainerThatCannotBeMadeToFitIsReturnedAsIs() {
-    PlanRel planRel = planRel(filters(scan, 60));
+    Type type = R.I32;
+    for (int i = 0; i < 60; i++) {
+      type = R.list(type);
+    }
+    PlanRel planRel = planRel(sb.namedScan(List.of("t"), List.of("nested"), List.of(type)));
     assertTrue(depth(planRel) > NestingDetacher.DEFAULT_MAX_DEPTH);
     assertSame(planRel, NestingDetacher.defaultDetacher().detach(planRel));
   }
@@ -309,6 +331,220 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
   }
 
   @Test
+  void rootAndBareRelationsResolveAgainstTheirOwnContainers() {
+    io.substrait.proto.Rel target = relProtoConverter.toProto(scan);
+    PlanRel root =
+        PlanRel.newBuilder()
+            .setRoot(io.substrait.proto.RelRoot.newBuilder().setInput(relOrdinal(0)).addNames("a"))
+            .addDetachedRels(target)
+            .build();
+    assertEquals(scan, protoRelConverter.from(root).getInput());
+    assertEquals(
+        orders,
+        protoRelConverter.fromRel(
+            PlanRel.newBuilder()
+                .setRel(relOrdinal(0))
+                .addDetachedRels(relProtoConverter.toProto(orders))
+                .build()));
+    assertThrows(IllegalArgumentException.class, () -> protoRelConverter.from(relOrdinal(0)));
+  }
+
+  @Test
+  void rejectsInvalidReachableRelationOrdinals() {
+    io.substrait.proto.Rel target = relProtoConverter.toProto(scan);
+    assertRejectedRelation("out of range", relOrdinal(-1), List.of(target));
+    assertRejectedRelation(
+        "itself a detached relation ordinal", relOrdinal(0), List.of(relOrdinal(1), target));
+    io.substrait.proto.Rel twice =
+        io.substrait.proto.Rel.newBuilder()
+            .setCross(
+                io.substrait.proto.CrossRel.newBuilder()
+                    .setLeft(relOrdinal(0))
+                    .setRight(relOrdinal(0)))
+            .build();
+    assertRejectedRelation("referenced more than once", twice, List.of(target));
+    // Resolving relation 0 needs expression 0, whose scalar subquery points back to relation 0.
+    PlanRel cycle =
+        PlanRel.newBuilder()
+            .setRel(relOrdinal(0))
+            .addDetachedRels(condition(ordinal(0)))
+            .addDetachedExpressions(subqueryOn(relOrdinal(0)))
+            .build();
+    assertTrue(
+        assertThrows(IllegalArgumentException.class, () -> protoRelConverter.fromRel(cycle))
+            .getMessage()
+            .contains("cycle"));
+  }
+
+  @Test
+  void extendedScalarSubqueryResolvesBothTablesAtTheReferenceSite() {
+    io.substrait.proto.Rel filter = condition(ordinal(0));
+    io.substrait.proto.ExtendedExpression wire =
+        io.substrait.proto.ExtendedExpression.newBuilder()
+            .setBaseSchema(planRel(scan).getRoot().getInput().getRead().getBaseSchema())
+            .addReferredExpr(
+                io.substrait.proto.ExpressionReference.newBuilder()
+                    .setExpression(subqueryOn(relOrdinal(0)))
+                    .addOutputNames("answer"))
+            .addDetachedRels(
+                filter.toBuilder()
+                    .setFilter(filter.getFilter().toBuilder().setInput(relOrdinal(1))))
+            .addDetachedRels(relProtoConverter.toProto(scan))
+            .addDetachedExpressions(expressionProtoConverter.toProto(sb.bool(true)))
+            .build();
+    ExtendedExpression read = new ProtoExtendedExpressionConverter().from(wire);
+    io.substrait.proto.ExtendedExpression written =
+        new ExtendedExpressionProtoConverter().toProto(read);
+    assertEquals(
+        subqueryOn(relProtoConverter.toProto(filterOn(sb.bool(true)))),
+        written.getReferredExpr(0).getExpression());
+    assertEquals(0, written.getDetachedRelsCount());
+    assertEquals(read, new ProtoExtendedExpressionConverter().from(written));
+  }
+
+  @Test
+  void aCustomPlanRelDetailCannotLoseItsDetachedTargets() {
+    ProtoRelConverter reader =
+        new ProtoRelConverter(functionCollector, extensions) {
+          @Override
+          protected Extension.LeafRelDetail detailFromExtensionLeafRel(Any any) {
+            return new StringHolder("") {
+              @Override
+              public Any toProto(io.substrait.relation.RelProtoConverter converter) {
+                return any;
+              }
+            };
+          }
+        };
+    io.substrait.proto.Rel leaf =
+        io.substrait.proto.Rel.newBuilder()
+            .setExtensionLeaf(
+                io.substrait.proto.ExtensionLeafRel.newBuilder().setDetail(Any.pack(relOrdinal(1))))
+            .build();
+    PlanRel wire =
+        PlanRel.newBuilder()
+            .setRel(relOrdinal(0))
+            .addDetachedRels(leaf)
+            .addDetachedRels(relProtoConverter.toProto(scan))
+            .build();
+    assertTrue(
+        assertThrows(UnsupportedOperationException.class, () -> reader.fromRel(wire))
+            .getMessage()
+            .contains("opaque payload"));
+    assertEquals(scan, reader.fromRel(wire.toBuilder().setRel(relOrdinal(1)).build()));
+  }
+
+  @Test
+  void anOpaqueEnhancementKeepsItsRelationOrdinalAndFunctionBinding() {
+    io.substrait.proto.ExtendedExpression declared = declaredEquality();
+    io.substrait.proto.ExtendedExpression wire =
+        declared.toBuilder()
+            .setVersion(
+                io.substrait.proto.Version.newBuilder().setMinorNumber(108).setProducer("test"))
+            .setReferredExpr(0, declared.getReferredExpr(0).toBuilder().setExpression(literal()))
+            .addDetachedRels(relProtoConverter.toProto(scan))
+            .addDetachedRels(condition(declared.getReferredExpr(0).getExpression()))
+            .setAdvancedExtensions(
+                io.substrait.proto.AdvancedExtension.newBuilder()
+                    .setEnhancement(com.google.protobuf.Any.pack(relOrdinal(1))))
+            .build();
+    ExtendedExpression read = new ProtoExtendedExpressionConverter().from(wire);
+    io.substrait.proto.ExtendedExpression written =
+        new ExtendedExpressionProtoConverter().toProto(read);
+    assertEquals(wire.getVersion(), written.getVersion());
+    assertEquals(wire.getDetachedRelsList(), written.getDetachedRelsList());
+    assertEquals(wire.getAdvancedExtensions(), written.getAdvancedExtensions());
+    assertEquals(wire.getExtensionUrnsList(), written.getExtensionUrnsList());
+    assertEquals(wire.getExtensionsList(), written.getExtensionsList());
+
+    ExtendedExpression unversioned =
+        new ProtoExtendedExpressionConverter().from(wire.toBuilder().clearVersion().build());
+    assertEquals(
+        Plan.Version.DEFAULT_VERSION.getMinor(),
+        new ExtendedExpressionProtoConverter().toProto(unversioned).getVersion().getMinorNumber());
+    io.substrait.proto.Version oldVersion =
+        wire.getVersion().toBuilder().setMinorNumber(104).setGitHash("old").build();
+    io.substrait.proto.ExtendedExpression expressionOnly =
+        new ExtendedExpressionProtoConverter(DETACH_ALL)
+            .toProto(
+                new ProtoExtendedExpressionConverter()
+                    .from(declared.toBuilder().setVersion(oldVersion).build()));
+    assertTrue(expressionOnly.getDetachedExpressionsCount() > 0);
+    assertEquals(
+        oldVersion.toBuilder().setMinorNumber(105).clearGitHash().build(),
+        expressionOnly.getVersion());
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 7, Integer.MIN_VALUE})
+  void anOpaqueSubtreeAndAReferredExpressionShareTheProducersAnchors(int anchor) {
+    io.substrait.proto.ExtendedExpression.Builder wire = declaredEquality().toBuilder();
+    wire.getReferredExprBuilder(0)
+        .getExpressionBuilder()
+        .getScalarFunctionBuilder()
+        .setFunctionReference(anchor);
+    wire.getExtensionsBuilder(0)
+        .getExtensionFunctionBuilder()
+        .setFunctionAnchor(anchor)
+        .setExtensionUrnReference(5);
+    wire.getExtensionUrnsBuilder(0).setExtensionUrnAnchor(5);
+    wire.addDetachedRels(condition(wire.getReferredExpr(0).getExpression()));
+    wire.getAdvancedExtensionsBuilder().setEnhancement(Any.pack(relOrdinal(0)));
+
+    ProtoExtendedExpressionConverter reader = new ProtoExtendedExpressionConverter();
+    ExtendedExpressionProtoConverter writer = new ExtendedExpressionProtoConverter();
+    ExtendedExpression read = reader.from(wire.build());
+    assertEquals(wire.build(), writer.toProto(read));
+
+    ExtendedExpression edited =
+        ExtendedExpression.builder()
+            .from(read)
+            .addReferredExpressions(
+                ImmutableExpressionReference.builder()
+                    .expression(sb.add(sb.i32(1), sb.i32(2)))
+                    .build())
+            .build();
+    io.substrait.proto.ExtendedExpression written = writer.toProto(edited);
+    assertEquals(wire.getExtensions(0), written.getExtensions(0));
+    assertEquals(anchor + 1, written.getExtensions(1).getExtensionFunction().getFunctionAnchor());
+    assertEquals(6, written.getExtensionUrns(1).getExtensionUrnAnchor());
+    assertEquals(edited.getReferredExpressions(), reader.from(written).getReferredExpressions());
+  }
+
+  private io.substrait.proto.ExtendedExpression declaredEquality() {
+    return new ExtendedExpressionProtoConverter()
+        .toProto(
+            ExtendedExpression.builder()
+                .baseSchema(scan.getInitialSchema())
+                .addReferredExpressions(
+                    ImmutableExpressionReference.builder()
+                        .expression(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)))
+                        .build())
+                .build());
+  }
+
+  private void assertRejectedRelation(
+      String message, io.substrait.proto.Rel rel, List<io.substrait.proto.Rel> entries) {
+    PlanRel container = PlanRel.newBuilder().setRel(rel).addAllDetachedRels(entries).build();
+    IllegalArgumentException error =
+        assertThrows(IllegalArgumentException.class, () -> protoRelConverter.fromRel(container));
+    assertTrue(error.getMessage().contains(message), error.getMessage());
+  }
+
+  private static io.substrait.proto.Rel relOrdinal(int ordinal) {
+    return io.substrait.proto.Rel.newBuilder().setDetachedRelOrdinal(ordinal).build();
+  }
+
+  private static io.substrait.proto.Expression subqueryOn(io.substrait.proto.Rel input) {
+    return io.substrait.proto.Expression.newBuilder()
+        .setSubquery(
+            io.substrait.proto.Expression.Subquery.newBuilder()
+                .setScalar(
+                    io.substrait.proto.Expression.Subquery.Scalar.newBuilder().setInput(input)))
+        .build();
+  }
+
+  @Test
   void anExpressionConverterBuiltBeforeTheConversionResolvesAgainstIt() {
     ProtoRelConverter reader =
         new ProtoRelConverter(functionCollector, extensions) {
@@ -392,11 +628,19 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
   void aStepsOutReferenceResolvesAgainstTheEnclosingQuery() {
     Rel subquery =
         correlated(FieldReference.newRootStructOuterReference(1, orders.getRecordType(), 1));
-    assertDetachedRoundTrip(
+    Rel rel =
         sb.project(
             input -> List.of(sb.fieldReference(input, 0), sb.scalarSubquery(subquery, R.I64)),
             Remap.of(List.of(2, 3)),
-            orders));
+            orders);
+    assertDetachedRoundTrip(rel);
+
+    io.substrait.proto.Rel protoRel = relProtoConverter.toProto(rel);
+    PlanRel detached =
+        NestingDetacher.everySubtree().detach(PlanRel.newBuilder().setRel(protoRel).build());
+    assertTrue(detached.getRel().hasDetachedRelOrdinal());
+    assertEquals(count(protoRel, io.substrait.proto.Rel.class), detached.getDetachedRelsCount());
+    assertEquals(rel, protoRelConverter.fromRel(detached));
   }
 
   @Test
@@ -526,11 +770,9 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
         DefaultExtensionCatalog.DEFAULT_COLLECTION, new ExtensionProtoConverter<>(), detacher);
   }
 
-  private static boolean containsExpression(Message message) {
-    if (message instanceof io.substrait.proto.Expression) {
-      return true;
-    }
-    return children(message).anyMatch(DetachedExpressionRoundtripTest::containsExpression);
+  private static int count(Message message, Class<? extends Message> type) {
+    return (type.isInstance(message) ? 1 : 0)
+        + children(message).mapToInt(child -> count(child, type)).sum();
   }
 
   /** Returns how many levels of messages nest below {@code message}, as a parser counts them. */

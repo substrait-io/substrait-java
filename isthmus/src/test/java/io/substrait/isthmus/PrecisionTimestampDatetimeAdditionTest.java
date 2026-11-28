@@ -2,8 +2,12 @@ package io.substrait.isthmus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.substrait.expression.Expression;
+import io.substrait.plan.Plan;
+import io.substrait.relation.Project;
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -114,6 +118,17 @@ class PrecisionTimestampDatetimeAdditionTest extends PlanTestBase {
   void precisionTimestampTzAddIntervalYear() throws Exception {
     String query = "SELECT event_timestamp_tz + INTERVAL '2' YEAR FROM events";
     assertFullRoundTrip(query, CREATES);
+    Plan plan = assertProtoPlanRoundrip(query, new SqlToSubstrait(), CREATES);
+    Project project = assertInstanceOf(Project.class, plan.getRoots().get(0).getInput());
+    Expression.ScalarFunctionInvocation addition =
+        assertInstanceOf(
+            Expression.ScalarFunctionInvocation.class, project.getExpressions().get(0));
+    assertEquals("add:ptstz_iyear_str", addition.declaration().key());
+    assertEquals(3, addition.arguments().size());
+    assertInstanceOf(Expression.CurrentTimezone.class, addition.arguments().get(2));
+
+    String sql = new SubstraitToSql().convert(plan, PostgresqlSqlDialect.DEFAULT).get(0);
+    assertTrue(sql.contains("+ INTERVAL"));
   }
 
   @Test

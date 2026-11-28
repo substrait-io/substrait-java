@@ -5,7 +5,9 @@ import io.substrait.expression.proto.NestingDetacher;
 import io.substrait.extension.ExtensionCollector;
 import io.substrait.proto.ExpressionReference;
 import io.substrait.proto.ExtendedExpression;
+import io.substrait.proto.Version;
 import io.substrait.relation.AggregateFunctionProtoConverter;
+import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
 
@@ -18,8 +20,8 @@ public class ExtendedExpressionProtoConverter {
 
   /**
    * Creates a converter that uses {@link NestingDetacher#defaultDetacher()}, which leaves an
-   * extended expression unchanged unless its expressions nest too deeply for protobuf parsers with
-   * default limits.
+   * extended expression unchanged unless its relations or expressions nest too deeply for protobuf
+   * parsers with default limits.
    */
   public ExtendedExpressionProtoConverter() {
     this(NestingDetacher.defaultDetacher());
@@ -49,11 +51,15 @@ public class ExtendedExpressionProtoConverter {
       io.substrait.extendedexpression.ExtendedExpression extendedExpression) {
 
     ExtendedExpression.Builder builder = ExtendedExpression.newBuilder();
-    ExtensionCollector functionCollector = new ExtensionCollector();
+    ExtensionCollector functionCollector =
+        new ExtensionCollector(
+            extendedExpression.getRetainedExtensionUrns(),
+            extendedExpression.getRetainedExtensions());
 
+    RelProtoConverter relConverter = new RelProtoConverter(functionCollector);
     final ExpressionProtoConverter expressionProtoConverter =
-        new ExpressionProtoConverter(functionCollector, null);
-    final TypeProtoConverter typeProtoConverter = new TypeProtoConverter(functionCollector);
+        relConverter.getExpressionProtoConverter();
+    final TypeProtoConverter typeProtoConverter = relConverter.getTypeProtoConverter();
     final AggregateFunctionProtoConverter aggregateFunctionProtoConverter =
         new AggregateFunctionProtoConverter(
             functionCollector, expressionProtoConverter, typeProtoConverter);
@@ -90,13 +96,23 @@ public class ExtendedExpressionProtoConverter {
     }
     builder.setBaseSchema(extendedExpression.getBaseSchema().toProto(typeProtoConverter));
 
-    // the process of adding simple extensions (URNs and declarations) is handled on the fly
     functionCollector.addExtensionsToExtendedExpression(builder);
+    builder.addAllExpectedTypeUrls(extendedExpression.getExpectedTypeUrls());
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());
     }
-    // Ahead of any newly detached entry, so the advanced extension's ordinals keep their targets.
+    builder.setVersion(extendedExpression.getVersion());
+    // Retain existing ordinals before appending any newly detached subtrees.
     builder.addAllDetachedExpressions(extendedExpression.getRetainedDetachedExpressions());
-    return nestingDetacher.detach(builder.build());
+    builder.addAllDetachedRels(extendedExpression.getRetainedDetachedRelations());
+    ExtendedExpression bounded = nestingDetacher.detach(builder.build());
+    Version version =
+        NestingDetacher.versionForTables(
+            bounded.getVersion(),
+            bounded.getDetachedExpressionsCount(),
+            bounded.getDetachedRelsCount());
+    return version == bounded.getVersion()
+        ? bounded
+        : bounded.toBuilder().setVersion(version).build();
   }
 }
