@@ -10,7 +10,6 @@ import io.substrait.relation.AggregateFunctionProtoConverter;
 import io.substrait.relation.RelProtoConverter;
 import io.substrait.type.proto.TypeProtoConverter;
 import io.substrait.util.EmptyVisitationContext;
-import java.util.HashSet;
 
 /**
  * Converts from {@link io.substrait.extendedexpression.ExtendedExpression} to {@link
@@ -52,7 +51,10 @@ public class ExtendedExpressionProtoConverter {
       io.substrait.extendedexpression.ExtendedExpression extendedExpression) {
 
     ExtendedExpression.Builder builder = ExtendedExpression.newBuilder();
-    ExtensionCollector functionCollector = new ExtensionCollector();
+    ExtensionCollector functionCollector =
+        new ExtensionCollector(
+            extendedExpression.getRetainedExtensionUrns(),
+            extendedExpression.getRetainedExtensions());
 
     RelProtoConverter relConverter = new RelProtoConverter(functionCollector);
     final ExpressionProtoConverter expressionProtoConverter =
@@ -94,23 +96,7 @@ public class ExtendedExpressionProtoConverter {
     }
     builder.setBaseSchema(extendedExpression.getBaseSchema().toProto(typeProtoConverter));
 
-    // the process of adding simple extensions (URNs and declarations) is handled on the fly
     functionCollector.addExtensionsToExtendedExpression(builder);
-    if (!extendedExpression.getRetainedExtensions().isEmpty()
-        || !extendedExpression.getRetainedExtensionUrns().isEmpty()) {
-      // Raw subtrees may use anchors that the referred expressions never visit.
-      if (!new HashSet<>(extendedExpression.getRetainedExtensionUrns())
-              .containsAll(builder.getExtensionUrnsList())
-          || !new HashSet<>(extendedExpression.getRetainedExtensions())
-              .containsAll(builder.getExtensionsList())) {
-        throw new UnsupportedOperationException(
-            "Cannot renumber extension anchors used by opaque detached subtrees");
-      }
-      builder
-          .clearExtensionUrns()
-          .addAllExtensionUrns(extendedExpression.getRetainedExtensionUrns());
-      builder.clearExtensions().addAllExtensions(extendedExpression.getRetainedExtensions());
-    }
     builder.addAllExpectedTypeUrls(extendedExpression.getExpectedTypeUrls());
     if (extendedExpression.getAdvancedExtension().isPresent()) {
       builder.setAdvancedExtensions(extendedExpression.getAdvancedExtension().get());

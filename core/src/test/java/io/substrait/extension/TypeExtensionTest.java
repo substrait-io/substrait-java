@@ -4,9 +4,15 @@ import static io.substrait.type.TypeCreator.REQUIRED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.substrait.TestBase;
+import io.substrait.extendedexpression.ExtendedExpression;
+import io.substrait.extendedexpression.ExtendedExpressionProtoConverter;
+import io.substrait.extendedexpression.ProtoExtendedExpressionConverter;
 import io.substrait.plan.Plan;
 import io.substrait.plan.PlanProtoConverter;
 import io.substrait.plan.ProtoPlanConverter;
+import io.substrait.proto.SimpleExtensionDeclaration;
+import io.substrait.proto.SimpleExtensionURN;
+import io.substrait.type.NamedStruct;
 import io.substrait.type.Type;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -81,6 +87,35 @@ class TypeExtensionTest extends TestBase {
 
     // verify default typeVariationReference is 0
     assertEquals(0, ((Type.UserDefined) customType1).typeVariationReference());
+  }
+
+  @Test
+  void aNewSchemaTypeSharesTheRetainedUrn() {
+    SimpleExtensionURN urn = SimpleExtensionURN.newBuilder().setUrn(URN).build();
+    SimpleExtensionDeclaration retained =
+        SimpleExtensionDeclaration.newBuilder()
+            .setExtensionType(
+                SimpleExtensionDeclaration.ExtensionType.newBuilder()
+                    .setName("customType1")
+                    .setTypeAnchor(9))
+            .build();
+    NamedStruct schema = NamedStruct.of(List.of("a", "b"), R.struct(customType2, customType1));
+    ExtendedExpression expression =
+        ExtendedExpression.builder()
+            .baseSchema(schema)
+            .addRetainedExtensionUrns(urn)
+            .addRetainedExtensions(retained)
+            .build();
+    io.substrait.proto.ExtendedExpression written =
+        new ExtendedExpressionProtoConverter().toProto(expression);
+    assertEquals(List.of(urn), written.getExtensionUrnsList());
+    assertEquals(retained, written.getExtensions(0));
+    assertEquals(
+        10, written.getBaseSchema().getStruct().getTypes(0).getUserDefined().getTypeReference());
+    assertEquals(
+        9, written.getBaseSchema().getStruct().getTypes(1).getUserDefined().getTypeReference());
+    assertEquals(
+        schema, new ProtoExtendedExpressionConverter(extensions).from(written).getBaseSchema());
   }
 
   @Test

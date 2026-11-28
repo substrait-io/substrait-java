@@ -49,6 +49,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Verifies detached expression subtrees (spec v0.105.0): the writer moves expressions into {@code
@@ -435,16 +436,7 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
 
   @Test
   void anOpaqueEnhancementKeepsItsRelationOrdinalAndFunctionBinding() {
-    io.substrait.proto.ExtendedExpression declared =
-        new ExtendedExpressionProtoConverter()
-            .toProto(
-                ExtendedExpression.builder()
-                    .baseSchema(scan.getInitialSchema())
-                    .addReferredExpressions(
-                        ImmutableExpressionReference.builder()
-                            .expression(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)))
-                            .build())
-                    .build());
+    io.substrait.proto.ExtendedExpression declared = declaredEquality();
     io.substrait.proto.ExtendedExpression wire =
         declared.toBuilder()
             .setVersion(
@@ -481,6 +473,54 @@ class DetachedExpressionRoundtripTest extends StringHolderRoundtripTestBase {
     assertEquals(
         oldVersion.toBuilder().setMinorNumber(105).clearGitHash().build(),
         expressionOnly.getVersion());
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 7, Integer.MIN_VALUE})
+  void anOpaqueSubtreeAndAReferredExpressionShareTheProducersAnchors(int anchor) {
+    io.substrait.proto.ExtendedExpression.Builder wire = declaredEquality().toBuilder();
+    wire.getReferredExprBuilder(0)
+        .getExpressionBuilder()
+        .getScalarFunctionBuilder()
+        .setFunctionReference(anchor);
+    wire.getExtensionsBuilder(0)
+        .getExtensionFunctionBuilder()
+        .setFunctionAnchor(anchor)
+        .setExtensionUrnReference(5);
+    wire.getExtensionUrnsBuilder(0).setExtensionUrnAnchor(5);
+    wire.addDetachedRels(condition(wire.getReferredExpr(0).getExpression()));
+    wire.getAdvancedExtensionsBuilder().setEnhancement(Any.pack(relOrdinal(0)));
+
+    ProtoExtendedExpressionConverter reader = new ProtoExtendedExpressionConverter();
+    ExtendedExpressionProtoConverter writer = new ExtendedExpressionProtoConverter();
+    ExtendedExpression read = reader.from(wire.build());
+    assertEquals(wire.build(), writer.toProto(read));
+
+    ExtendedExpression edited =
+        ExtendedExpression.builder()
+            .from(read)
+            .addReferredExpressions(
+                ImmutableExpressionReference.builder()
+                    .expression(sb.add(sb.i32(1), sb.i32(2)))
+                    .build())
+            .build();
+    io.substrait.proto.ExtendedExpression written = writer.toProto(edited);
+    assertEquals(wire.getExtensions(0), written.getExtensions(0));
+    assertEquals(anchor + 1, written.getExtensions(1).getExtensionFunction().getFunctionAnchor());
+    assertEquals(6, written.getExtensionUrns(1).getExtensionUrnAnchor());
+    assertEquals(edited.getReferredExpressions(), reader.from(written).getReferredExpressions());
+  }
+
+  private io.substrait.proto.ExtendedExpression declaredEquality() {
+    return new ExtendedExpressionProtoConverter()
+        .toProto(
+            ExtendedExpression.builder()
+                .baseSchema(scan.getInitialSchema())
+                .addReferredExpressions(
+                    ImmutableExpressionReference.builder()
+                        .expression(sb.equal(sb.fieldReference(scan, 0), sb.i32(1)))
+                        .build())
+                .build());
   }
 
   private void assertRejectedRelation(

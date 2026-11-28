@@ -5,9 +5,11 @@ import io.substrait.proto.Plan;
 import io.substrait.proto.SimpleExtensionDeclaration;
 import io.substrait.proto.SimpleExtensionURN;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * Maintains a mapping between function/type anchors and function/type references. Generates
@@ -19,9 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ExtensionCollector extends AbstractExtensionLookup {
   private final BidiMap<Integer, SimpleExtension.FunctionAnchor> funcMap;
   private final BidiMap<Integer, SimpleExtension.TypeAnchor> typeMap;
-
-  // start at 0 to make sure functionAnchors start with 1 according to spec
-  private int counter = 0;
+  private final List<SimpleExtensionURN> retainedUrns;
+  private final List<SimpleExtensionDeclaration> retainedDeclarations;
+  private final int highestRetainedAnchor;
+  private int counter;
 
   /** Creates a collector backed by the default extension collection. */
   public ExtensionCollector() {
@@ -35,12 +38,48 @@ public class ExtensionCollector extends AbstractExtensionLookup {
    *     be null
    */
   public ExtensionCollector(SimpleExtension.ExtensionCollection extensionCollection) {
-    super(new HashMap<>(), new HashMap<>());
+    this(Collections.emptyList(), Collections.emptyList());
     if (extensionCollection == null) {
       throw new IllegalArgumentException("ExtensionCollection is required");
     }
+  }
+
+  /**
+   * Creates a collector that preserves the original URNs and declarations, including those used
+   * only by opaque subtrees. New function and type anchors start above the highest retained
+   * function or type anchor. URN anchors have a separate counter.
+   *
+   * @param urns the original extension URNs
+   * @param declarations the original extension declarations
+   */
+  public ExtensionCollector(
+      List<SimpleExtensionURN> urns, List<SimpleExtensionDeclaration> declarations) {
+    super(new HashMap<>(), new HashMap<>());
+    retainedUrns = new ArrayList<>(urns);
+    retainedDeclarations = new ArrayList<>(declarations);
+    if (retainedDeclarations.isEmpty()) {
+      highestRetainedAnchor = 0;
+    } else {
+      ImmutableExtensionLookup lookup =
+          ImmutableExtensionLookup.builder().from(retainedUrns, retainedDeclarations).build();
+      functionAnchorMap.putAll(lookup.functionAnchorMap);
+      typeAnchorMap.putAll(lookup.typeAnchorMap);
+      highestRetainedAnchor =
+          Stream.concat(functionAnchorMap.keySet().stream(), typeAnchorMap.keySet().stream())
+              .max(Integer::compareUnsigned)
+              .orElse(0);
+    }
     funcMap = new BidiMap<>(functionAnchorMap);
     typeMap = new BidiMap<>(typeAnchorMap);
+    counter = highestRetainedAnchor;
+  }
+
+  private static int nextAnchor(int anchor) {
+    if (anchor == -1) {
+      throw new IllegalStateException(
+          "Cannot allocate an extension anchor above the uint32 maximum");
+    }
+    return anchor + 1;
   }
 
   /**
@@ -55,7 +94,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     if (i != null) {
       return i;
     }
-    ++counter; // prefix here to make clearer than postfixing at end.
+    counter = nextAnchor(counter);
     funcMap.put(counter, declaration.getAnchor());
     return counter;
   }
@@ -72,7 +111,7 @@ public class ExtensionCollector extends AbstractExtensionLookup {
     if (i != null) {
       return i;
     }
-    ++counter; // prefix here to make clearer than postfixing at end.
+    counter = nextAnchor(counter);
     typeMap.put(counter, typeAnchor);
     return counter;
   }
@@ -85,7 +124,8 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   public void addExtensionsToPlan(Plan.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 
-    builder.addAllExtensionUrns(simpleExtensions.urns.values());
+    builder.addAllExtensionUrns(retainedUrns);
+    builder.addAllExtensionUrns(simpleExtensions.newUrns.values());
     builder.addAllExtensions(simpleExtensions.extensionList);
   }
 
@@ -97,72 +137,76 @@ public class ExtensionCollector extends AbstractExtensionLookup {
   public void addExtensionsToExtendedExpression(ExtendedExpression.Builder builder) {
     SimpleExtensions simpleExtensions = getExtensions();
 
-    builder.addAllExtensionUrns(simpleExtensions.urns.values());
+    builder.addAllExtensionUrns(retainedUrns);
+    builder.addAllExtensionUrns(simpleExtensions.newUrns.values());
     builder.addAllExtensions(simpleExtensions.extensionList);
   }
 
   private SimpleExtensions getExtensions() {
-    AtomicInteger urnPos = new AtomicInteger(1);
-    HashMap<String, SimpleExtensionURN> urns = new HashMap<>();
-
-    ArrayList<SimpleExtensionDeclaration> extensionList = new ArrayList<>();
+    SimpleExtensions extensions = new SimpleExtensions(retainedUrns, retainedDeclarations);
     for (Map.Entry<Integer, SimpleExtension.FunctionAnchor> e : funcMap.forwardEntrySet()) {
-      String urn = e.getValue().urn();
-
-      SimpleExtensionURN urnObj =
-          urns.computeIfAbsent(
-              urn,
-              k ->
-                  SimpleExtensionURN.newBuilder()
-                      .setExtensionUrnAnchor(urnPos.getAndIncrement())
-                      .setUrn(k)
-                      .build());
-
+      if (Integer.compareUnsigned(e.getKey(), highestRetainedAnchor) <= 0) {
+        continue;
+      }
       SimpleExtensionDeclaration.ExtensionFunction.Builder funcBuilder =
           SimpleExtensionDeclaration.ExtensionFunction.newBuilder()
               .setFunctionAnchor(e.getKey())
               .setName(e.getValue().key())
-              .setExtensionUrnReference(urnObj.getExtensionUrnAnchor());
+              .setExtensionUrnReference(extensions.urnReference(e.getValue().urn()));
 
       SimpleExtensionDeclaration decl =
           SimpleExtensionDeclaration.newBuilder().setExtensionFunction(funcBuilder).build();
-      extensionList.add(decl);
+      extensions.extensionList.add(decl);
     }
 
     for (Map.Entry<Integer, SimpleExtension.TypeAnchor> e : typeMap.forwardEntrySet()) {
-      String urn = e.getValue().urn();
-
-      SimpleExtensionURN urnObj =
-          urns.computeIfAbsent(
-              urn,
-              k ->
-                  SimpleExtensionURN.newBuilder()
-                      .setExtensionUrnAnchor(urnPos.getAndIncrement())
-                      .setUrn(k)
-                      .build());
-
+      if (Integer.compareUnsigned(e.getKey(), highestRetainedAnchor) <= 0) {
+        continue;
+      }
       SimpleExtensionDeclaration.ExtensionType.Builder typeBuilder =
           SimpleExtensionDeclaration.ExtensionType.newBuilder()
               .setTypeAnchor(e.getKey())
               .setName(e.getValue().key())
-              .setExtensionUrnReference(urnObj.getExtensionUrnAnchor());
+              .setExtensionUrnReference(extensions.urnReference(e.getValue().urn()));
 
       SimpleExtensionDeclaration decl =
           SimpleExtensionDeclaration.newBuilder().setExtensionType(typeBuilder).build();
-      extensionList.add(decl);
+      extensions.extensionList.add(decl);
     }
-    return new SimpleExtensions(urns, extensionList);
+    return extensions;
   }
 
   private static final class SimpleExtensions {
-    final HashMap<String, SimpleExtensionURN> urns;
-    final ArrayList<SimpleExtensionDeclaration> extensionList;
+    final Map<String, Integer> retainedUrnAnchors = new HashMap<>();
+    final Map<String, SimpleExtensionURN> newUrns = new HashMap<>();
+    final List<SimpleExtensionDeclaration> extensionList;
+    int highestUrnAnchor;
 
-    SimpleExtensions(
-        HashMap<String, SimpleExtensionURN> urns,
-        ArrayList<SimpleExtensionDeclaration> extensionList) {
-      this.urns = urns;
-      this.extensionList = extensionList;
+    SimpleExtensions(List<SimpleExtensionURN> urns, List<SimpleExtensionDeclaration> declarations) {
+      extensionList = new ArrayList<>(declarations);
+      for (SimpleExtensionURN urn : urns) {
+        int anchor = urn.getExtensionUrnAnchor();
+        retainedUrnAnchors.put(urn.getUrn(), anchor);
+        if (Integer.compareUnsigned(anchor, highestUrnAnchor) > 0) {
+          highestUrnAnchor = anchor;
+        }
+      }
+    }
+
+    int urnReference(String urn) {
+      Integer retained = retainedUrnAnchors.get(urn);
+      if (retained != null) {
+        return retained;
+      }
+      return newUrns.computeIfAbsent(urn, this::newUrn).getExtensionUrnAnchor();
+    }
+
+    private SimpleExtensionURN newUrn(String urn) {
+      highestUrnAnchor = nextAnchor(highestUrnAnchor);
+      return SimpleExtensionURN.newBuilder()
+          .setExtensionUrnAnchor(highestUrnAnchor)
+          .setUrn(urn)
+          .build();
     }
   }
 }

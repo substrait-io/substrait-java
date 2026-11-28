@@ -82,7 +82,7 @@ public class ImmutableExtensionLookup extends AbstractExtensionLookup {
           extendedExpression.getExtensionUrnsList(), extendedExpression.getExtensionsList());
     }
 
-    private Builder from(
+    Builder from(
         List<SimpleExtensionURN> simpleExtensionURNs,
         List<SimpleExtensionDeclaration> simpleExtensionDeclarations) {
       Map<Integer, String> urnMap = new HashMap<>();
