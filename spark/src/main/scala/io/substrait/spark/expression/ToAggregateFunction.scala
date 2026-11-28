@@ -16,7 +16,7 @@
  */
 package io.substrait.spark.expression
 
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 
 import io.substrait.`type`.Type
@@ -30,6 +30,11 @@ import scala.jdk.CollectionConverters._
 abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunctionVariant])
   extends FunctionConverter[SimpleExtension.AggregateFunctionVariant, AggregateFunctionInvocation](
     functions) {
+
+  override def getSparkExpressionFromSubstraitFunc(
+      key: String,
+      args: Seq[Expression]): Option[Expression] =
+    super.getSparkExpressionFromSubstraitFunc(key, ToAggregateFunction.sparkArguments(key, args))
 
   override def generateBinding(
       sparkExp: Expression,
@@ -66,6 +71,15 @@ abstract class ToAggregateFunction(functions: Seq[SimpleExtension.AggregateFunct
 }
 
 object ToAggregateFunction {
+
+  /**
+   * The arguments Spark builds an aggregate function call with. Substrait's `count()` counts rows,
+   * which in Spark is `count(1)`. [[ToWindowFunction]] uses this too, as an aggregate function can
+   * be called over a window.
+   */
+  private[expression] def sparkArguments(key: String, args: Seq[Expression]): Seq[Expression] =
+    if (args.isEmpty && key.takeWhile(_ != ':') == "count") Seq(Literal(1)) else args
+
   def fromSpark(mode: AggregateMode): SExpression.AggregationPhase = mode match {
     case Partial => SExpression.AggregationPhase.INITIAL_TO_INTERMEDIATE
     case PartialMerge => SExpression.AggregationPhase.INTERMEDIATE_TO_INTERMEDIATE

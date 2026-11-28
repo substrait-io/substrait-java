@@ -58,7 +58,7 @@ import java.net.{URI, URISyntaxException}
 import java.util.Optional
 
 import scala.annotation.nowarn
-import scala.collection.mutable.{ArrayBuffer, HashSet}
+import scala.collection.mutable.HashSet
 import scala.jdk.CollectionConverters._
 
 /**
@@ -74,7 +74,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
   private def fromMeasure(measure: relation.Aggregate.Measure): AggregateExpression = {
     // this functions is called in createParentwithChild
     val function = measure.getFunction
-    var arguments = function
+    val arguments = function
       .arguments()
       .asScala
       .zipWithIndex
@@ -87,11 +87,7 @@ class ToLogicalPlan(val spark: AnyRef = SparkCompat.instance.getOrCreateSparkSes
             EmptyVisitationContext.INSTANCE)
       }
       .toSeq
-    if (function.declaration.name == "count" && function.arguments.size == 0) {
-      // HACK - count() needs to be rewritten as count(1)
-      arguments = ArrayBuffer(Literal(1)).toSeq
-    }
-
+    // ToAggregateFunction rewrites count() as count(1).
     val aggregateFunction = SparkExtension.toAggregateFunction
       .getSparkExpressionFromSubstraitFunc(function.declaration.key, arguments)
       .map(_.asInstanceOf[AggregateFunction])
